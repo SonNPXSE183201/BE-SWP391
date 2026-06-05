@@ -6,8 +6,6 @@
 > **ĐÂY LÀ TỆP TIN CẤU HÌNH BẮT BUỘC CHO AI.**
 > Mỗi khi AI bắt đầu phiên làm việc mới hoặc chuẩn bị viết mã nguồn, xây dựng API, sửa lỗi, hay thiết lập bất kỳ tính năng nào trên hệ thống này, **AI phải đọc tệp tin này đầu tiên** và tuân thủ nghiêm ngặt các quy tắc dưới đây. Không tự ý viết mã nguồn lộn xộn hay vi phạm cấu trúc kiến trúc.
 
----
-
 ## 1. YÊU CẦU ĐỌC HIỂU NGHIỆP VỤ BẮT BUỘC
 
 Trước khi triển khai bất kỳ tính năng nào liên quan đến nghiệp vụ sáng tác, phân việc, ký hợp đồng hay thanh toán, AI phải đọc tệp tin [SRS.md](file:///d:/SWP391/Project/BE-SWP391/SRS.md) tại gốc dự án để hiểu rõ:
@@ -15,8 +13,6 @@ Trước khi triển khai bất kỳ tính năng nào liên quan đến nghiệp
 1. **Vai trò các Actor**: Ai được phép gọi API nào (Mangaka, Assistant, Tantou Editor, Editorial Board, System Admin).
 2. **Quy tắc về tiền và ví (Wallet Rules)**: `SetupFundBalance` vs `WithdrawableBalance`.
 3. **Quy tắc Escrow**: Khóa tiền cọc nhiệm vụ khi tạo task, giải ngân khi approve, hoàn tiền khi hủy task.
-
----
 
 ## 2. NGUYÊN TẮC KIẾN TRÚC NGHIÊM NGẶT (CLEAN ARCHITECTURE 4 TẦNG)
 
@@ -43,8 +39,6 @@ graph TD
 * **Tầng Presentation (`MangaPublishingSystem.Presentation`)**:
   * Chỉ chứa các bộ điều khiển API (`Controllers`), bộ lọc lỗi, cấu hình khởi chạy (`Program.cs`, `launchSettings.json`, `appsettings.json`), và các hàm đăng ký phụ thuộc (`Extensions/DependencyInjectionExtensions.cs`).
 
----
-
 ## 3. QUY TRÌNH THỰC HIỆN KHI AI THÊM API / CHỨC NĂNG MỚI
 
 AI phải thực hiện tuần tự theo quy trình dưới đây, không nhảy bước:
@@ -67,8 +61,6 @@ AI phải thực hiện tuần tự theo quy trình dưới đây, không nhảy
        ▼
 [BƯỚC 6: GatewayAPI] Định tuyến Router upstream/downstream trong ocelot.json
 ```
-
----
 
 ## 4. HƯỚNG DẪN CẤU HÌNH & CHẠY DỰ ÁN DÀNH CHO AI
 
@@ -103,8 +95,6 @@ dotnet build MangaPublishingSystem.slnx
 
 *(Lưu ý: Upstream luôn dùng tiền tố `/api/v1/...` và Downstream trỏ về đúng cổng 5010 cùng route tương ứng của controller).*
 
----
-
 ## 5. NGUYÊN TẮC VIẾT MÃ NGUỒN (CODING RULES)
 
 * **Xác thực dữ liệu**: Bắt buộc sử dụng **FluentValidation** tự động xác thực ở tầng Application, không viết mã kiểm tra thủ công (như if-else) trong Controller.
@@ -122,4 +112,3 @@ dotnet build MangaPublishingSystem.slnx
   * Hãy luôn chạy `dotnet build` trước khi đề xuất thay đổi, vì hệ thống có cấu hình tự động Husky.Net kích hoạt tại sự kiện Git `pre-commit` và `pre-push`. Bất kỳ lỗi biên dịch nào cũng sẽ bị Git chặn lại và không cho phép lưu trữ.
 
 AI phải ghi nhớ và áp dụng nghiêm ngặt các quy tắc trên!
-
