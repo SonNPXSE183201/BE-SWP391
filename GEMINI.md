@@ -1,311 +1,114 @@
-# Backend Rules — Manga Publishing System
+# CẤU HÌNH & QUY TẮC PHÁT TRIỂN DÀNH CHO AI (GEMINI/CLAUDE/CHATGPT)
 
-> ASP.NET Core 8+ · Clean Architecture · EF Core · SignalR · JWT
+## HỆ THỐNG MANGA PUBLISHING SYSTEM (BACKEND)
 
-## 1. Kiến trúc: Clean Architecture (4 Layers)
+> [!IMPORTANT]
+> **ĐÂY LÀ TỆP TIN CẤU HÌNH BẮT BUỘC CHO AI.**
+> Mỗi khi AI bắt đầu phiên làm việc mới hoặc chuẩn bị viết mã nguồn, xây dựng API, sửa lỗi, hay thiết lập bất kỳ tính năng nào trên hệ thống này, **AI phải đọc tệp tin này đầu tiên** và tuân thủ nghiêm ngặt các quy tắc dưới đây. Không tự ý viết mã nguồn lộn xộn hay vi phạm cấu trúc kiến trúc.
 
-### 1.1 Cấu trúc Solution
-```
-MangaPublishing.sln
-├── src/
-│   ├── MangaPublishing.Domain/          # Core Domain Layer
-│   ├── MangaPublishing.Application/     # Application/Use Case Layer
-│   ├── MangaPublishing.Infrastructure/  # Infrastructure Layer
-│   └── MangaPublishing.API/             # Presentation Layer
-├── tests/
-│   ├── MangaPublishing.Domain.Tests/
-│   ├── MangaPublishing.Application.Tests/
-│   ├── MangaPublishing.Infrastructure.Tests/
-│   └── MangaPublishing.API.Tests/
-```
+## 1. YÊU CẦU ĐỌC HIỂU NGHIỆP VỤ BẮT BUỘC
 
-### 1.2 Dependency Rules (Nghiêm ngặt)
-- **Domain**: KHÔNG phụ thuộc vào bất kỳ layer nào khác. Không reference external packages.
-- **Application**: Chỉ phụ thuộc vào Domain. Định nghĩa interfaces cho Infrastructure.
-- **Infrastructure**: Phụ thuộc vào Application + Domain. Implement interfaces.
-- **API**: Phụ thuộc vào Application. KHÔNG trực tiếp gọi Infrastructure.
+Trước khi triển khai bất kỳ tính năng nào liên quan đến nghiệp vụ sáng tác, phân việc, ký hợp đồng hay thanh toán, AI phải đọc tệp tin [SRS.md](file:///d:/SWP391/Project/BE-SWP391/SRS.md) tại gốc dự án để hiểu rõ:
 
-## 2. Domain Layer
+1. **Vai trò các Actor**: Ai được phép gọi API nào (Mangaka, Assistant, Tantou Editor, Editorial Board, System Admin).
+2. **Quy tắc về tiền và ví (Wallet Rules)**: `SetupFundBalance` vs `WithdrawableBalance`.
+3. **Quy tắc Escrow**: Khóa tiền cọc nhiệm vụ khi tạo task, giải ngân khi approve, hoàn tiền khi hủy task.
 
-### 2.1 Entities — `Entities/`
-- Kế thừa từ `BaseEntity` với `Id` (Guid), `CreatedAt`, `UpdatedAt`.
-- Encapsulate business logic bên trong Entity methods.
-- **KHÔNG** dùng public setters cho critical fields (balance, status).
+## 2. NGUYÊN TẮC KIẾN TRÚC NGHIÊM NGẶT (CLEAN ARCHITECTURE 4 TẦNG)
 
-```csharp
-public class Wallet : BaseEntity
-{
-    public Guid UserId { get; private set; }
-    public decimal SetupFundBalance { get; private set; }
-    public decimal WithdrawableBalance { get; private set; }
-    public decimal LockedFund { get; private set; }
-    public decimal LockedWithdrawable { get; private set; }
+Mọi mã nguồn của các API, tính năng mới phải được tổ chức tách biệt tuyệt đối vào 4 tầng thuộc `Services/MangaPublishingSystem`:
 
-    // F03: Ưu tiên SetupFundBalance trước → thiếu ghép WithdrawableBalance
-    public void LockFund(decimal amount, out decimal lockedFromSetup, out decimal lockedFromWithdrawable)
-    {
-        // Business logic...
-    }
-}
+```mermaid
+graph TD
+    Presentation[MangaPublishingSystem.Presentation] --> Infrastructure[MangaPublishingSystem.Infrastructure]
+    Presentation --> Application[MangaPublishingSystem.Application]
+    Infrastructure --> Application
+    Application --> Domain[MangaPublishingSystem.Domain]
 ```
 
-### 2.2 Enums — `Enums/`
+### Quy định nội dung của từng Layer:
 
-```csharp
-public enum UserStatus { Pending, Active, Inactive, Banned }
-public enum SeriesStatus { Draft, Pending_Approval, Board_Approved, In_Production, Published, Cancelled }
-public enum TaskStatus { Pending, In_Progress, Revision, Approved, Cancelled, Disputed, Closed }
-public enum TransactionType { Lock, Unlock, Transfer, Funding, Genkouryo, Deposit, Withdraw }
-public enum AnnotationType { Technical_Error, Art_Error, Content_Error }
-public enum AnnotationTargetType { Page, TaskVersion }
-public enum DisputeResolution { Refund_100, Pay_100, Partial }
-public enum VoteType { Approve, Reject }
-public enum PublicationSchedule { Weekly, Monthly }
-public enum TaskVersionStatus { Pending_Review, Approved, Rejected }
-public enum NotificationType { System, Task_Update, Transaction, Ranking_Alert }
-```
+* **Tầng Domain (`MangaPublishingSystem.Domain`)**:
+  * Chỉ chứa thực thể nghiệp vụ (`Entities`), các kiểu liệt kê (`Enums`), đối tượng giá trị (`ValueObjects`), hoặc ngoại lệ nghiệp vụ lõi (`Exceptions`).
+  * **CẤM TUYỆT ĐỐI**: Tham chiếu đến các thư viện ngoài, Entity Framework, hoặc bất kỳ cấu hình DI, Controller nào.
+* **Tầng Application (`MangaPublishingSystem.Application`)**:
+  * Chứa Interfaces nghiệp vụ (`IServices`, `IRepositories`, `IUnitOfWork`), DTOs (`DTOs`), Trình xác thực (`Validations` dùng FluentValidation), logic nghiệp vụ (`Services`).
+  * **CẤM TUYỆT ĐỐI**: Truy cập trực tiếp cơ sở dữ liệu hoặc sử dụng các lớp cụ thể của EF Core (như DbContext). Tất cả các truy xuất dữ liệu phải thông qua các interface Repository và được điều phối bởi `IUnitOfWork`.
+* **Tầng Infrastructure (`MangaPublishingSystem.Infrastructure`)**:
+  * Chứa DbContext (`Data/MangaPublishingDbContext`), cấu hình thực thể EF Core (`Data/Configurations`), hiện thực cụ thể của các Repository (`Repositories/` và `UnitOfWork.cs`), và các dịch vụ bên thứ ba (như VNPay Sandbox, lưu trữ ảnh Firebase/MinIO).
+* **Tầng Presentation (`MangaPublishingSystem.Presentation`)**:
+  * Chỉ chứa các bộ điều khiển API (`Controllers`), bộ lọc lỗi, cấu hình khởi chạy (`Program.cs`, `launchSettings.json`, `appsettings.json`), và các hàm đăng ký phụ thuộc (`Extensions/DependencyInjectionExtensions.cs`).
 
-### 2.3 Repository Interfaces — `Interfaces/`
-- Naming: `I{EntityName}Repository`.
-- Generic base: `IRepository<T>` cho CRUD cơ bản.
+## 3. QUY TRÌNH THỰC HIỆN KHI AI THÊM API / CHỨC NĂNG MỚI
 
-### 2.4 Exceptions — `Exceptions/`
-- Custom exceptions cụ thể cho nghiệp vụ:
-  - `InsufficientBalanceException` — Không đủ số dư
-  - `TaskOverdueException` — Task quá hạn
-  - `UnauthorizedAccessException` — Truy cập không phép
-  - `DuplicateExtensionRequestException` — T08: Đã xin gia hạn rồi
-  - `InvalidTaskStateException` — Chuyển trạng thái không hợp lệ
-
-## 3. Application Layer
-
-### 3.1 CQRS Pattern (khuyến nghị dùng MediatR)
+AI phải thực hiện tuần tự theo quy trình dưới đây, không nhảy bước:
 
 ```
-Application/
-├── Commands/
-│   ├── Tasks/
-│   │   ├── CreateTaskCommand.cs
-│   │   └── CreateTaskCommandHandler.cs
-│   ├── Wallet/
-│   │   ├── LockFundCommand.cs
-│   │   └── LockFundCommandHandler.cs
-│   └── ...
-├── Queries/
-│   ├── Tasks/
-│   │   ├── GetMyTasksQuery.cs
-│   │   └── GetMyTasksQueryHandler.cs
-│   └── ...
+[BƯỚC 1: Domain] Tạo thực thể (Entity) trong Domain
+       │
+       ▼
+[BƯỚC 2: Application] Tạo DTOs & Trình xác thực (FluentValidation)
+       │
+       ▼
+[BƯỚC 3: Application] Tạo Repository Interface & Service Interface + Cài đặt Service
+       │
+       ▼
+[BƯỚC 4: Infrastructure] Đăng ký DbSet trong DbContext & Hiện thực Repository/UnitOfWork
+       │
+       ▼
+[BƯỚC 5: Presentation] Tạo Controller & Đăng ký DI trong Extensions
+       │
+       ▼
+[BƯỚC 6: GatewayAPI] Định tuyến Router upstream/downstream trong ocelot.json
 ```
 
-### 3.2 DTOs
+## 4. HƯỚNG DẪN CẤU HÌNH & CHẠY DỰ ÁN DÀNH CHO AI
 
-```
-DTOs/
-├── Requests/
-│   ├── CreateSeriesRequest.cs
-│   ├── CreateTaskRequest.cs
-│   ├── SubmitTaskVersionRequest.cs
-│   └── ...
-├── Responses/
-│   ├── SeriesResponse.cs
-│   ├── TaskResponse.cs
-│   ├── WalletDashboardResponse.cs
-│   └── ...
+### 4.1. Cách biên dịch (Build) giải pháp
+
+Mỗi khi chỉnh sửa mã nguồn, AI phải chạy lệnh sau tại thư mục gốc để đảm bảo hệ thống không bị lỗi cú pháp hay tham chiếu:
+
+```powershell
+dotnet build MangaPublishingSystem.slnx
 ```
 
-- Naming: `{Action}{Entity}Request`, `{Entity}Response`.
+### 4.2. Cấu hình cổng chạy (Ports) & Routing của API Gateway
 
-```csharp
-public class CreateTaskRequest
-{
-    public Guid RegionId { get; set; }
-    public Guid AssistantId { get; set; }
-    public string Description { get; set; } = string.Empty;
-    public decimal PaymentAmount { get; set; }
-    public DateTime Deadline { get; set; }
-    public int ZIndexOrder { get; set; }
-}
-```
+* **GatewayAPI**: Chạy tại cổng **5000** (`http://localhost:5000`).
+* **Manga Service (Presentation)**: Chạy tại cổng **5010** (`http://localhost:5010`).
+* Mỗi khi viết một Controller mới (ví dụ: `ChaptersController` ứng với route `api/chapters`), AI **bắt buộc** phải bổ sung luật định tuyến vào cả hai tệp [ocelot.json](file:///d:/SWP391/Project/BE-SWP391/GatewayAPI/ocelot.json) và [ocelot.Development.json](file:///d:/SWP391/Project/BE-SWP391/GatewayAPI/ocelot.Development.json) của GatewayAPI:
 
-### 3.3 Validators — FluentValidation
-- Mỗi Request DTO có 1 Validator class.
-- Naming: `{RequestName}Validator`.
-- Đặt trong `Validators/`.
-
-```csharp
-public class CreateTaskRequestValidator : AbstractValidator<CreateTaskRequest>
-{
-    public CreateTaskRequestValidator()
-    {
-        RuleFor(x => x.PaymentAmount).GreaterThan(0).WithMessage("Tiền công phải lớn hơn 0.");
-        RuleFor(x => x.Deadline).GreaterThan(DateTime.UtcNow).WithMessage("Deadline phải là tương lai.");
-        RuleFor(x => x.Description).NotEmpty().MaximumLength(1000);
-        RuleFor(x => x.ZIndexOrder).GreaterThanOrEqualTo(0);
-    }
-}
-```
-
-### 3.4 Service Interfaces — `Interfaces/`
-- `IWalletService` — Lock / Transfer / Unlock / Funding / Genkouryo
-- `ITaskService` — Quản lý vòng đời Task (create, assign, approve, revision, cancel, dispute)
-- `ICompositeService` — Gộp ảnh (ImageSharp, Alpha Blending, Z-Index)
-- `INotificationService` — Gửi thông báo realtime (SignalR)
-- `IVNPayService` — Tích hợp VNPay Sandbox (Deposit/Withdraw)
-- `IFileStorageService` — Upload/Download files (Firebase/MinIO)
-- `IChapterService` — Quản lý chapters, QC, Genkoūryō calculation
-
-### 3.5 AutoMapper Profiles — `Mappings/`
-- 1 Profile per feature area: `TaskMappingProfile`, `WalletMappingProfile`, etc.
-
-## 4. Infrastructure Layer
-
-### 4.1 EF Core
-- DbContext: `MangaPublishingDbContext`
-- Entity configs: `Configurations/{EntityName}Configuration.cs` (IEntityTypeConfiguration)
-- Migrations folder: `Migrations/`
-- Connection: SQL Server
-
-### 4.2 Repositories — `Repositories/`
-- Implement từ Domain interfaces.
-- Generic Repository pattern cho CRUD cơ bản.
-- Specific repositories cho complex queries.
-
-### 4.3 External Services — `Services/`
-- `VNPayService.cs` — VNPay Sandbox integration + Checksum Signature validation.
-- `FirebaseStorageService.cs` — Upload/download files lên Firebase Storage.
-- `MinIOStorageService.cs` — Local dev alternative.
-- `RedisService.cs` — Caching (Ranking, Dashboard data).
-
-### 4.4 SignalR Hubs — `Hubs/`
-- `NotificationHub.cs` — Broadcast theo UserId hoặc Role.
-- Events: `TaskStatusChanged`, `NewNotification`, `WalletUpdated`, `ChapterApproved`.
-- Auto-fallback: WebSocket → SSE → Long Polling.
-
-### 4.5 Background Jobs — `BackgroundJobs/`
-- `AutoCompositeJob` — G01: Gộp ảnh khi tất cả Region trên trang hoàn thành.
-- `AutoApproveJob` — T04: Auto-approve sau 3 ngày Mangaka không phản hồi.
-- `AutoCleanupJob` — T03a: Hủy Task overdue 3 ngày, Unlock tiền.
-- `ProfileUpdateJob` — T09: Cập nhật AssistantProfile stats.
-- Sử dụng Hangfire hoặc BackgroundService tùy scale.
-
-## 5. API / Presentation Layer
-
-### 5.1 Controllers
-- Naming: `{Feature}Controller`.
-- Attribute: `[ApiController]`.
-- Route template: `api/[controller]`.
-- Authorization per Role:
-
-```csharp
-[ApiController]
-[Route("api/[controller]")]
-[Authorize]
-public class TasksController : ControllerBase
-{
-    [HttpPost]
-    [Authorize(Roles = "Mangaka")]
-    public async Task<ActionResult<ApiResponse<TaskResponse>>> CreateTask(
-        CreateTaskRequest request, CancellationToken ct) { }
-
-    [HttpGet]
-    [Authorize(Roles = "Assistant")]
-    public async Task<ActionResult<ApiResponse<List<TaskResponse>>>> GetMyTasks(
-        CancellationToken ct) { }
-
-    [HttpPut("{id}/approve")]
-    [Authorize(Roles = "Mangaka")]
-    public async Task<ActionResult<ApiResponse<TaskResponse>>> ApproveTask(
-        Guid id, CancellationToken ct) { }
-}
-```
-
-### 5.2 Key Controllers
-| Controller | Role chính | Mô tả |
-|-----------|-----------|-------|
-| `AuthController` | All | Login, Register (chỉ Assistant), Refresh Token |
-| `UsersController` | Admin | CRUD users, phê duyệt tài khoản |
-| `SeriesController` | Mangaka, Editor | CRUD series, submit xét duyệt |
-| `ChaptersController` | Mangaka, Editor | Upload, submit, approve chapters |
-| `PagesController` | Mangaka | Upload trang truyện |
-| `RegionsController` | Mangaka | Tạo/quản lý vùng khoanh |
-| `TasksController` | Mangaka, Assistant | CRUD tasks, approve, revision, dispute |
-| `TaskVersionsController` | Assistant | Upload kết quả nộp bài |
-| `AnnotationsController` | Editor, Mangaka | Tạo/xem annotations bắt lỗi |
-| `WalletsController` | Mangaka, Assistant | Xem số dư, lịch sử giao dịch |
-| `PaymentsController` | Mangaka, Assistant | VNPay deposit/withdraw |
-| `VotesController` | Board | Board voting (Approve/Reject series) |
-| `RankingsController` | Board, Mangaka | Nhập/xem ranking data |
-| `NotificationsController` | All | Xem thông báo |
-| `ContractsController` | Admin | Quản lý hợp đồng, phụ lục |
-| `ReportsController` | All | Báo cáo vi phạm |
-| `DisputesController` | Editor | Phân xử tranh chấp |
-
-### 5.3 Middleware
-- **ExceptionHandlingMiddleware** — Trả về chuẩn ProblemDetails (RFC 7807).
-- **RequestLoggingMiddleware** — Log request/response với Serilog.
-- **JWT Authentication Middleware** — ASP.NET Core built-in.
-
-### 5.4 API Response Format chuẩn
 ```json
 {
-  "success": true,
-  "data": { },
-  "message": "Operation completed successfully.",
-  "errors": []
+  "DownstreamPathTemplate": "/api/chapters/{everything}",
+  "DownstreamScheme": "http",
+  "DownstreamHostAndPorts": [
+    {
+      "Host": "localhost",
+      "Port": 5010
+    }
+  ],
+  "UpstreamPathTemplate": "/api/v1/chapters/{everything}",
+  "UpstreamHttpMethod": [ "Get", "Post", "Put", "Delete", "Patch", "Options" ]
 }
 ```
 
-## 6. Security
+*(Lưu ý: Upstream luôn dùng tiền tố `/api/v1/...` và Downstream trỏ về đúng cổng 5010 cùng route tương ứng của controller).*
 
-- Mọi endpoint phải có `[Authorize]` attribute (trừ Login/Register).
-- Password hash bằng BCrypt hoặc ASP.NET Core Identity.
-- JWT payload: `{ "sub": "user-guid", "role": "Mangaka", "exp": "..." }`.
-- VNPay giao tiếp phải check **Checksum Signature**.
-- Chống IDOR: luôn filter theo `UserId` từ JWT claims, không tin client input.
+## 5. NGUYÊN TẮC VIẾT MÃ NGUỒN (CODING RULES)
 
-## 7. Wallet & Transaction — CRITICAL RULES
+* **Xác thực dữ liệu**: Bắt buộc sử dụng **FluentValidation** tự động xác thực ở tầng Application, không viết mã kiểm tra thủ công (như if-else) trong Controller.
+* **Xử lý lỗi (Exception Handling)**:
+  * Ném các Exception chuẩn trong `BuildingBlocks.Exceptions` (ví dụ: `NotFoundException`, `ConflictException`) ở tầng Application/Service.
+  * Tầng Presentation sẽ tự động kích hoạt `GlobalExceptionMiddleware` để chuyển lỗi thành JSON chuẩn, không sử dụng khối `try-catch` bọc bừa bãi trong Controller.
+* **Định dạng phản hồi**: Mọi dữ liệu trả về client từ Gateway hay API đều sẽ được chuẩn hóa qua lớp `ApiResponse<T>` của BuildingBlocks.
+* **Quy tắc SignalR & WebSocket**:
+  * Khi định nghĩa Hub mới (ví dụ `/hubs/my-hub`), bắt buộc phải cấu hình **2 Route định tuyến tương ứng** trong `ocelot.json` và `ocelot.Development.json` của GatewayAPI:
+    1. Route HTTP cho request bắt tay (negotiate): Downstream `/hubs/my-hub/negotiate` trỏ tới `http` downstream scheme.
+    2. Route WebSockets cho kết nối chính: Downstream `/hubs/my-hub` trỏ tới `ws` downstream scheme.
+* **Quy tắc gửi Email (FluentEmail)**:
+  * Tiêm `IFluentEmail` trực tiếp vào constructor của Service ở tầng Application để gửi email. Tuyệt đối không khởi tạo thủ công đối tượng `SmtpClient`.
+* **Giữ sạch mã nguồn (Husky.Net)**:
+  * Hãy luôn chạy `dotnet build` trước khi đề xuất thay đổi, vì hệ thống có cấu hình tự động Husky.Net kích hoạt tại sự kiện Git `pre-commit` và `pre-push`. Bất kỳ lỗi biên dịch nào cũng sẽ bị Git chặn lại và không cho phép lưu trữ.
 
-> ⚠️ Mọi thao tác Wallet **BẮT BUỘC** bọc trong `DbTransaction` (ACID).
-
-- **Lock**: Trừ `SetupFundBalance` trước → thiếu thì trừ `WithdrawableBalance`.
-- **Unlock**: Đọc giao dịch Lock gốc → hoàn trả chính xác vào 2 ngăn.
-- **Transfer**: Chuyển từ Locked funds → Ví Assistant.
-- **Funding**: Hệ thống cấp vốn → `SetupFundBalance` Mangaka.
-- **Genkouryo**: Hệ thống trả nhuận bút → `WithdrawableBalance` Mangaka.
-- **Deposit/Withdraw**: VNPay Sandbox, phải có `ReferenceCode`.
-- **KHÔNG BAO GIỜ** cho phép số dư âm.
-- Mọi Transaction phải ghi log: `TransactionId`, `WalletId`, `Amount`, `Type`, `ReferenceId`, `ReferenceCode`, `Timestamp`.
-
-## 8. Logging — Serilog
-
-- **Information**: Business events (Task created, Chapter approved, Funding disbursed).
-- **Warning**: Anomalies (Auto-approve triggered, Low ranking alert).
-- **Error**: Exceptions, failed transactions.
-- Financial transactions **PHẢI** log structured data đầy đủ để kiểm toán.
-
-```csharp
-_logger.LogInformation("Wallet Lock executed. TransactionId={TransactionId}, WalletId={WalletId}, Amount={Amount}, TaskId={TaskId}",
-    transaction.Id, wallet.Id, amount, taskId);
-```
-
-## 9. Testing
-
-- Framework: **xUnit** + Moq + FluentAssertions.
-- Test naming: `{Method}_{Scenario}_{Expected}`.
-- Unit test bắt buộc cho:
-  - Domain logic (đặc biệt Wallet operations: Lock, Unlock, Transfer).
-  - Validators.
-  - Command/Query handlers.
-- Integration test cho API endpoints.
-
-## 10. Coding Conventions
-
-- `async/await` cho tất cả I/O operations.
-- Nullable reference types **enabled**.
-- File-scoped namespaces.
-- `CancellationToken` propagation qua tất cả async methods.
-- Không dùng magic strings — sử dụng constants hoặc enums.
-- Mỗi file chỉ chứa 1 class/interface/enum.
-- Regions **KHÔNG** dùng trong code.
-- XML doc comments cho public APIs.
+AI phải ghi nhớ và áp dụng nghiêm ngặt các quy tắc trên!
