@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/Services/" />
+  <Folder Name="/Services/MangaPublishingSystem/">
+    <Project Path="Services/MangaPublishingSystem/MangaPublishingSystem.Application/MangaPublishingSystem.Application.csproj" />
+    <Project Path="Services/MangaPublishingSystem/MangaPublishingSystem.Domain/MangaPublishingSystem.Domain.csproj" />
+    <Project Path="Services/MangaPublishingSystem/MangaPublishingSystem.Infrastructure/MangaPublishingSystem.Infrastructure.csproj" />
+    <Project Path="Services/MangaPublishingSystem/MangaPublishingSystem.Presentation/MangaPublishingSystem.Presentation.csproj" />
+  </Folder>
+  <Project Path="BuildingBlocks/BuildingBlocks.csproj" />
+  <Project Path="GatewayAPI/GatewayAPI.csproj" />
+</Solution>
