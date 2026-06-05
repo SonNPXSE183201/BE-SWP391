@@ -16,4 +16,10 @@
     <ProjectReference Include="..\BuildingBlocks\BuildingBlocks.csproj" />
   </ItemGroup>
 
+  <!-- Tự động restore local tools và cài đặt Git Hooks của Husky khi build ở môi trường local Debug -->
+  <Target Name="Husky" BeforeTargets="Restore" Condition="'$(Configuration)' == 'Debug' And Exists('$(MSBuildThisFileDirectory)../.git')">
+    <Exec Command="dotnet tool restore" WorkingDirectory="$(MSBuildThisFileDirectory)../" />
+    <Exec Command="dotnet husky install" WorkingDirectory="$(MSBuildThisFileDirectory)../" ContinueOnError="true" />
+  </Target>
+
 </Project>

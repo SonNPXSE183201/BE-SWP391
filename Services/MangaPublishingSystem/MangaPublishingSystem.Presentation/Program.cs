@@ -5,6 +5,7 @@ using FluentValidation;
 using FluentValidation.AspNetCore;
 using MangaPublishingSystem.Application.IRepositories;
 using MangaPublishingSystem.Presentation.Extensions;
+using MangaPublishingSystem.Presentation.Hubs;
 
 var builder = WebApplication.CreateBuilder(args);
 var config = builder.Configuration;
@@ -28,6 +29,7 @@ builder.Services.AddSwaggerAndAuth(config);
 
 // Presentation configurations
 builder.Services.AddPresentationServices();
+builder.Services.AddSignalR();
 
 builder.Services.AddCorsFromConfig(builder.Configuration);
 builder.Services.AddHealthChecks();
@@ -46,6 +48,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+app.MapHub<NotificationHub>("/hubs/notification");
 app.MapHealthChecks("/health");
 
 app.Run();

@@ -109,3 +109,38 @@ Khi bạn (hoặc AI) cần tạo một API chức năng mới (Ví dụ: Tạo 
   ```powershell
   dotnet run --project GatewayAPI/GatewayAPI.csproj
   ```
+
+---
+
+## 5. HƯỚNG DẪN CẤU HÌNH & SỬ DỤNG CÁC DỊCH VỤ TÍCH HỢP
+
+### 5.1. Cấu hình thông báo thời gian thực (SignalR)
+* **Hub Endpoint**: `/hubs/notification` (Địa chỉ upstream qua Gateway: `/api/v1/hubs/notification`).
+* **Định tuyến qua Gateway (Ocelot)**: 
+  * Ocelot được cấu hình chia 2 route: Route bắt tay (HTTP Post/Options `/negotiate`) và Route kết nối chính (WebSockets `ws://`).
+  * **Lưu ý về CORS**: Trình duyệt sẽ chặn kết nối nếu CORS để wildcard `*` khi dùng Credentials. Bắt buộc phải khai báo chính xác địa chỉ Client trong khóa `"Cors:AllowedOrigins"` tại tệp `appsettings.json`.
+
+### 5.2. Công cụ tự động hóa Git Hooks (Husky.Net)
+* **Mục tiêu**: Ngăn chặn commit/push mã nguồn gặp lỗi biên dịch.
+* **Cấu hình Git Hooks**:
+  * `pre-commit`: Tự động chạy lệnh `dotnet build MangaPublishingSystem.slnx` trước khi commit cục bộ.
+  * `pre-push`: Tự động chạy lệnh `dotnet build MangaPublishingSystem.slnx` trước khi push lên GitHub.
+* **Tự động hóa cho team**:
+  * Lập trình viên mới chỉ cần clone mã nguồn về và **Build lần đầu tiên**, MSBuild Target được cài sẵn trong tệp [GatewayAPI.csproj](file:///d:/SWP391/Project/BE-SWP391/GatewayAPI/GatewayAPI.csproj) sẽ tự động khôi phục công cụ Husky và cài đặt Git Hooks ngầm xuống thư mục `.git` mà không cần bất kỳ thao tác thủ công nào.
+
+### 5.3. Dịch vụ gửi Email (FluentEmail)
+* **Cách hoạt động**: Tích hợp gửi email trực tiếp qua SMTP Server.
+* **Cấu hình trong `appsettings.json`**:
+  ```json
+  "EmailSettings": {
+    "DefaultFromEmail": "noreply@yourdomain.com",
+    "DefaultFromName": "Manga Publishing System",
+    "SmtpServer": "smtp.gmail.com",
+    "Port": 587,
+    "Username": "your-email@gmail.com",
+    "Password": "your-app-password",
+    "EnableSsl": true
+  }
+  ```
+* **Cách sử dụng**:
+  * Tiêm `IFluentEmail` vào các Service cần gửi thông báo (ví dụ: ở lớp xử lý Onboarding) và gọi `SendAsync()` để thực hiện gửi mail.

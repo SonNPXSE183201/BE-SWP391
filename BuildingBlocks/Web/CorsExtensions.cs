@@ -20,7 +20,10 @@ namespace BuildingBlocks.Web
                     }
                     else
                     {
-                        builder.WithOrigins(origins).AllowAnyHeader().AllowAnyMethod();
+                        builder.WithOrigins(origins)
+                               .AllowAnyHeader()
+                               .AllowAnyMethod()
+                               .AllowCredentials();
                     }
                 });
             });
