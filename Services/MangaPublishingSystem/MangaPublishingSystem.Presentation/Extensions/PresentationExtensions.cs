@@ -12,6 +12,7 @@ namespace MangaPublishingSystem.Presentation.Extensions
                 {
                     options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
                     options.JsonSerializerOptions.PropertyNamingPolicy = null;
+                    options.JsonSerializerOptions.Converters.Add(new DateTimeJsonConverter());
                 });
 
             services.AddHttpContextAccessor();
