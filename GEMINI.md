@@ -97,6 +97,31 @@ dotnet build MangaPublishingSystem.slnx
 
 ## 5. NGUYÊN TẮC VIẾT MÃ NGUỒN (CODING RULES)
 
+* **Phân chia thư mục theo tính năng (Feature Folders)**:
+  * Khi triển khai hoặc viết mã cho bất kỳ chức năng/nghiệp vụ mới nào, AI **bắt buộc phải tạo một thư mục riêng biệt đặt tên theo tính năng đó** (ví dụ: thư mục `Chapter`, `Task`, `User`, `Wallet`...) bên trong các thư mục thành phần lớn như `DTOs`, `Validations`, `Services`, `Controllers`.
+  * **CẤM TUYỆT ĐỐI** tạo các tệp tin chức năng nằm lộn xộn trực tiếp dưới thư mục gốc (như `DTOs/`, `Validations/`, `Services/`, `Controllers/`) mà không phân cụm theo thư mục tính năng, nhằm đảm bảo nguồn mã được phân bổ khoa học, dễ quản lý và kiểm soát.
+* **Quy tắc phân chia tầng độc lập (Clean Architecture Boundaries)**:
+  * **Tầng Application (`MangaPublishingSystem.Application`)** phải luôn giữ **SẠCH** hoàn toàn, không phụ thuộc vào Entity Framework hay các thư viện hạ tầng cụ thể (`Microsoft.EntityFrameworkCore` hoặc `Microsoft.EntityFrameworkCore.Relational`).
+  * Tất cả các helper truy vấn cơ sở dữ liệu (ví dụ: `WhereContainsUnsigned`) **bắt buộc phải đặt tại tầng Infrastructure** (trong thư mục `Extensions`). Tầng Application tuyệt đối không được gọi trực tiếp các phương thức mở rộng hoặc collation của EF Core.
+* **Tự động hóa Kiểm toán (Audit Fields - CreateAt/UpdateAt)**:
+  * Tất cả các thực thể kế thừa từ `BaseEntity` đều tự động có 2 cột `CreateAt` và `UpdateAt`.
+  * **CẤM** tự cập nhật thủ công giá trị cho `CreateAt` và `UpdateAt` ở tầng nghiệp vụ (Service). `MangaPublishingDbContext.cs` đã được thiết lập tự động hóa: Gán `CreateAt = DateTime.UtcNow` khi thêm mới (Added) và `UpdateAt = DateTime.UtcNow` khi cập nhật (Modified).
+  * Trong các SQL script (`schema.sql`), mọi bảng đều phải có:
+    `CreateAt DATETIME2 NOT NULL DEFAULT GETUTCDATE()`,
+    `UpdateAt DATETIME2 NULL`.
+* **Múi giờ & Định dạng JSON**:
+  * Mọi dữ liệu thời gian lưu trữ trong DB và Backend C# bắt buộc phải sử dụng **múi giờ chuẩn UTC** (`DateTime.UtcNow`).
+  * Khi trả dữ liệu JSON về cho Client/FE, hệ thống sử dụng bộ chuyển đổi chung `DateTimeJsonConverter` để tự động đổi múi giờ sang giờ Việt Nam (**UTC+7**) và định dạng thân thiện: **`yyyy-MM-dd HH:mm:ss`**.
+* **Phân trang dùng chung (Pagination Capped at 50)**:
+  * Khi viết các API có danh sách cần phân trang, AI **bắt buộc tái sử dụng** các cấu trúc phân trang có sẵn:
+    * Đầu vào: Dùng **`PagedRequest`** (đã cấu hình Getter/Setter tự động giới hạn `PageSize` tối đa là **50**).
+    * Đầu ra: Dùng **`PagedResult<T>`** đóng gói danh sách `Items` kèm các siêu dữ liệu (`TotalItems`, `TotalPages`, `PageNumber`, `PageSize`, `HasNextPage`...).
+    * Truy vấn DB (IQueryable): Gọi hàm mở rộng **`ToPagedListAsync(...)`** ở tầng Infrastructure.
+    * Lọc bộ nhớ (IEnumerable): Gọi hàm mở rộng **`ToPagedList(...)`** trong `BuildingBlocks.Extensions`.
+* **Bộ tìm kiếm dùng chung (Search Extensions)**:
+  * **CẤM TUYỆT ĐỐI** tự viết mã loại bỏ dấu tiếng Việt hoặc so sánh hoa thường lặp lại. Sử dụng các tiện ích có sẵn:
+    * Lọc cơ sở dữ liệu (Database level): Dùng **`WhereContainsUnsigned(...)`** ở tầng Infrastructure để thực thi collation `SQL_Latin1_General_CP1_CI_AI` không phân biệt dấu và hoa thường trực tiếp trên máy chủ SQL Server.
+    * Lọc bộ nhớ (In-memory level): Dùng **`ContainsUnsigned(...)`** trong `BuildingBlocks.Extensions` để chuẩn hóa Unicode, xóa dấu và so sánh chữ thường.
 * **Xác thực dữ liệu**: Bắt buộc sử dụng **FluentValidation** tự động xác thực ở tầng Application, không viết mã kiểm tra thủ công (như if-else) trong Controller.
 * **Xử lý lỗi (Exception Handling)**:
   * Ném các Exception chuẩn trong `BuildingBlocks.Exceptions` (ví dụ: `NotFoundException`, `ConflictException`) ở tầng Application/Service.
