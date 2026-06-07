@@ -18,42 +18,68 @@ Chào mừng bạn đến với mã nguồn Backend của dự án **Manga Creat
 
 ---
 
-## 2. QUY ĐỊNH CẤU TRÚC LAYER TRONG CLEAN ARCHITECTURE
+## 2. QUY ĐỊNH CẤU TRÚC LAYER & NGUYÊN TẮC TỔ CHỨC CODE (ĐẶC BIỆT QUAN TRỌNG)
 
-Dự án nghiệp vụ chính `Services/MangaPublishingSystem` được chia nhỏ thành 4 Layer độc lập:
+Dự án áp dụng kiến trúc **Clean Architecture** kết hợp quy chuẩn **Feature Folders**. Lập trình viên **bắt buộc** phải tuân thủ việc viết đúng mã nguồn tại đúng nơi quy định, không viết lộn xộn.
 
-### 2.1. Domain Layer (`MangaPublishingSystem.Domain`)
-* **Trách nhiệm**: Chứa các thực thể nghiệp vụ cốt lõi, giá trị và logic miền nghiệp vụ.
-* **Thư mục cho phép**:
-  * `Entities/`: Các lớp thực thể kế thừa từ `BaseEntity` (ví dụ: `User.cs`, `Task.cs`, `Chapter.cs`).
-  * `Enums/`: Các kiểu liệt kê của hệ thống (ví dụ: `Role.cs`, `TaskStatus.cs`).
-  * `ValueObjects/`: Các đối tượng giá trị không có định danh độc lập.
-  * `Exceptions/`: Các Exception nghiệp vụ thuần của miền Domain.
-* **Quy tắc**: **Tuyệt đối không tham chiếu thư viện ngoài hoặc các tầng khác.**
+### 2.1. Phân chia Layer & Trách nhiệm (Dev viết gì ở đâu?)
 
-### 2.2. Application Layer (`MangaPublishingSystem.Application`)
-* **Trách nhiệm**: Định nghĩa các Use Case, DTOs truyền nhận dữ liệu, quy tắc kiểm tra đầu vào và điều phối luồng nghiệp vụ.
-* **Thư mục cho phép**:
-  * `DTOs/`: Chứa các lớp Data Transfer Object (Ví dụ: `CreateTaskDto.cs`, `TaskDto.cs`).
-  * `Validations/`: Chứa các bộ Validator kế thừa từ `AbstractValidator<T>` của FluentValidation để xác thực DTO.
-  * `IRepositories/`: Định nghĩa Interface truy xuất dữ liệu (ví dụ: `ITaskRepository.cs`) và `IUnitOfWork.cs`.
-  * `IServices/`: Định nghĩa Interface của Service nghiệp vụ điều khiển Use Case (ví dụ: `ITaskService.cs`).
-  * `Services/`: Hiện thực hóa của Service Interface (chứa logic nghiệp vụ chính của hệ thống).
-* **Quy tắc**: Không truy cập trực tiếp DB, mọi tương tác dữ liệu phải thông qua các interface trong `IRepositories`.
+* **Tầng Domain (`MangaPublishingSystem.Domain`)**:
+  * *Viết gì ở đây:* Thực thể nghiệp vụ (`Entities`), các kiểu liệt kê (`Enums`), đối tượng giá trị (`ValueObjects`), hoặc ngoại lệ nghiệp vụ lõi (`Exceptions`).
+  * *Quy tắc:* **CẤM TUYỆT ĐỐI** tham chiếu Entity Framework, thư viện ngoài, hoặc các tầng khác.
+* **Tầng Application (`MangaPublishingSystem.Application`)**:
+  * *Viết gì ở đây:* Interfaces nghiệp vụ (`IServices`, `IRepositories`, `IUnitOfWork`), các lớp DTOs truyền nhận, các bộ kiểm tra đầu vào (FluentValidation) và các Service nghiệp vụ điều khiển Use Case.
+  * *Quy tắc:* **Sạch hoàn toàn.** Cấm truy cập trực tiếp DB hoặc sử dụng các thư viện cụ thể của EF Core (`Microsoft.EntityFrameworkCore.Relational`). 
+* **Tầng Infrastructure (`MangaPublishingSystem.Infrastructure`)**:
+  * *Viết gì ở đây:* Cấu hình kết nối DB (`MangaPublishingDbContext`), cấu hình ánh xạ bảng Fluent API (`Configurations/`), hiện thực cụ thể của các Repository, và các dịch vụ bên thứ ba (VNPay Sandbox, Storage).
+  * *Quy tắc:* Mọi helper truy vấn CSDL liên quan đến EF Core (ví dụ: `WhereContainsUnsigned`) phải nằm ở đây.
+* **Tầng Presentation (`MangaPublishingSystem.Presentation`)**:
+  * *Viết gì ở đây:* Controllers tiếp nhận HTTP request, các cấu hình khởi chạy (`Program.cs`, `appsettings.json`), và các hàm đăng ký DI (`Extensions/DependencyInjectionExtensions.cs`).
+  * *Quy tắc:* Chỉ gọi xuống tầng Application, giữ Controller mỏng nhất có thể.
 
-### 2.3. Infrastructure Layer (`MangaPublishingSystem.Infrastructure`)
-* **Trách nhiệm**: Hiện thực hóa các giao tiếp ngoại vi (Cơ sở dữ liệu, bên thứ ba VNPay Sandbox, File Storage).
-* **Thư mục cho phép**:
-  * `Data/`: `MangaPublishingDbContext` cấu hình DB, các lớp `IEntityTypeConfiguration<T>` cấu hình Fluent API.
-  * `Repositories/`: Hiện thực cụ thể của các Repository Interface (ví dụ: `TaskRepository.cs`) và `UnitOfWork.cs`.
-  * `Services/`: Hiện thực các dịch vụ ngoại vi (ví dụ: `FirebaseStorageService`, `VnPayPaymentService`).
+---
 
-### 2.4. Presentation Layer (`MangaPublishingSystem.Presentation`)
-* **Trách nhiệm**: Expose API ra bên ngoài, xử lý yêu cầu HTTP và đăng ký DI.
-* **Thư mục cho phép**:
-  * `Controllers/`: Chứa các Controller tiếp nhận HTTP request.
-  * `Extensions/`: Các phương thức đăng ký dịch vụ (`DependencyInjectionExtensions.cs` để đăng ký DI cho Repo/Service, `InfrastructureExtensions.cs` để đăng ký DbContext).
-  * `Program.cs`, `appsettings.json`, `launchSettings.json`.
+### 2.2. Quy tắc tổ chức Code theo thư mục tính năng (Feature Folders)
+
+Để tránh mã nguồn bị lộn xộn và chồng chéo, lập trình viên **bắt buộc phải phân cụm mã nguồn theo thư mục tính năng** bên trong các thư mục lớn của `Application` và `Presentation`:
+
+* **Cách cấu trúc đúng:**
+  ```text
+  MangaPublishingSystem.Application/
+  ├── DTOs/
+  │   ├── Chapter/         <-- Thư mục tính năng
+  │   │   ├── ChapterDto.cs
+  │   │   └── CreateChapterDto.cs
+  │   └── Task/
+  │       └── TaskDto.cs
+  ├── Validations/
+  │   └── Chapter/         <-- Thư mục tính năng
+  │       └── CreateChapterDtoValidator.cs
+  ```
+* **CẤM TUYỆT ĐỐI:** Tạo các file DTO, Validator, Service, hay Controller trực tiếp dưới thư mục cha (`DTOs/`, `Validations/`, `Services/`, `Controllers/`) mà không nằm trong thư mục tính năng cụ thể.
+
+---
+
+### 2.3. Các cấu hình và Tiện ích dùng chung (Không tạo thêm, không viết trùng)
+
+* **Tự động hóa Kiểm toán (Audit Fields - CreateAt/UpdateAt):**
+  * Tất cả các thực thể kế thừa từ `BaseEntity` đều tự động có cột `CreateAt` và `UpdateAt`.
+  * Lập trình viên **không tự gán thủ công** thời gian khi Insert/Update trong Service. Hệ thống sẽ tự động gán thông qua cơ chế ghi đè `SaveChanges` tại [MangaPublishingDbContext.cs](file:///d:/SWP391/Project/BE-SWP391/Services/MangaPublishingSystem/MangaPublishingSystem.Infrastructure/Data/MangaPublishingDbContext.cs).
+* **Quy tắc ánh xạ Enum & Ràng buộc CSDL (Enum Mapping & DB Constraints):**
+  * Để dữ liệu trực quan dễ đọc, mọi Enum sử dụng trong DB (ví dụ: `UserStatus` cho cột `Status`) **bắt buộc** phải được chuyển đổi thành chuỗi khi lưu trữ bằng cách sử dụng `.HasConversion<string>()` trong các file cấu hình Fluent API (trong `Configurations/`).
+  * Đồng thời, **bắt buộc** phải thêm ràng buộc `CHECK CONSTRAINT` tương ứng trong file `schema.sql` (ví dụ: `CONSTRAINT CK_User_Status CHECK (Status IN (N'Pending', N'Active', N'Rejected', N'Locked'))`) để đảm bảo tính toàn vẹn dữ liệu chặt chẽ ở tầng CSDL vật lý.
+* **Múi giờ & Định dạng JSON (UTC & Vietnam Time):**
+  * Database và Backend C# lưu trữ toàn bộ thời gian theo **múi giờ chuẩn UTC** (`DateTime.UtcNow`).
+  * Khi trả dữ liệu ra ngoài API cho FE, hệ thống sử dụng bộ lọc `DateTimeJsonConverter` tự động đổi sang múi giờ Việt Nam (**UTC+7**) và format dạng dễ đọc: **`yyyy-MM-dd HH:mm:ss`**.
+* **Phân trang dùng chung (Pagination Capped at 50):**
+  * Không viết lại logic phân trang. Sử dụng các lớp có sẵn trong `BuildingBlocks.Web.Responses`:
+    * Đầu vào: **`PagedRequest`** (Tự động khống chế `PageSize` tối đa là **50**).
+    * Đầu ra: **`PagedResult<T>`** đóng gói kèm metadata cho FE vẽ UI.
+    * Lọc DB: Dùng phương thức mở rộng **`ToPagedListAsync(...)`** ở tầng Infrastructure.
+    * Lọc bộ nhớ: Dùng **`ToPagedList(...)`** trong `BuildingBlocks.Extensions`.
+* **Tìm kiếm không dấu & không phân biệt hoa thường (Search Extensions):**
+  * Lọc cơ sở dữ liệu: Dùng **`WhereContainsUnsigned(...)`** ở tầng Infrastructure để thực thi collation `SQL_Latin1_General_CP1_CI_AI` trên SQL Server.
+  * Lọc bộ nhớ RAM: Dùng **`ContainsUnsigned(...)`** trong `BuildingBlocks.Extensions`.
 
 ---
 

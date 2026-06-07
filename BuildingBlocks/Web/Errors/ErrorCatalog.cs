@@ -12,13 +12,13 @@ namespace BuildingBlocks.Web.Errors
         {
             return statusCode switch
             {
-                StatusCodes.Status400BadRequest => new ErrorDescriptor(StatusCodes.Status400BadRequest, "The request is invalid."),
-                StatusCodes.Status401Unauthorized => new ErrorDescriptor(StatusCodes.Status401Unauthorized, "You are not authenticated or the access token is invalid."),
-                StatusCodes.Status403Forbidden => new ErrorDescriptor(StatusCodes.Status403Forbidden, "You do not have permission to access this resource."),
-                StatusCodes.Status404NotFound => new ErrorDescriptor(StatusCodes.Status404NotFound, "The requested resource or endpoint was not found."),
-                StatusCodes.Status409Conflict => new ErrorDescriptor(StatusCodes.Status409Conflict, "The request could not be completed because of a conflict."),
-                StatusCodes.Status500InternalServerError => new ErrorDescriptor(StatusCodes.Status500InternalServerError, "Internal server error. Please try again later."),
-                _ => new ErrorDescriptor(statusCode, "Request failed.")
+                StatusCodes.Status400BadRequest => new ErrorDescriptor(StatusCodes.Status400BadRequest, "Yêu cầu không hợp lệ."),
+                StatusCodes.Status401Unauthorized => new ErrorDescriptor(StatusCodes.Status401Unauthorized, "Tài khoản chưa được xác thực hoặc mã token truy cập không hợp lệ."),
+                StatusCodes.Status403Forbidden => new ErrorDescriptor(StatusCodes.Status403Forbidden, "Bạn không có quyền truy cập vào tài nguyên này."),
+                StatusCodes.Status404NotFound => new ErrorDescriptor(StatusCodes.Status404NotFound, "Không tìm thấy tài nguyên hoặc điểm cuối (endpoint) được yêu cầu."),
+                StatusCodes.Status409Conflict => new ErrorDescriptor(StatusCodes.Status409Conflict, "Yêu cầu không thể hoàn thành do có xung đột dữ liệu."),
+                StatusCodes.Status500InternalServerError => new ErrorDescriptor(StatusCodes.Status500InternalServerError, "Lỗi hệ thống nội bộ. Vui lòng thử lại sau."),
+                _ => new ErrorDescriptor(statusCode, "Yêu cầu thất bại.")
             };
         }
 
@@ -31,13 +31,13 @@ namespace BuildingBlocks.Web.Errors
 
             if (exception is NotImplementedException)
             {
-                return new ErrorDescriptor((int)HttpStatusCode.NotImplemented, "This feature is not implemented yet.");
+                return new ErrorDescriptor((int)HttpStatusCode.NotImplemented, "Tính năng này chưa được phát triển.");
             }
 
             if (IsDatabaseConnectionIssue(exception))
             {
                 return new ErrorDescriptor(StatusCodes.Status500InternalServerError,
-                    "Unable to connect to the database server. Please check network connectivity or the database server status.");
+                    "Không thể kết nối đến máy chủ cơ sở dữ liệu. Vui lòng kiểm tra kết nối mạng hoặc trạng thái máy chủ cơ sở dữ liệu.");
             }
 
             return FromStatusCode(StatusCodes.Status500InternalServerError);
