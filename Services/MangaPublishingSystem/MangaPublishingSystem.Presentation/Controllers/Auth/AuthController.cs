@@ -23,5 +23,12 @@ namespace MangaPublishingSystem.Presentation.Controllers.Auth
             var result = await _authService.LoginAsync(loginDto);
             return Ok(ApiResponse<AuthResponseDto>.Success(result, "Đăng nhập thành công."));
         }
+
+        [HttpPost("register")]
+        public async Task<ActionResult<ApiResponse<RegisterResponseDto>>> Register([FromBody] RegisterDto registerDto)
+        {
+            var result = await _authService.RegisterAssistantAsync(registerDto);
+            return Ok(ApiResponse<RegisterResponseDto>.Success(result, result.Message));
+        }
     }
 }

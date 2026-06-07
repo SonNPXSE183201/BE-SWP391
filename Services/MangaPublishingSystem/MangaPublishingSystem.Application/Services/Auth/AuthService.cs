@@ -1,9 +1,14 @@
+using System;
+using System.Linq;
 using System.Threading.Tasks;
 using BuildingBlocks.Exceptions;
 using MangaPublishingSystem.Application.Common.Security;
+using MangaPublishingSystem.Application.Common.Templates;
 using MangaPublishingSystem.Application.DTOs.Auth;
 using MangaPublishingSystem.Application.IRepositories;
+using MangaPublishingSystem.Application.IServices;
 using MangaPublishingSystem.Application.IServices.Auth;
+using MangaPublishingSystem.Domain.Entities;
 using MangaPublishingSystem.Domain.Enums;
 
 namespace MangaPublishingSystem.Application.Services.Auth
@@ -11,17 +16,29 @@ namespace MangaPublishingSystem.Application.Services.Auth
     public class AuthService : IAuthService
     {
         private readonly IUserRepository _userRepository;
+        private readonly IRoleRepository _roleRepository;
         private readonly IPasswordHasher _passwordHasher;
         private readonly IJwtTokenGenerator _jwtTokenGenerator;
+        private readonly IEmailService _emailService;
+        private readonly IUnitOfWork _unitOfWork;
+        private readonly IOtpService _otpService;
 
         public AuthService(
             IUserRepository userRepository,
+            IRoleRepository roleRepository,
             IPasswordHasher passwordHasher,
-            IJwtTokenGenerator jwtTokenGenerator)
+            IJwtTokenGenerator jwtTokenGenerator,
+            IEmailService emailService,
+            IUnitOfWork unitOfWork,
+            IOtpService otpService)
         {
             _userRepository = userRepository;
+            _roleRepository = roleRepository;
             _passwordHasher = passwordHasher;
             _jwtTokenGenerator = jwtTokenGenerator;
+            _emailService = emailService;
+            _unitOfWork = unitOfWork;
+            _otpService = otpService;
         }
 
         public async Task<AuthResponseDto> LoginAsync(LoginDto loginDto)
@@ -69,6 +86,100 @@ namespace MangaPublishingSystem.Application.Services.Auth
                 FullName = user.FullName,
                 RoleName = user.Role.RoleName,
                 Token = token
+            };
+        }
+
+        public async Task<RegisterResponseDto> RegisterAssistantAsync(RegisterDto registerDto)
+        {
+            // 1. Kiểm tra duy nhất (Username / Email)
+            var existingUser = await _userRepository.GetUserWithRoleByUsernameOrEmailAsync(registerDto.UserName);
+            if (existingUser != null)
+            {
+                throw new ConflictException("Tên đăng nhập đã tồn tại trên hệ thống.");
+            }
+
+            var existingEmail = await _userRepository.GetUserWithRoleByUsernameOrEmailAsync(registerDto.Email);
+            if (existingEmail != null)
+            {
+                throw new ConflictException("Email đã tồn tại trên hệ thống.");
+            }
+
+            var roles = await _roleRepository.FindAsync(r => r.RoleName == "Assistant");
+            var assistantRole = roles.FirstOrDefault();
+            if (assistantRole == null)
+            {
+                throw new NotFoundException("Vai trò Trợ lý không tồn tại trên hệ thống.");
+            }
+
+            // Nhánh A: Chưa nhập mã OTP -> Tạo OTP và gửi vào email
+            if (string.IsNullOrEmpty(registerDto.VerificationCode))
+            {
+                await _otpService.SendOtpAsync(registerDto.Email);
+                return new RegisterResponseDto
+                {
+                    RequiresVerification = true,
+                    Message = "Mã xác thực OTP đã được gửi tới email của bạn. Vui lòng nhập mã để hoàn tất đăng ký."
+                };
+            }
+
+            // Nhánh B: Đã nhập mã OTP -> So khớp OTP và hoàn tất đăng ký
+            var isOtpValid = _otpService.VerifyOtp(registerDto.Email, registerDto.VerificationCode);
+            if (!isOtpValid)
+            {
+                throw new BadRequestException("Mã xác thực email không chính xác hoặc đã hết hạn.");
+            }
+
+            var user = new User
+            {
+                RoleId = assistantRole.Id,
+                UserName = registerDto.UserName,
+                PasswordHash = _passwordHasher.HashPassword(registerDto.Password),
+                Email = registerDto.Email,
+                FullName = registerDto.FullName,
+                Status = UserStatus.Pending,
+                PortfolioUrl = registerDto.PortfolioUrl,
+                Skills = registerDto.Skills,
+                Wallet = new Wallet
+                {
+                    SetupFundBalance = 0.00m,
+                    WithdrawableBalance = 0.00m,
+                    LockedFund = 0.00m,
+                    LockedWithdrawable = 0.00m
+                },
+                AssistantProfile = new AssistantProfile
+                {
+                    SpecialtyTags = registerDto.Skills,
+                    TotalCompletedTasks = 0,
+                    OnTimeRate = 0.00m,
+                    DisputeRate = 0.00m,
+                    CurrentActiveTasks = 0,
+                    AverageRating = 0.00m
+                }
+            };
+
+            await _userRepository.AddAsync(user);
+            await _unitOfWork.SaveChangesAsync();
+
+            try
+            {
+                var emailSubject = "Đăng ký tài khoản Trợ lý thành công - Chờ phê duyệt";
+                var emailBody = EmailTemplates.GetRegisterSuccessBody(
+                    user.FullName,
+                    user.UserName,
+                    user.Email,
+                    user.PortfolioUrl);
+
+                await _emailService.SendEmailAsync(user.Email, emailSubject, emailBody);
+            }
+            catch (Exception)
+            {
+                // Chỉ ghi nhận cảnh báo gửi mail lỗi, không hủy giao dịch lưu DB vì tài khoản đã tạo hợp lệ
+            }
+
+            return new RegisterResponseDto
+            {
+                RequiresVerification = false,
+                Message = "Đăng ký tài khoản trợ lý thành công. Vui lòng chờ phê duyệt từ quản trị viên."
             };
         }
     }
