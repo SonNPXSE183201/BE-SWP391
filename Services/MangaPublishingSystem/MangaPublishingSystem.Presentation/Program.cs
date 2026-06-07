@@ -10,38 +10,49 @@ using MangaPublishingSystem.Presentation.Hubs;
 var builder = WebApplication.CreateBuilder(args);
 var config = builder.Configuration;
 
+// Controllers
 builder.Services.AddControllers();
+
+// FluentValidation
 builder.Services.AddFluentValidationAutoValidation();
 builder.Services.AddValidatorsFromAssemblyContaining<IUnitOfWork>();
+
+// Swagger
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerWithBearer();
+
+// JWT
 builder.Services.AddJwtAuthenticationFromEnv(config);
+
+// User Secrets
 builder.Configuration.AddUserSecrets<Program>();
 
-// Database & Infrastructure registrations
+// Infrastructure
 builder.Services.AddInfrastructureServices(config);
 
-// Repositories, Services, Unit Of Work registrations
+// Application DI (QUAN TRỌNG)
 builder.Services.AddApplicationServices();
 
-// Swagger & Auth configuration
-builder.Services.AddSwaggerAndAuth(config);
-
-// Presentation configurations
+// Presentation
 builder.Services.AddPresentationServices();
+
+// SignalR
 builder.Services.AddSignalR();
 
+// CORS + HealthCheck
 builder.Services.AddCorsFromConfig(builder.Configuration);
 builder.Services.AddHealthChecks();
 
 var app = builder.Build();
 
+// Swagger UI
 if (app.Environment.IsDevelopment() || app.Environment.EnvironmentName == "Docker")
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
 
+// Middleware pipeline
 app.UseCors("Default");
 app.UseGlobalExceptionHandler();
 app.UseAuthentication();
