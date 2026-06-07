@@ -80,7 +80,8 @@ CREATE TABLE dbo.[User] (
     CONSTRAINT PK_User PRIMARY KEY CLUSTERED (UserId),
     CONSTRAINT FK_User_Role FOREIGN KEY (RoleId) REFERENCES dbo.Role (RoleId),
     CONSTRAINT UQ_User_UserName UNIQUE (UserName),
-    CONSTRAINT UQ_User_Email UNIQUE (Email)
+    CONSTRAINT UQ_User_Email UNIQUE (Email),
+    CONSTRAINT CK_User_Status CHECK (Status IN (N'Pending', N'Active', N'Rejected', N'Locked'))
 );
 GO
 
@@ -181,8 +182,8 @@ CREATE TABLE dbo.Series (
     CreateAt DATETIME2 NOT NULL CONSTRAINT DF_Series_CreateAt DEFAULT GETUTCDATE(),
     UpdateAt DATETIME2 NULL,
     CONSTRAINT PK_Series PRIMARY KEY CLUSTERED (SeriesId),
-    CONSTRAINT FK_Series_Mangaka KEY_MANGAKA FOREIGN KEY (MangakaId) REFERENCES dbo.[User] (UserId) ON DELETE NO ACTION,
-    CONSTRAINT FK_Series_Editor KEY_EDITOR FOREIGN KEY (EditorId) REFERENCES dbo.[User] (UserId) ON DELETE NO ACTION
+    CONSTRAINT FK_Series_Mangaka FOREIGN KEY (MangakaId) REFERENCES dbo.[User] (UserId) ON DELETE NO ACTION,
+    CONSTRAINT FK_Series_Editor FOREIGN KEY (EditorId) REFERENCES dbo.[User] (UserId) ON DELETE NO ACTION
 );
 GO
 
