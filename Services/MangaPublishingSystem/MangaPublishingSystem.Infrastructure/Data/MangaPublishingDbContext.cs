@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using MangaPublishingSystem.Domain.Entities;
 
 namespace MangaPublishingSystem.Infrastructure.Data
 {
@@ -18,5 +19,8 @@ namespace MangaPublishingSystem.Infrastructure.Data
             base.OnModelCreating(modelBuilder);
             modelBuilder.ApplyConfigurationsFromAssembly(typeof(MangaPublishingDbContext).Assembly);
         }
+
+        // VNPay transaction table
+        public DbSet<VNPayTransaction> VNPayTransactions { get; set; }
     }
 }
