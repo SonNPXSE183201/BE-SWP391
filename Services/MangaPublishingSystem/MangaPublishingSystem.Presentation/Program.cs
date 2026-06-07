@@ -3,9 +3,11 @@ using BuildingBlocks.Web;
 using BuildingBlocks.Web.Middlewares;
 using FluentValidation;
 using FluentValidation.AspNetCore;
+using MangaPublishingSystem.Application;
 using MangaPublishingSystem.Application.IRepositories;
 using MangaPublishingSystem.Presentation.Extensions;
 using MangaPublishingSystem.Presentation.Hubs;
+using MangaPublishingSystem.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
 var config = builder.Configuration;
