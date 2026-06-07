@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using MangaPublishingSystem.Domain.Common;
+using MangaPublishingSystem.Domain.Enums;
 
 namespace MangaPublishingSystem.Domain.Entities
 {
@@ -11,7 +12,7 @@ namespace MangaPublishingSystem.Domain.Entities
         public string PasswordHash { get; set; } = null!;
         public string Email { get; set; } = null!;
         public string FullName { get; set; } = null!;
-        public string Status { get; set; } = "Pending";
+        public UserStatus Status { get; set; } = UserStatus.Pending;
         public string? PenName { get; set; }
         public string? PortfolioUrl { get; set; }
         public string? Skills { get; set; }

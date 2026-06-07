@@ -2,6 +2,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using MangaPublishingSystem.Domain.Entities;
+using MangaPublishingSystem.Domain.Enums;
 
 namespace MangaPublishingSystem.Infrastructure.Data.Configurations
 {
@@ -35,7 +36,8 @@ namespace MangaPublishingSystem.Infrastructure.Data.Configurations
 
             builder.Property(e => e.Status)
                 .HasMaxLength(50)
-                .HasDefaultValue("Pending")
+                .HasDefaultValue(UserStatus.Pending)
+                .HasConversion<string>()
                 .IsRequired();
 
             builder.Property(e => e.CreateAt)

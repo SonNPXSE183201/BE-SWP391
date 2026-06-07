@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Mail;
 using System.Linq;
+using MangaPublishingSystem.Application.Common.Security;
 using MangaPublishingSystem.Application.IRepositories;
 using MangaPublishingSystem.Application.IServices;
 using MangaPublishingSystem.Infrastructure.Data;
@@ -59,6 +60,10 @@ namespace MangaPublishingSystem.Infrastructure
                 });
 
             services.AddScoped<IEmailService, FluentEmailService>();
+
+            // Security services
+            services.AddScoped<IPasswordHasher, BCryptPasswordHasher>();
+            services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
 
             return services;
         }
