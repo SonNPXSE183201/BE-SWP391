@@ -6,5 +6,6 @@ namespace MangaPublishingSystem.Application.IServices.Auth
     public interface IAuthService
     {
         Task<AuthResponseDto> LoginAsync(LoginDto loginDto);
+        Task<RegisterResponseDto> RegisterAssistantAsync(RegisterDto registerDto);
     }
 }
