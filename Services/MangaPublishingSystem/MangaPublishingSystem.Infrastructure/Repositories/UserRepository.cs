@@ -1,3 +1,9 @@
+<<<<<<< HEAD
+=======
+using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
+using MangaPublishingSystem.Domain.Entities;
+>>>>>>> origin/dev
 using MangaPublishingSystem.Application.IRepositories;
 using MangaPublishingSystem.Domain.Entities;
 using MangaPublishingSystem.Infrastructure.Data;
@@ -34,6 +40,13 @@ namespace MangaPublishingSystem.Infrastructure.Repositories
         public async Task<bool> ExistsByUserNameAsync(string userName)
         {
             return await _context.Users.AnyAsync(x => x.UserName == userName);
+        }
+
+        public async Task<User?> GetUserWithRoleByUsernameOrEmailAsync(string identifier)
+        {
+            return await _context.Users
+                .Include(u => u.Role)
+                .FirstOrDefaultAsync(u => u.UserName == identifier || u.Email == identifier);
         }
     }
 }

@@ -65,6 +65,9 @@ Dự án áp dụng kiến trúc **Clean Architecture** kết hợp quy chuẩn 
 * **Tự động hóa Kiểm toán (Audit Fields - CreateAt/UpdateAt):**
   * Tất cả các thực thể kế thừa từ `BaseEntity` đều tự động có cột `CreateAt` và `UpdateAt`.
   * Lập trình viên **không tự gán thủ công** thời gian khi Insert/Update trong Service. Hệ thống sẽ tự động gán thông qua cơ chế ghi đè `SaveChanges` tại [MangaPublishingDbContext.cs](file:///d:/SWP391/Project/BE-SWP391/Services/MangaPublishingSystem/MangaPublishingSystem.Infrastructure/Data/MangaPublishingDbContext.cs).
+* **Quy tắc ánh xạ Enum & Ràng buộc CSDL (Enum Mapping & DB Constraints):**
+  * Để dữ liệu trực quan dễ đọc, mọi Enum sử dụng trong DB (ví dụ: `UserStatus` cho cột `Status`) **bắt buộc** phải được chuyển đổi thành chuỗi khi lưu trữ bằng cách sử dụng `.HasConversion<string>()` trong các file cấu hình Fluent API (trong `Configurations/`).
+  * Đồng thời, **bắt buộc** phải thêm ràng buộc `CHECK CONSTRAINT` tương ứng trong file `schema.sql` (ví dụ: `CONSTRAINT CK_User_Status CHECK (Status IN (N'Pending', N'Active', N'Rejected', N'Locked'))`) để đảm bảo tính toàn vẹn dữ liệu chặt chẽ ở tầng CSDL vật lý.
 * **Múi giờ & Định dạng JSON (UTC & Vietnam Time):**
   * Database và Backend C# lưu trữ toàn bộ thời gian theo **múi giờ chuẩn UTC** (`DateTime.UtcNow`).
   * Khi trả dữ liệu ra ngoài API cho FE, hệ thống sử dụng bộ lọc `DateTimeJsonConverter` tự động đổi sang múi giờ Việt Nam (**UTC+7**) và format dạng dễ đọc: **`yyyy-MM-dd HH:mm:ss`**.

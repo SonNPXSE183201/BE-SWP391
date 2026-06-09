@@ -1,20 +1,48 @@
 using BuildingBlocks.Security;
 using BuildingBlocks.Web;
 using BuildingBlocks.Web.Middlewares;
+using BuildingBlocks.Web.Responses;
+using Microsoft.AspNetCore.Mvc;
 using FluentValidation;
 using FluentValidation.AspNetCore;
+using MangaPublishingSystem.Application;
 using MangaPublishingSystem.Application.IRepositories;
 using MangaPublishingSystem.Infrastructure.Repositories; // THÊM DÒNG NÀY
 using MangaPublishingSystem.Presentation.Extensions;
 using MangaPublishingSystem.Presentation.Hubs;
+using MangaPublishingSystem.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
 var config = builder.Configuration;
 
+<<<<<<< HEAD
 // Controllers
 builder.Services.AddControllers();
 
 // FluentValidation
+=======
+builder.Services.AddControllers()
+    .ConfigureApiBehaviorOptions(options =>
+    {
+        options.InvalidModelStateResponseFactory = context =>
+        {
+            var errors = context.ModelState
+                .Where(e => e.Value != null && e.Value.Errors.Count > 0)
+                .ToDictionary(
+                    kvp => kvp.Key,
+                    kvp => kvp.Value!.Errors.Select(x => x.ErrorMessage).ToArray()
+                );
+
+            var response = ApiResponse<object>.Failure(
+                StatusCodes.Status400BadRequest,
+                "Dữ liệu yêu cầu không hợp lệ.",
+                errors
+            );
+
+            return new BadRequestObjectResult(response);
+        };
+    });
+>>>>>>> origin/dev
 builder.Services.AddFluentValidationAutoValidation();
 builder.Services.AddValidatorsFromAssemblyContaining<IUnitOfWork>();
 

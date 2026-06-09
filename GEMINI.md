@@ -109,6 +109,9 @@ dotnet build MangaPublishingSystem.slnx
   * Trong các SQL script (`schema.sql`), mọi bảng đều phải có:
     `CreateAt DATETIME2 NOT NULL DEFAULT GETUTCDATE()`,
     `UpdateAt DATETIME2 NULL`.
+* **Quy tắc khai báo Enum & Ràng buộc Database (Enum Mapping & DB Constraints)**:
+  * Khi tạo các trường dữ liệu kiểu Enum (ví dụ: `UserStatus` cho `Status`), bắt buộc phải sử dụng cấu hình `.HasConversion<string>()` trong Fluent API cấu hình thực thể (Configuration) để lưu trữ dưới dạng chuỗi (`VARCHAR`/`NVARCHAR`) trong cơ sở dữ liệu thay vì số nguyên.
+  * Đồng thời, bắt buộc phải thêm ràng buộc `CHECK CONSTRAINT` tương ứng trong tệp SQL khởi tạo cơ sở dữ liệu `schema.sql` (ví dụ: `CONSTRAINT CK_User_Status CHECK (Status IN (N'Pending', N'Active', N'Rejected', N'Locked'))`) để đảm bảo tính toàn vẹn dữ liệu chặt chẽ ở cả mức vật lý.
 * **Múi giờ & Định dạng JSON**:
   * Mọi dữ liệu thời gian lưu trữ trong DB và Backend C# bắt buộc phải sử dụng **múi giờ chuẩn UTC** (`DateTime.UtcNow`).
   * Khi trả dữ liệu JSON về cho Client/FE, hệ thống sử dụng bộ chuyển đổi chung `DateTimeJsonConverter` để tự động đổi múi giờ sang giờ Việt Nam (**UTC+7**) và định dạng thân thiện: **`yyyy-MM-dd HH:mm:ss`**.
@@ -123,6 +126,8 @@ dotnet build MangaPublishingSystem.slnx
     * Lọc cơ sở dữ liệu (Database level): Dùng **`WhereContainsUnsigned(...)`** ở tầng Infrastructure để thực thi collation `SQL_Latin1_General_CP1_CI_AI` không phân biệt dấu và hoa thường trực tiếp trên máy chủ SQL Server.
     * Lọc bộ nhớ (In-memory level): Dùng **`ContainsUnsigned(...)`** trong `BuildingBlocks.Extensions` để chuẩn hóa Unicode, xóa dấu và so sánh chữ thường.
 * **Xác thực dữ liệu**: Bắt buộc sử dụng **FluentValidation** tự động xác thực ở tầng Application, không viết mã kiểm tra thủ công (như if-else) trong Controller.
+* **Ngôn ngữ thông báo trả về (Response Messages)**:
+  * Tất cả các thông báo trả về người dùng (bao gồm tin nhắn thành công, thông điệp lỗi trong các ngoại lệ, hay thông điệp lỗi kiểm tra dữ liệu đầu vào của FluentValidation) **bắt buộc phải viết bằng tiếng Việt**, tuyệt đối không viết bằng tiếng Anh.
 * **Xử lý lỗi (Exception Handling)**:
   * Ném các Exception chuẩn trong `BuildingBlocks.Exceptions` (ví dụ: `NotFoundException`, `ConflictException`) ở tầng Application/Service.
   * Tầng Presentation sẽ tự động kích hoạt `GlobalExceptionMiddleware` để chuyển lỗi thành JSON chuẩn, không sử dụng khối `try-catch` bọc bừa bãi trong Controller.
