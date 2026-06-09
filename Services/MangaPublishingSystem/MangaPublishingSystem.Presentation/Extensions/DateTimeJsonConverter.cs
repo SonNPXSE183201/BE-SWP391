@@ -27,11 +27,16 @@ namespace MangaPublishingSystem.Presentation.Extensions
         {
             if (reader.TokenType == JsonTokenType.String && DateTime.TryParse(reader.GetString(), out var date))
             {
-                // If it is already UTC, return as-is.
-                // If it is local (e.g. sent by FE in Vietnam timezone), we convert it to UTC for DB storage.
-                return date.Kind == DateTimeKind.Utc 
-                    ? date 
-                    : TimeZoneInfo.ConvertTimeToUtc(date, VietnamTimeZone);
+                if (date.Kind == DateTimeKind.Utc)
+                {
+                    return date;
+                }
+                if (date.Kind == DateTimeKind.Local)
+                {
+                    return date.ToUniversalTime();
+                }
+                // For Unspecified, treat it as Vietnam Time (UTC+7) and convert to UTC
+                return TimeZoneInfo.ConvertTimeToUtc(DateTime.SpecifyKind(date, DateTimeKind.Unspecified), VietnamTimeZone);
             }
             return reader.GetDateTime();
         }

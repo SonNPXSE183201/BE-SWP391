@@ -15,9 +15,9 @@ namespace MangaPublishingSystem.Application.Validations.Auth
 
             RuleFor(x => x.Password)
                 .NotEmpty().WithMessage("Mật khẩu không được để trống.")
-                .MinimumLength(6).WithMessage("Mật khẩu phải chứa ít nhất 6 ký tự.")
-                .Matches(@"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^\da-zA-Z]).{6,}$")
-                .WithMessage("Mật khẩu phải bao gồm ít nhất 6 ký tự, chứa chữ hoa, chữ thường, chữ số và ký tự đặc biệt.");
+                .MinimumLength(8).WithMessage("Mật khẩu phải chứa ít nhất 8 ký tự.")
+                .Matches(@"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^\da-zA-Z]).{8,}$")
+                .WithMessage("Mật khẩu phải bao gồm ít nhất 8 ký tự, chứa chữ hoa, chữ thường, chữ số và ký tự đặc biệt.");
 
             RuleFor(x => x.Email)
                 .NotEmpty().WithMessage("Email không được để trống.")

@@ -1,7 +1,9 @@
+using System.Collections.Generic;
+using System.Linq;
+using Microsoft.EntityFrameworkCore;
 using MangaPublishingSystem.Domain.Entities;
 using MangaPublishingSystem.Application.IRepositories;
 using MangaPublishingSystem.Infrastructure.Data;
-using Microsoft.EntityFrameworkCore;
 
 namespace MangaPublishingSystem.Infrastructure.Repositories
 {
@@ -26,5 +28,16 @@ namespace MangaPublishingSystem.Infrastructure.Repositories
             _context.VNPayTransactions.Update(transaction);
             await _context.SaveChangesAsync(cancellationToken);
         }
+
+        // Existing method from older version
+        public async System.Threading.Tasks.Task<System.Collections.Generic.IEnumerable<Transaction>> GetTransactionsByWalletIdAsync(int walletId)
+        {
+            return await _context.Transactions
+                .Include(t => t.FromUser)
+                .Include(t => t.ToUser)
+                .Where(t => t.WalletId == walletId)
+                .OrderByDescending(t => t.CreateAt)
+                .ToListAsync();
+        }
     }
-}
+}
