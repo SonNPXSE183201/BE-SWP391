@@ -59,5 +59,19 @@ namespace MangaPublishingSystem.Presentation.Controllers.Auth
             await _authService.ForgotPasswordResetAsync(resetDto);
             return Ok(ApiResponse<object>.Success(null, "Đặt lại mật khẩu thành công. Bạn có thể đăng nhập bằng mật khẩu mới."));
         }
+
+        [HttpPost("refresh-token")]
+        public async Task<ActionResult<ApiResponse<AuthResponseDto>>> RefreshToken([FromBody] RefreshTokenDto refreshTokenDto)
+        {
+            var result = await _authService.RefreshTokenAsync(refreshTokenDto);
+            return Ok(ApiResponse<AuthResponseDto>.Success(result, "Làm mới token thành công."));
+        }
+
+        [HttpPost("logout")]
+        public async Task<ActionResult<ApiResponse<object>>> Logout([FromBody] LogoutDto logoutDto)
+        {
+            await _authService.LogoutAsync(logoutDto);
+            return Ok(ApiResponse<object>.Success(null, "Đăng xuất thành công."));
+        }
     }
 }

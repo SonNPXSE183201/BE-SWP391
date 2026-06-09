@@ -42,9 +42,11 @@ namespace MangaPublishingSystem.Presentation.Services
                         var taskVersionRepository = scope.ServiceProvider.GetRequiredService<ITaskVersionRepository>();
                         var assistantProfileRepository = scope.ServiceProvider.GetRequiredService<IAssistantProfileRepository>();
                         var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
+                        var refreshTokenRepository = scope.ServiceProvider.GetRequiredService<IRefreshTokenRepository>();
 
                         await AutoRefundOverdueTasksAsync(tasksRepository, walletService, notificationRepository, notificationPublisher, taskVersionRepository, assistantProfileRepository, unitOfWork);
                         await AutoApproveSubmittedTasksAsync(tasksRepository, walletService, userRepository, notificationRepository, notificationPublisher, taskVersionRepository, assistantProfileRepository, unitOfWork);
+                        await CleanExpiredRefreshTokensAsync(refreshTokenRepository, unitOfWork);
                     }
                     _logger.LogInformation("Quét tự động hóa nhiệm vụ hoàn tất.");
                 }
@@ -278,6 +280,42 @@ namespace MangaPublishingSystem.Presentation.Services
             profile.CurrentActiveTasks = tasksList.Count(t => t.Status == "In_Progress" || t.Status == "Submitted" || t.Status == "Revision" || t.Status == "Pending");
 
             assistantProfileRepository.Update(profile);
+        }
+
+        private async Task CleanExpiredRefreshTokensAsync(
+            IRefreshTokenRepository refreshTokenRepository,
+            IUnitOfWork unitOfWork)
+        {
+            _logger.LogInformation("Bắt đầu dọn dẹp các RefreshToken đã hết hạn hoặc bị thu hồi...");
+            try
+            {
+                var now = DateTime.UtcNow;
+                var thresholdDate = now.AddDays(-30);
+                var expiredOrRevokedTokens = await refreshTokenRepository.FindAsync(t => 
+                    t.ExpiresAt < now || 
+                    (t.IsRevoked && t.CreateAt < thresholdDate));
+                
+                int count = 0;
+                foreach (var token in expiredOrRevokedTokens)
+                 {
+                     refreshTokenRepository.Delete(token);
+                     count++;
+                 }
+
+                 if (count > 0)
+                 {
+                     await unitOfWork.SaveChangesAsync();
+                     _logger.LogInformation("Đã dọn dẹp thành công {Count} RefreshToken rác khỏi DB.", count);
+                 }
+                 else
+                 {
+                     _logger.LogInformation("Không có RefreshToken rác nào cần dọn dẹp.");
+                 }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Lỗi khi tự động dọn dẹp RefreshToken.");
+            }
         }
     }
 }

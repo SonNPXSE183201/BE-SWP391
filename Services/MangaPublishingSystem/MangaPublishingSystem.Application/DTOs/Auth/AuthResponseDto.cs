@@ -8,5 +8,6 @@ namespace MangaPublishingSystem.Application.DTOs.Auth
         public string FullName { get; set; } = null!;
         public string RoleName { get; set; } = null!;
         public string Token { get; set; } = null!;
+        public string RefreshToken { get; set; } = null!;
     }
 }

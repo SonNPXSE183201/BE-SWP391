@@ -23,6 +23,7 @@ namespace MangaPublishingSystem.Application.Services.Auth
         private readonly IEmailService _emailService;
         private readonly IUnitOfWork _unitOfWork;
         private readonly IOtpService _otpService;
+        private readonly IRefreshTokenRepository _refreshTokenRepository;
 
         public AuthService(
             IUserRepository userRepository,
@@ -31,7 +32,8 @@ namespace MangaPublishingSystem.Application.Services.Auth
             IJwtTokenGenerator jwtTokenGenerator,
             IEmailService emailService,
             IUnitOfWork unitOfWork,
-            IOtpService otpService)
+            IOtpService otpService,
+            IRefreshTokenRepository refreshTokenRepository)
         {
             _userRepository = userRepository;
             _roleRepository = roleRepository;
@@ -40,6 +42,7 @@ namespace MangaPublishingSystem.Application.Services.Auth
             _emailService = emailService;
             _unitOfWork = unitOfWork;
             _otpService = otpService;
+            _refreshTokenRepository = refreshTokenRepository;
         }
 
         public async Task<AuthResponseDto> LoginAsync(LoginDto loginDto)
@@ -78,6 +81,18 @@ namespace MangaPublishingSystem.Application.Services.Auth
 
             // Generate JWT Token
             var token = _jwtTokenGenerator.GenerateToken(user);
+            var refreshTokenString = _jwtTokenGenerator.GenerateRefreshToken();
+
+            var refreshToken = new RefreshToken
+            {
+                UserId = user.Id,
+                Token = refreshTokenString,
+                ExpiresAt = DateTime.UtcNow.AddDays(7),
+                IsRevoked = false
+            };
+
+            await _refreshTokenRepository.AddAsync(refreshToken);
+            await _unitOfWork.SaveChangesAsync();
 
             return new AuthResponseDto
             {
@@ -86,7 +101,8 @@ namespace MangaPublishingSystem.Application.Services.Auth
                 Email = user.Email,
                 FullName = user.FullName,
                 RoleName = user.Role.RoleName,
-                Token = token
+                Token = token,
+                RefreshToken = refreshTokenString
             };
         }
 
@@ -231,6 +247,94 @@ namespace MangaPublishingSystem.Application.Services.Auth
 
             user.PasswordHash = _passwordHasher.HashPassword(resetDto.NewPassword);
             await _unitOfWork.SaveChangesAsync();
+        }
+
+        public async Task<AuthResponseDto> RefreshTokenAsync(RefreshTokenDto tokenDto)
+        {
+            var principal = _jwtTokenGenerator.GetPrincipalFromExpiredToken(tokenDto.AccessToken);
+            if (principal == null)
+            {
+                throw new UnauthorizedException("Access token không hợp lệ hoặc không thể phân tích.");
+            }
+
+            var userName = principal.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value;
+            if (string.IsNullOrEmpty(userName))
+            {
+                throw new UnauthorizedException("Access token không chứa thông tin người dùng hợp lệ.");
+            }
+
+            var user = await _userRepository.GetUserWithRoleByUsernameOrEmailAsync(userName);
+            if (user == null)
+            {
+                throw new UnauthorizedException("Không tìm thấy người dùng tương ứng với token.");
+            }
+
+            if (user.Status != UserStatus.Active)
+            {
+                throw new UnauthorizedException("Tài khoản người dùng đã bị khóa hoặc chưa được kích hoạt.");
+            }
+
+            var savedRefreshTokens = await _refreshTokenRepository.FindAsync(t => 
+                t.Token == tokenDto.RefreshToken && 
+                t.UserId == user.Id);
+            var savedRefreshToken = savedRefreshTokens.FirstOrDefault();
+
+            if (savedRefreshToken == null)
+            {
+                throw new UnauthorizedException("Refresh token không tồn tại hoặc không khớp với người dùng.");
+            }
+
+            if (savedRefreshToken.IsRevoked)
+            {
+                throw new UnauthorizedException("Refresh token đã bị thu hồi.");
+            }
+
+            if (savedRefreshToken.ExpiresAt < DateTime.UtcNow)
+            {
+                throw new UnauthorizedException("Refresh token đã hết hạn.");
+            }
+
+            // Revoke the old refresh token
+            savedRefreshToken.IsRevoked = true;
+            _refreshTokenRepository.Update(savedRefreshToken);
+
+            // Generate new pair of tokens (Token Rotation)
+            var newAccessToken = _jwtTokenGenerator.GenerateToken(user);
+            var newRefreshTokenString = _jwtTokenGenerator.GenerateRefreshToken();
+
+            var newRefreshToken = new RefreshToken
+            {
+                UserId = user.Id,
+                Token = newRefreshTokenString,
+                ExpiresAt = DateTime.UtcNow.AddDays(7),
+                IsRevoked = false
+            };
+
+            await _refreshTokenRepository.AddAsync(newRefreshToken);
+            await _unitOfWork.SaveChangesAsync();
+
+            return new AuthResponseDto
+            {
+                UserId = user.Id,
+                UserName = user.UserName,
+                Email = user.Email,
+                FullName = user.FullName,
+                RoleName = user.Role.RoleName,
+                Token = newAccessToken,
+                RefreshToken = newRefreshTokenString
+            };
+        }
+
+        public async Task LogoutAsync(LogoutDto logoutDto)
+        {
+            var savedRefreshTokens = await _refreshTokenRepository.FindAsync(t => t.Token == logoutDto.RefreshToken);
+            var savedRefreshToken = savedRefreshTokens.FirstOrDefault();
+            if (savedRefreshToken != null)
+            {
+                savedRefreshToken.IsRevoked = true;
+                _refreshTokenRepository.Update(savedRefreshToken);
+                await _unitOfWork.SaveChangesAsync();
+            }
         }
     }
 }
