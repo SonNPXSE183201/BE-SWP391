@@ -17,6 +17,7 @@ namespace MangaPublishingSystem.Infrastructure.Data
 
         public virtual DbSet<Role> Roles { get; set; } = null!;
         public virtual DbSet<User> Users { get; set; } = null!;
+        public virtual DbSet<RefreshToken> RefreshTokens { get; set; } = null!;
         public virtual DbSet<Wallet> Wallets { get; set; } = null!;
         public virtual DbSet<Transaction> Transactions { get; set; } = null!;
         public virtual DbSet<AssistantProfile> AssistantProfiles { get; set; } = null!;

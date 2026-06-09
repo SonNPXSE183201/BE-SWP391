@@ -44,6 +44,7 @@ IF OBJECT_ID('dbo.Notification', 'U') IS NOT NULL DROP TABLE dbo.Notification;
 IF OBJECT_ID('dbo.AssistantProfile', 'U') IS NOT NULL DROP TABLE dbo.AssistantProfile;
 IF OBJECT_ID('dbo.Transaction', 'U') IS NOT NULL DROP TABLE dbo.[Transaction];
 IF OBJECT_ID('dbo.Wallet', 'U') IS NOT NULL DROP TABLE dbo.Wallet;
+IF OBJECT_ID('dbo.RefreshToken', 'U') IS NOT NULL DROP TABLE dbo.RefreshToken;
 IF OBJECT_ID('dbo.User', 'U') IS NOT NULL DROP TABLE dbo.[User];
 IF OBJECT_ID('dbo.Role', 'U') IS NOT NULL DROP TABLE dbo.Role;
 GO
@@ -82,6 +83,23 @@ CREATE TABLE dbo.[User] (
     CONSTRAINT UQ_User_UserName UNIQUE (UserName),
     CONSTRAINT UQ_User_Email UNIQUE (Email),
     CONSTRAINT CK_User_Status CHECK (Status IN (N'Pending', N'Active', N'Rejected', N'Locked'))
+);
+GO
+
+-- =========================================================================
+-- 2b. TABLE: RefreshToken
+-- =========================================================================
+CREATE TABLE dbo.RefreshToken (
+    RefreshTokenId INT IDENTITY(1,1) NOT NULL,
+    UserId INT NOT NULL,
+    Token VARCHAR(255) NOT NULL,
+    ExpiresAt DATETIME2 NOT NULL,
+    IsRevoked BIT NOT NULL CONSTRAINT DF_RefreshToken_IsRevoked DEFAULT 0,
+    CreateAt DATETIME2 NOT NULL CONSTRAINT DF_RefreshToken_CreateAt DEFAULT GETUTCDATE(),
+    UpdateAt DATETIME2 NULL,
+    CONSTRAINT PK_RefreshToken PRIMARY KEY CLUSTERED (RefreshTokenId),
+    CONSTRAINT FK_RefreshToken_User FOREIGN KEY (UserId) REFERENCES dbo.[User] (UserId) ON DELETE CASCADE,
+    CONSTRAINT UQ_RefreshToken_Token UNIQUE (Token)
 );
 GO
 
@@ -444,6 +462,8 @@ CREATE INDEX IX_Annotation_PageId ON dbo.Annotation (PageId) WHERE PageId IS NOT
 CREATE INDEX IX_Annotation_TaskVersionId ON dbo.Annotation (TaskVersionId) WHERE TaskVersionId IS NOT NULL;
 CREATE INDEX IX_Report_ReporterId ON dbo.Report (ReporterId);
 CREATE INDEX IX_Report_ReportedUserId ON dbo.Report (ReportedUserId);
+CREATE INDEX IX_RefreshToken_UserId ON dbo.RefreshToken (UserId);
+CREATE INDEX IX_RefreshToken_Token ON dbo.RefreshToken (Token);
 GO
 
 PRINT 'Database MangaPublishing schema initialized successfully with unified audit columns (CreateAt/UpdateAt).';
