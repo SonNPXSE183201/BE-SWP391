@@ -16,6 +16,8 @@ namespace MangaPublishingSystem.Presentation.Extensions
                 });
 
             services.AddHttpContextAccessor();
+            services.AddScoped<MangaPublishingSystem.Application.IServices.INotificationPublisher, Services.NotificationPublisher>();
+            services.AddHostedService<Services.TaskAutomationBackgroundService>();
 
             return services;
         }
