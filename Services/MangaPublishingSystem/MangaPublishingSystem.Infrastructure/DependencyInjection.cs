@@ -60,6 +60,7 @@ namespace MangaPublishingSystem.Infrastructure
                 });
 
             services.AddScoped<IEmailService, FluentEmailService>();
+            services.AddScoped<IImageCompositor, ImageCompositor>();
 
             // Security services
             services.AddScoped<IPasswordHasher, BCryptPasswordHasher>();
