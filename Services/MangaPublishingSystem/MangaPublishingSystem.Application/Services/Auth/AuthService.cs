@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using System.Threading.Tasks;
+using Task = System.Threading.Tasks.Task;
 using BuildingBlocks.Exceptions;
 using MangaPublishingSystem.Application.Common.Security;
 using MangaPublishingSystem.Application.Common.Templates;
@@ -181,6 +182,55 @@ namespace MangaPublishingSystem.Application.Services.Auth
                 RequiresVerification = false,
                 Message = "Đăng ký tài khoản trợ lý thành công. Vui lòng chờ phê duyệt từ quản trị viên."
             };
+        }
+
+        public async Task ChangePasswordAsync(int userId, ChangePasswordDto changePasswordDto)
+        {
+            var user = await _userRepository.GetByIdAsync(userId);
+            if (user == null)
+            {
+                throw new NotFoundException("Không tìm thấy người dùng.");
+            }
+
+            var isPasswordValid = _passwordHasher.VerifyPassword(changePasswordDto.CurrentPassword, user.PasswordHash);
+            if (!isPasswordValid)
+            {
+                throw new UnauthorizedException("Mật khẩu hiện tại không chính xác.");
+            }
+
+            user.PasswordHash = _passwordHasher.HashPassword(changePasswordDto.NewPassword);
+            await _unitOfWork.SaveChangesAsync();
+        }
+
+        public async Task ForgotPasswordRequestAsync(ForgotPasswordRequestDto requestDto)
+        {
+            var users = await _userRepository.FindAsync(u => u.Email == requestDto.Email);
+            var user = users.FirstOrDefault();
+            if (user == null)
+            {
+                throw new NotFoundException("Không tìm thấy người dùng với email đã cung cấp.");
+            }
+
+            await _otpService.SendForgotPasswordOtpAsync(requestDto.Email);
+        }
+
+        public async Task ForgotPasswordResetAsync(ForgotPasswordResetDto resetDto)
+        {
+            var isOtpValid = _otpService.VerifyOtp(resetDto.Email, resetDto.VerificationCode);
+            if (!isOtpValid)
+            {
+                throw new BadRequestException("Mã xác thực OTP không chính xác hoặc đã hết hạn.");
+            }
+
+            var users = await _userRepository.FindAsync(u => u.Email == resetDto.Email);
+            var user = users.FirstOrDefault();
+            if (user == null)
+            {
+                throw new NotFoundException("Không tìm thấy người dùng với email đã cung cấp.");
+            }
+
+            user.PasswordHash = _passwordHasher.HashPassword(resetDto.NewPassword);
+            await _unitOfWork.SaveChangesAsync();
         }
     }
 }
