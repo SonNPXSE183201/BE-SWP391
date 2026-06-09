@@ -31,7 +31,7 @@ builder.Configuration.AddUserSecrets<Program>();
 builder.Services.AddInfrastructureServices(config);
 
 // Application DI (QUAN TRỌNG)
-builder.Services.AddApplicationServices();
+builder.Services.AddApplicationServices(config);
 
 // Presentation
 builder.Services.AddPresentationServices();
