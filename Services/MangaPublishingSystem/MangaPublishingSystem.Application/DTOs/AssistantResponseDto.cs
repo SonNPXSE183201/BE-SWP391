@@ -9,4 +9,6 @@ public class AssistantResponseDto
     public string Status { get; set; } = null!;
     public string? PortfolioUrl { get; set; }
     public string? Skills { get; set; }
+    
+     public string Message { get; set; } = null!;//thong báo tạo tk assi xong
 }

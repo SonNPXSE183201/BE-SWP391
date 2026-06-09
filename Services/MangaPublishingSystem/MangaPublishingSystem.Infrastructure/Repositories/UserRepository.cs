@@ -25,5 +25,15 @@ namespace MangaPublishingSystem.Infrastructure.Repositories
         {
             return await _context.Users.FindAsync(id);
         }
+
+        public async Task<bool> ExistsByEmailAsync(string email)
+        {
+            return await _context.Users.AnyAsync(x => x.Email == email);
+        }
+
+        public async Task<bool> ExistsByUserNameAsync(string userName)
+        {
+            return await _context.Users.AnyAsync(x => x.UserName == userName);
+        }
     }
 }

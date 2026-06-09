@@ -10,15 +10,18 @@ namespace MangaPublishingSystem.Application.Services
     public class UserService : IUserService
     {
         private readonly IUserRepository _userRepository;
+        private readonly IWalletRepository _walletRepository;
         private readonly IUnitOfWork _unitOfWork;
         private readonly IEmailService _emailService;
 
         public UserService(
             IUserRepository userRepository,
+            IWalletRepository walletRepository,
             IUnitOfWork unitOfWork,
             IEmailService emailService)
         {
             _userRepository = userRepository;
+            _walletRepository = walletRepository;
             _unitOfWork = unitOfWork;
             _emailService = emailService;
         }
@@ -34,10 +37,25 @@ namespace MangaPublishingSystem.Application.Services
                 PasswordHash = HashPassword(randomPassword),
                 Email = dto.Email,
                 FullName = dto.FullName,
+                PenName = dto.PenName,
+                PortfolioUrl = dto.PortfolioUrl,
+                Skills = dto.Skills,
                 Status = "Active"
             };
 
             await _userRepository.AddAsync(user);
+            await _unitOfWork.SaveChangesAsync();
+
+            var wallet = new Wallet
+            {
+                UserId = user.Id,
+                SetupFundBalance = 0,
+                WithdrawableBalance = 0,
+                LockedFund = 0,
+                LockedWithdrawable = 0
+            };
+
+            await _walletRepository.AddAsync(wallet);
             await _unitOfWork.SaveChangesAsync();
 
             try
@@ -80,6 +98,18 @@ namespace MangaPublishingSystem.Application.Services
             await _userRepository.AddAsync(user);
             await _unitOfWork.SaveChangesAsync();
 
+            var wallet = new Wallet
+            {
+                UserId = user.Id,
+                SetupFundBalance = 0,
+                WithdrawableBalance = 0,
+                LockedFund = 0,
+                LockedWithdrawable = 0
+            };
+
+            await _walletRepository.AddAsync(wallet);
+            await _unitOfWork.SaveChangesAsync();
+
             return MapAssistant(user);
         }
 
@@ -90,8 +120,9 @@ namespace MangaPublishingSystem.Application.Services
             return assistants.Select(MapAssistant).ToList();
         }
 
-        public async Task<AssistantResponseDto> ApproveAssistantAsync(int id)
+       public async Task<AssistantResponseDto> ApproveAssistantAsync(int id)
         {
+            // Duyệt Assistant: chuyển trạng thái từ Pending sang Active
             var user = await _userRepository.GetByIdAsync(id);
 
             if (user == null)
@@ -101,22 +132,32 @@ namespace MangaPublishingSystem.Application.Services
 
             await _unitOfWork.SaveChangesAsync();
 
-            return MapAssistant(user);
+            var response = MapAssistant(user);
+
+            // Thông báo để frontend biết Assistant đã được duyệt thành công
+            response.Message = "Assistant approved successfully.";
+
+            return response;
         }
+    public async Task<AssistantResponseDto> RejectAssistantAsync(int id)
+    {
+        // Từ chối Assistant: chuyển trạng thái từ Pending sang Rejected
+        var user = await _userRepository.GetByIdAsync(id);
 
-        public async Task<AssistantResponseDto> RejectAssistantAsync(int id)
-        {
-            var user = await _userRepository.GetByIdAsync(id);
+        if (user == null)
+            throw new Exception("Assistant not found");
 
-            if (user == null)
-                throw new Exception("Assistant not found");
+        user.Status = "Rejected";
 
-            user.Status = "Rejected";
+        await _unitOfWork.SaveChangesAsync();
 
-            await _unitOfWork.SaveChangesAsync();
+        var response = MapAssistant(user);
 
-            return MapAssistant(user);
-        }
+        // Thông báo để frontend biết Assistant đã bị từ chối
+        response.Message = "Assistant rejected successfully.";
+
+        return response;
+    }
 
         private AssistantResponseDto MapAssistant(User user)
         {
@@ -128,7 +169,10 @@ namespace MangaPublishingSystem.Application.Services
                 FullName = user.FullName,
                 Status = user.Status,
                 PortfolioUrl = user.PortfolioUrl,
-                Skills = user.Skills
+                Skills = user.Skills,
+
+                Message = "Assistant registration submitted successfully. Please wait for admin approval"// do test bên back end nên để tạm cái message này, sau này có thể bỏ đi hoặc thay bằng thông báo khác phù hợp hơn
+
             };
         }
 

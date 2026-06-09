@@ -22,6 +22,8 @@ namespace MangaPublishingSystem.Presentation.Extensions
             services.AddScoped<IUnitOfWork, UnitOfWork>();
 
             services.AddScoped<IUserRepository, UserRepository>();
+            services.AddScoped<IWalletRepository, WalletRepository>();
+
             services.AddScoped<IUserService, UserService>();
 
             return services;

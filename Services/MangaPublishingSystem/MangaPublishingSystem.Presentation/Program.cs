@@ -4,6 +4,7 @@ using BuildingBlocks.Web.Middlewares;
 using FluentValidation;
 using FluentValidation.AspNetCore;
 using MangaPublishingSystem.Application.IRepositories;
+using MangaPublishingSystem.Infrastructure.Repositories; // THÊM DÒNG NÀY
 using MangaPublishingSystem.Presentation.Extensions;
 using MangaPublishingSystem.Presentation.Hubs;
 
@@ -30,8 +31,11 @@ builder.Configuration.AddUserSecrets<Program>();
 // Infrastructure
 builder.Services.AddInfrastructureServices(config);
 
-// Application DI (QUAN TRỌNG)
+// Application DI
 builder.Services.AddApplicationServices(config);
+
+// THÊM 2 DÒNG NÀY
+builder.Services.AddScoped<IWalletRepository, WalletRepository>();
 
 // Presentation
 builder.Services.AddPresentationServices();
