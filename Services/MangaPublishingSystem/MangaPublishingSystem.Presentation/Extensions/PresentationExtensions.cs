@@ -6,7 +6,6 @@ namespace MangaPublishingSystem.Presentation.Extensions
     {
         public static IServiceCollection AddPresentationServices(this IServiceCollection services)
         {
-            // Configure controllers with JSON options to ignore cycles and preserve naming policies
             services.AddControllers()
                 .AddJsonOptions(options =>
                 {
@@ -16,8 +15,13 @@ namespace MangaPublishingSystem.Presentation.Extensions
                 });
 
             services.AddHttpContextAccessor();
-            services.AddScoped<MangaPublishingSystem.Application.IServices.INotificationPublisher, Services.NotificationPublisher>();
-            services.AddHostedService<Services.TaskAutomationBackgroundService>();
+
+            services.AddScoped<
+                MangaPublishingSystem.Application.IServices.INotificationPublisher,
+                Services.NotificationPublisher>();
+
+            // Tạm tắt vì DB hiện chưa có bảng RefreshToken
+            // services.AddHostedService<Services.TaskAutomationBackgroundService>();
 
             return services;
         }

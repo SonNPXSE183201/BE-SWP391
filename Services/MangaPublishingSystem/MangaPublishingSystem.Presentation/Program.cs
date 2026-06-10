@@ -7,7 +7,9 @@ using FluentValidation;
 using FluentValidation.AspNetCore;
 using MangaPublishingSystem.Application;
 using MangaPublishingSystem.Application.IRepositories;
-using MangaPublishingSystem.Infrastructure.Repositories; // THÊM DÒNG NÀY
+using MangaPublishingSystem.Application.IServices;
+using MangaPublishingSystem.Application.Services;
+using MangaPublishingSystem.Infrastructure.Repositories;
 using MangaPublishingSystem.Presentation.Extensions;
 using MangaPublishingSystem.Presentation.Hubs;
 using MangaPublishingSystem.Infrastructure;
@@ -15,12 +17,6 @@ using MangaPublishingSystem.Infrastructure;
 var builder = WebApplication.CreateBuilder(args);
 var config = builder.Configuration;
 
-<<<<<<< HEAD
-// Controllers
-builder.Services.AddControllers();
-
-// FluentValidation
-=======
 builder.Services.AddControllers()
     .ConfigureApiBehaviorOptions(options =>
     {
@@ -42,49 +38,39 @@ builder.Services.AddControllers()
             return new BadRequestObjectResult(response);
         };
     });
->>>>>>> origin/dev
+
 builder.Services.AddFluentValidationAutoValidation();
 builder.Services.AddValidatorsFromAssemblyContaining<IUnitOfWork>();
 
-// Swagger
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerWithBearer();
 
-// JWT
 builder.Services.AddJwtAuthenticationFromEnv(config);
 
-// User Secrets
 builder.Configuration.AddUserSecrets<Program>();
 
-// Infrastructure
 builder.Services.AddInfrastructureServices(config);
 
-// Application DI
 builder.Services.AddApplicationServices(config);
 
-// THÊM 2 DÒNG NÀY
 builder.Services.AddScoped<IWalletRepository, WalletRepository>();
+builder.Services.AddScoped<IWalletService, WalletService>();
 
-// Presentation
 builder.Services.AddPresentationServices();
 
-// SignalR
 builder.Services.AddSignalR();
 
-// CORS + HealthCheck
 builder.Services.AddCorsFromConfig(builder.Configuration);
 builder.Services.AddHealthChecks();
 
 var app = builder.Build();
 
-// Swagger UI
 if (app.Environment.IsDevelopment() || app.Environment.EnvironmentName == "Docker")
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
 
-// Middleware pipeline
 app.UseCors("Default");
 app.UseGlobalExceptionHandler();
 app.UseAuthentication();

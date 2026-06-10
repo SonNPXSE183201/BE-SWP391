@@ -1,4 +1,5 @@
 using MangaPublishingSystem.Domain.Entities;
+using MangaPublishingSystem.Domain.Enums;
 using MangaPublishingSystem.Application.IRepositories;
 using MangaPublishingSystem.Application.IServices;
 using MangaPublishingSystem.Application.DTOs.User;
@@ -28,6 +29,12 @@ namespace MangaPublishingSystem.Application.Services
 
         public async Task<UserResponseDto> CreateUserByAdminAsync(CreateUserByAdminDto dto)
         {
+            if (await _userRepository.ExistsByEmailAsync(dto.Email))
+                throw new Exception("Email already exists");
+
+            if (await _userRepository.ExistsByUserNameAsync(dto.UserName))
+                throw new Exception("Username already exists");
+
             var randomPassword = GenerateRandomPassword();
 
             var user = new User
@@ -40,36 +47,33 @@ namespace MangaPublishingSystem.Application.Services
                 PenName = dto.PenName,
                 PortfolioUrl = dto.PortfolioUrl,
                 Skills = dto.Skills,
-                Status = "Active"
+                Status = UserStatus.Active
             };
 
             await _userRepository.AddAsync(user);
             await _unitOfWork.SaveChangesAsync();
 
-            var wallet = new Wallet
+            // Chỉ Mangaka mới được tạo ví khi Admin tạo tài khoản
+            if (dto.RoleId == 2)
             {
-                UserId = user.Id,
-                SetupFundBalance = 0,
-                WithdrawableBalance = 0,
-                LockedFund = 0,
-                LockedWithdrawable = 0
-            };
+                var wallet = new Wallet
+                {
+                    UserId = user.Id,
+                    SetupFundBalance = 0,
+                    WithdrawableBalance = 0,
+                    LockedFund = 0,
+                    LockedWithdrawable = 0
+                };
 
-            await _walletRepository.AddAsync(wallet);
-            await _unitOfWork.SaveChangesAsync();
+                await _walletRepository.AddAsync(wallet);
+                await _unitOfWork.SaveChangesAsync();
+            }
 
-            try
-            {
-                await _emailService.SendAccountInfoAsync(
-                    dto.Email,
-                    dto.UserName,
-                    randomPassword
-                );
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine("SEND MAIL ERROR: " + ex.Message);
-            }
+            await _emailService.SendAccountInfoAsync(
+                dto.Email,
+                dto.UserName,
+                randomPassword
+            );
 
             return new UserResponseDto
             {
@@ -83,6 +87,12 @@ namespace MangaPublishingSystem.Application.Services
 
         public async Task<AssistantResponseDto> RegisterAssistantAsync(AssistantRegisterDto dto)
         {
+            if (await _userRepository.ExistsByEmailAsync(dto.Email))
+                throw new Exception("Email already exists");
+
+            if (await _userRepository.ExistsByUserNameAsync(dto.UserName))
+                throw new Exception("Username already exists");
+
             var user = new User
             {
                 RoleId = 4,
@@ -92,12 +102,13 @@ namespace MangaPublishingSystem.Application.Services
                 FullName = dto.FullName,
                 PortfolioUrl = dto.PortfolioUrl,
                 Skills = dto.Skills,
-                Status = "Pending"
+                Status = UserStatus.Pending
             };
 
             await _userRepository.AddAsync(user);
             await _unitOfWork.SaveChangesAsync();
 
+            // Assistant vẫn có ví
             var wallet = new Wallet
             {
                 UserId = user.Id,
@@ -120,44 +131,39 @@ namespace MangaPublishingSystem.Application.Services
             return assistants.Select(MapAssistant).ToList();
         }
 
-       public async Task<AssistantResponseDto> ApproveAssistantAsync(int id)
+        public async Task<AssistantResponseDto> ApproveAssistantAsync(int id)
         {
-            // Duyệt Assistant: chuyển trạng thái từ Pending sang Active
             var user = await _userRepository.GetByIdAsync(id);
 
             if (user == null)
                 throw new Exception("Assistant not found");
 
-            user.Status = "Active";
+            user.Status = UserStatus.Active;
 
             await _unitOfWork.SaveChangesAsync();
 
             var response = MapAssistant(user);
-
-            // Thông báo để frontend biết Assistant đã được duyệt thành công
             response.Message = "Assistant approved successfully.";
 
             return response;
         }
-    public async Task<AssistantResponseDto> RejectAssistantAsync(int id)
-    {
-        // Từ chối Assistant: chuyển trạng thái từ Pending sang Rejected
-        var user = await _userRepository.GetByIdAsync(id);
 
-        if (user == null)
-            throw new Exception("Assistant not found");
+        public async Task<AssistantResponseDto> RejectAssistantAsync(int id)
+        {
+            var user = await _userRepository.GetByIdAsync(id);
 
-        user.Status = "Rejected";
+            if (user == null)
+                throw new Exception("Assistant not found");
 
-        await _unitOfWork.SaveChangesAsync();
+            user.Status = UserStatus.Rejected;
 
-        var response = MapAssistant(user);
+            await _unitOfWork.SaveChangesAsync();
 
-        // Thông báo để frontend biết Assistant đã bị từ chối
-        response.Message = "Assistant rejected successfully.";
+            var response = MapAssistant(user);
+            response.Message = "Assistant rejected successfully.";
 
-        return response;
-    }
+            return response;
+        }
 
         private AssistantResponseDto MapAssistant(User user)
         {
@@ -167,12 +173,10 @@ namespace MangaPublishingSystem.Application.Services
                 UserName = user.UserName,
                 Email = user.Email,
                 FullName = user.FullName,
-                Status = user.Status,
+                Status = user.Status.ToString(),
                 PortfolioUrl = user.PortfolioUrl,
                 Skills = user.Skills,
-
-                Message = "Assistant registration submitted successfully. Please wait for admin approval"// do test bên back end nên để tạm cái message này, sau này có thể bỏ đi hoặc thay bằng thông báo khác phù hợp hơn
-
+                Message = "Assistant registration submitted successfully. Please wait for admin approval"
             };
         }
 

@@ -13,62 +13,67 @@ public class EmailService : IEmailService
     public EmailService(IOptions<EmailSettings> settings)
     {
         _settings = settings.Value;
+
+        Console.WriteLine("===== EMAIL SETTINGS =====");
+        Console.WriteLine($"SenderEmail : '{_settings.SenderEmail}'");
+        Console.WriteLine($"SenderName  : '{_settings.SenderName}'");
+        Console.WriteLine($"SmtpHost    : '{_settings.SmtpHost}'");
+        Console.WriteLine($"SmtpPort    : '{_settings.SmtpPort}'");
+        Console.WriteLine($"AppPassword : '{_settings.AppPassword}'");
+        Console.WriteLine("==========================");
     }
 
-    public async Task SendAccountInfoAsync(string toEmail, string username, string password)
-{
-    using var mail = new MailMessage();
+    public async Task SendEmailAsync(string to, string subject, string body)
+    {
+        using var mail = new MailMessage();
 
-    mail.From = new MailAddress(_settings.SenderEmail, _settings.SenderName);
-    mail.To.Add(toEmail);
+        mail.From = new MailAddress(
+            _settings.SenderEmail,
+            _settings.SenderName);
 
-    mail.Subject = "🎉 Your Manga Publishing Account";
+        mail.To.Add(to);
 
-    mail.Body = $@"
-<div style='background:#eef2f7;padding:40px;font-family:Arial,sans-serif'>
-    <div style='max-width:600px;margin:auto;background:white;border-radius:10px;overflow:hidden'>
+        mail.Subject = subject;
+        mail.Body = body;
+        mail.IsBodyHtml = true;
 
-        <div style='background:#16a34a;color:white;text-align:center;padding:30px'>
-            <h1 style='margin:0'>🎉 Congratulations 🎉</h1>
-            <p style='margin-top:10px'>Your account has been created successfully</p>
-        </div>
+        using var client = CreateSmtpClient();
 
-        <div style='padding:30px'>
-            <p>Hello,</p>
+        await client.SendMailAsync(mail);
+    }
 
-            <p>
-               Your Manga Publishing System account has been created successfully.
-            </p>
+    public async Task SendAccountInfoAsync(
+        string toEmail,
+        string username,
+        string password)
+    {
+        var subject = "Your Manga Publishing Account";
 
-            <div style='background:#f3f4f6;padding:20px;border-radius:8px'>
-                <p><strong>Username:</strong> {username}</p>
-                <p><strong>Password:</strong> {password}</p>
-            </div>
+        var body = $@"
+<h2>Congratulations!</h2>
 
-            <p style='color:red;font-weight:bold;margin-top:20px'>
-                Please log in and change your password after your first login.
-            </p>
-        </div>
+<p>Your account has been created successfully.</p>
 
-        
+<p><strong>Username:</strong> {username}</p>
+<p><strong>Password:</strong> {password}</p>
 
-    </div>
-</div>";
+<p>Please change your password after first login.</p>";
 
-    mail.IsBodyHtml = true;
+        await SendEmailAsync(toEmail, subject, body);
+    }
 
-    using var client = new SmtpClient();
-
-    client.Host = _settings.SmtpHost;
-    client.Port = _settings.SmtpPort;
-    client.EnableSsl = true;
-    client.DeliveryMethod = SmtpDeliveryMethod.Network;
-    client.UseDefaultCredentials = false;
-    client.Credentials = new NetworkCredential(
-        _settings.SenderEmail.Trim(),
-        _settings.AppPassword.Trim()
-    );
-
-    await client.SendMailAsync(mail);
-}
+    private SmtpClient CreateSmtpClient()
+    {
+        return new SmtpClient
+        {
+            Host = _settings.SmtpHost,
+            Port = _settings.SmtpPort,
+            EnableSsl = true,
+            DeliveryMethod = SmtpDeliveryMethod.Network,
+            UseDefaultCredentials = false,
+            Credentials = new NetworkCredential(
+                _settings.SenderEmail.Trim(),
+                _settings.AppPassword.Trim())
+        };
+    }
 }
