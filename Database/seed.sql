@@ -1,4 +1,4 @@
--- =========================================================================
+﻿-- =========================================================================
 -- SEED DATA SETUP SCRIPT WITH RESET
 -- PROJECT: Manga Creation Workflow & Publishing Management System (MCWPMS)
 -- DATABASE NAME: MangaPublishing

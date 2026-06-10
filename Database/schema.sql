@@ -1,4 +1,4 @@
--- =========================================================================
+﻿-- =========================================================================
 -- DATABASE CREATION & SCHEMA INITIALIZATION SCRIPT
 -- PROJECT: Manga Creation Workflow & Publishing Management System (MCWPMS)
 -- DATABASE NAME: MangaPublishing
