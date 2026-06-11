@@ -85,7 +85,7 @@ namespace MangaPublishingSystem.Presentation.Controllers.Wallet
                 withdrawDto.BankAccountName);
 
             var result = MapToTransactionDto(transaction);
-            return Ok(ApiResponse<TransactionDto>.Success(result, "Yêu cầu rút tiền đã được thực hiện thành công."));
+            return Ok(ApiResponse<TransactionDto>.Success(result, "Rút tiền thành công. Số tiền đã được chuyển về tài khoản ngân hàng của bạn."));
         }
 
         /// <summary>
@@ -286,6 +286,9 @@ namespace MangaPublishingSystem.Presentation.Controllers.Wallet
                 FromUserFullName = t.FromUser?.FullName,
                 ToUserName = t.ToUser?.UserName,
                 ToUserFullName = t.ToUser?.FullName,
+                BankName = t.BankName,
+                BankAccountNumber = t.BankAccountNumber,
+                BankAccountName = t.BankAccountName,
                 CreateAt = t.CreateAt,
                 UpdateAt = t.UpdateAt
             };

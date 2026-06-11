@@ -16,6 +16,12 @@ namespace MangaPublishingSystem.Domain.Entities
         public int? FromUserId { get; set; }
         public int? ToUserId { get; set; }
 
+        // Thông tin ngân hàng (dùng cho giao dịch rút tiền)
+        public string? BankName { get; set; }
+        public string? BankAccountNumber { get; set; }
+        public string? BankAccountName { get; set; }
+        public string? AdminNote { get; set; }
+
         // Navigation properties
         public virtual Wallet Wallet { get; set; } = null!;
         public virtual User? FromUser { get; set; }

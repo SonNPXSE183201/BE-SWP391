@@ -132,24 +132,33 @@ namespace MangaPublishingSystem.Application.Services
                 throw new NotFoundException("Ví của người dùng không tồn tại.");
             }
 
+            if (amount < 10000)
+            {
+                throw new BadRequestException("Số tiền rút tối thiểu là 10,000 VND.");
+            }
+
             if (wallet.WithdrawableBalance < amount)
             {
                 throw new BadRequestException("Số dư khả dụng không đủ để thực hiện rút tiền.");
             }
 
+            // Trừ số dư khả dụng ngay lập tức (giả lập chuyển khoản tự động qua Sandbox)
             wallet.WithdrawableBalance -= amount;
             _walletRepository.Update(wallet);
 
-            var referenceCode = "WDR_" + DateTime.UtcNow.Ticks;
+            var referenceCode = "WDR" + DateTime.UtcNow.ToString("yyyyMMddHHmmss") + userId;
             var transaction = new Transaction
             {
                 WalletId = wallet.Id,
                 Type = "Withdrawal",
                 Amount = amount,
                 WithdrawableAmount = -amount,
-                Status = "Success", // Giả lập rút tiền thành công ngay lập tức ở Sandbox
+                Status = "Success", // Giả lập rút tiền thành công tự động (Sandbox)
                 ReferenceCode = referenceCode,
-                ToUserId = userId
+                ToUserId = userId,
+                BankName = bankName,
+                BankAccountNumber = accountNumber,
+                BankAccountName = accountName
             };
 
             await _transactionRepository.AddAsync(transaction);
