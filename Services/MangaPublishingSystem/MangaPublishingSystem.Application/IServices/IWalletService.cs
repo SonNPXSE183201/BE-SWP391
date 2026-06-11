@@ -7,7 +7,8 @@ namespace MangaPublishingSystem.Application.IServices
     public interface IWalletService : IGenericService<Wallet>
     {
         Task<Wallet?> GetWalletByUserIdAsync(int userId);
-        Task<string> DepositAsync(int userId, decimal amount);
+        Task<string> DepositAsync(int userId, decimal amount, string ipAddr = "127.0.0.1");
+        Task<Transaction?> GetDepositByReferenceCodeAsync(string referenceCode);
         Task<bool> ConfirmDepositAsync(string referenceCode, string status);
         Task<Transaction> WithdrawAsync(int userId, decimal amount, string bankName, string accountNumber, string accountName);
         System.Threading.Tasks.Task LockFundsAsync(int userId, decimal amount, int taskId);

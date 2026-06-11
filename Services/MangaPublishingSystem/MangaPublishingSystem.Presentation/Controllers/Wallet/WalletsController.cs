@@ -8,6 +8,7 @@ using MangaPublishingSystem.Application.DTOs.Wallet;
 using MangaPublishingSystem.Application.IServices;
 using MangaPublishingSystem.Domain.Entities;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
 namespace MangaPublishingSystem.Presentation.Controllers.Wallet
@@ -17,10 +18,17 @@ namespace MangaPublishingSystem.Presentation.Controllers.Wallet
     public class WalletsController : ControllerBase
     {
         private readonly IWalletService _walletService;
+        private readonly IVnPayService _vnPayService;
+        private readonly IHttpContextAccessor _httpContextAccessor;
 
-        public WalletsController(IWalletService walletService)
+        public WalletsController(
+            IWalletService walletService,
+            IVnPayService vnPayService,
+            IHttpContextAccessor httpContextAccessor)
         {
             _walletService = walletService;
+            _vnPayService = vnPayService;
+            _httpContextAccessor = httpContextAccessor;
         }
 
         private int CurrentUserId => int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
@@ -55,7 +63,12 @@ namespace MangaPublishingSystem.Presentation.Controllers.Wallet
         public async Task<ActionResult<ApiResponse<string>>> Deposit([FromBody] DepositRequestDto depositDto)
         {
             int userId = CurrentUserId;
-            var redirectUrl = await _walletService.DepositAsync(userId, depositDto.Amount);
+
+            // Lấy IP của người dùng
+            var ipAddr = _httpContextAccessor.HttpContext?.Connection.RemoteIpAddress?.ToString() ?? "127.0.0.1";
+            if (ipAddr == "::1") ipAddr = "127.0.0.1"; // IPv6 loopback → IPv4
+
+            var redirectUrl = await _walletService.DepositAsync(userId, depositDto.Amount, ipAddr);
             return Ok(ApiResponse<string>.Success(redirectUrl, "Khởi tạo giao dịch nạp tiền thành công. Vui lòng thanh toán qua liên kết."));
         }
 
@@ -75,149 +88,169 @@ namespace MangaPublishingSystem.Presentation.Controllers.Wallet
             return Ok(ApiResponse<TransactionDto>.Success(result, "Yêu cầu rút tiền đã được thực hiện thành công."));
         }
 
-        [HttpGet("deposit/callback")]
-        public async Task<ActionResult<ApiResponse<bool>>> DepositCallback([FromQuery] string referenceCode, [FromQuery] string status)
+        /// <summary>
+        /// ReturnUrl: VNPay redirect trình duyệt người dùng về sau khi thanh toán.
+        /// Xác minh chữ ký HMAC-SHA512, kiểm tra ResponseCode + TransactionStatus,
+        /// cập nhật DB (idempotent) và trả về đầy đủ thông tin để FE hiển thị kết quả.
+        /// Logic theo chuẩn code mẫu VNPay:
+        ///   - Chữ ký hợp lệ: kiểm tra ResponseCode=00 VÀ TransactionStatus=00
+        ///   - Hiển thị: TerminalID, TxnRef, TransactionNo, Amount, BankCode
+        /// </summary>
+        [HttpGet("deposit/return")]
+        public async Task<ActionResult<ApiResponse<VnpayPaymentResultDto>>> DepositReturn([FromQuery] VnpayReturnDto dto)
         {
-            var isSuccess = await _walletService.ConfirmDepositAsync(referenceCode, status);
-            var message = isSuccess ? "Nạp tiền thành công." : "Giao dịch nạp tiền thất bại hoặc bị hủy.";
-            return Ok(ApiResponse<bool>.Success(isSuccess, message));
+            var query = HttpContext.Request.Query;
+
+            // Trích xuất các thông tin hiển thị cho người dùng (theo code mẫu VNPay)
+            query.TryGetValue("vnp_TxnRef",             out var txnRef);
+            query.TryGetValue("vnp_TransactionNo",       out var transactionNo);
+            query.TryGetValue("vnp_Amount",              out var amountStr);
+            query.TryGetValue("vnp_BankCode",            out var bankCode);
+            query.TryGetValue("vnp_CardType",            out var cardType);
+            query.TryGetValue("vnp_PayDate",             out var payDate);
+            query.TryGetValue("vnp_ResponseCode",        out var responseCode);
+            query.TryGetValue("vnp_TransactionStatus",   out var transactionStatus);
+            query.TryGetValue("vnp_OrderInfo",           out var orderInfo);
+            query.TryGetValue("vnp_TmnCode",             out var tmnCode);
+
+            // Số tiền thực = vnp_Amount / 100 (VNPay gửi đã nhân 100)
+            long.TryParse(amountStr, out var amountRaw);
+            var amount = (decimal)(amountRaw / 100);
+
+            // Bước 1: Xác minh chữ ký HMAC-SHA512
+            var isSignatureValid = _vnPayService.ValidateCallback(
+                query,
+                out var referenceCode,
+                out var isPaymentResponseSuccess);
+
+            if (!isSignatureValid)
+            {
+                var invalidResult = new VnpayPaymentResultDto
+                {
+                    IsSuccess         = false,
+                    ReferenceCode     = txnRef.ToString(),
+                    Amount            = amount,
+                    BankCode          = bankCode,
+                    ResponseCode      = responseCode,
+                    TransactionStatus = transactionStatus,
+                    Message           = "Có lỗi xảy ra trong quá trình xử lý. Chữ ký không hợp lệ."
+                };
+                return BadRequest(ApiResponse<VnpayPaymentResultDto>.Failure(400, "Chữ ký xác thực không hợp lệ."));
+            }
+
+            // Bước 2: Kiểm tra kết quả thanh toán
+            // Phải ĐỒNG THỜI: vnp_ResponseCode="00" VÀ vnp_TransactionStatus="00"
+            var isTransactionSuccess = isPaymentResponseSuccess
+                && transactionStatus.ToString() == "00";
+
+            // Bước 3: Cập nhật DB (idempotent — nếu IPN đã xử lý trước thì bỏ qua)
+            try
+            {
+                var dbStatus = isTransactionSuccess ? "Success" : "Failed";
+                await _walletService.ConfirmDepositAsync(referenceCode, dbStatus);
+            }
+            catch
+            {
+                // Giao dịch đã được IPN confirm → bỏ qua, không ảnh hưởng response
+            }
+
+            // Bước 4: Trả về kết quả đầy đủ cho FE hiển thị (Mã GD, ngân hàng, số tiền...)
+            var result = new VnpayPaymentResultDto
+            {
+                IsSuccess          = isTransactionSuccess,
+                ReferenceCode      = txnRef.ToString(),       // Mã giao dịch thanh toán
+                VnpayTransactionNo = transactionNo,           // Mã giao dịch tại VNPAY
+                Amount             = amount,                  // Số tiền thanh toán (VND)
+                BankCode           = bankCode,                // Ngân hàng thanh toán
+                CardType           = cardType,
+                PayDate            = payDate,
+                ResponseCode       = responseCode,
+                TransactionStatus  = transactionStatus,
+                OrderInfo          = orderInfo,
+                Message            = isTransactionSuccess
+                    ? "Giao dịch được thực hiện thành công. Cảm ơn quý khách đã sử dụng dịch vụ."
+                    : $"Có lỗi xảy ra trong quá trình xử lý. Mã lỗi: {responseCode}"
+            };
+
+            var apiMessage = isTransactionSuccess ? "Nạp tiền thành công." : "Giao dịch nạp tiền thất bại hoặc bị hủy.";
+            return Ok(ApiResponse<VnpayPaymentResultDto>.Success(result, apiMessage));
         }
 
-        [HttpGet("deposit/checkout-mock")]
-        public IActionResult GetCheckoutMockPage([FromQuery] string referenceCode, [FromQuery] decimal amount)
+        /// <summary>
+        /// IPN URL: VNPay gọi server-to-server để xác nhận kết quả thanh toán.
+        /// Phải trả về đúng format JSON {"RspCode":"xx","Message":"..."} mà VNPay yêu cầu.
+        /// Thứ tự kiểm tra theo chuẩn VNPay:
+        ///   99 → Không có dữ liệu đầu vào
+        ///   97 → Chữ ký không hợp lệ
+        ///   01 → Không tìm thấy đơn hàng
+        ///   04 → Số tiền không khớp
+        ///   02 → Đơn hàng đã được xử lý (idempotency)
+        ///   00 → Xác nhận thành công
+        /// </summary>
+        [HttpGet("deposit/ipn")]
+        public async Task<IActionResult> DepositIpn([FromQuery] VnpayReturnDto dto)
         {
-            // Trả về một trang HTML giả lập VNPay Sandbox đẹp mắt và chuyên nghiệp
-            var html = $@"
-<!DOCTYPE html>
-<html lang=""vi"">
-<head>
-    <meta charset=""UTF-8"">
-    <meta name=""viewport"" content=""width=device-width, initial-scale=1.0"">
-    <title>Cổng Thanh Toán Giả Lập VNPay Sandbox</title>
-    <link href=""https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap"" rel=""stylesheet"">
-    <style>
-        body {{
-            font-family: 'Outfit', sans-serif;
-            background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
-            color: #f8fafc;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            margin: 0;
-            padding: 20px;
-        }}
-        .card {{
-            background: rgba(30, 41, 59, 0.7);
-            backdrop-filter: blur(16px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 24px;
-            padding: 40px;
-            width: 100%;
-            max-width: 480px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
-            text-align: center;
-            box-sizing: border-box;
-        }}
-        .logo {{
-            font-size: 32px;
-            font-weight: 800;
-            background: linear-gradient(to right, #38bdf8, #818cf8);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            margin-bottom: 24px;
-        }}
-        .amount-box {{
-            background: rgba(15, 23, 42, 0.5);
-            border-radius: 16px;
-            padding: 20px;
-            margin: 24px 0;
-            border: 1px solid rgba(255, 255, 255, 0.05);
-        }}
-        .label {{
-            font-size: 14px;
-            color: #94a3b8;
-            text-transform: uppercase;
-            letter-spacing: 1.5px;
-            margin-bottom: 8px;
-        }}
-        .amount {{
-            font-size: 36px;
-            font-weight: 800;
-            color: #38bdf8;
-        }}
-        .reference {{
-            font-family: monospace;
-            font-size: 16px;
-            color: #e2e8f0;
-            background: rgba(255,255,255,0.05);
-            padding: 4px 8px;
-            border-radius: 6px;
-        }}
-        .btn {{
-            display: block;
-            width: 100%;
-            padding: 16px;
-            border: none;
-            border-radius: 14px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            margin-bottom: 12px;
-            text-decoration: none;
-        }}
-        .btn-success {{
-            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-            color: white;
-            box-shadow: 0 4px 14px rgba(16, 185, 129, 0.3);
-        }}
-        .btn-success:hover {{
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
-        }}
-        .btn-fail {{
-            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-            color: white;
-            box-shadow: 0 4px 14px rgba(239, 68, 68, 0.3);
-        }}
-        .btn-fail:hover {{
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(239, 68, 68, 0.4);
-        }}
-        .footer {{
-            margin-top: 24px;
-            font-size: 13px;
-            color: #64748b;
-        }}
-    </style>
-</head>
-<body>
-    <div class=""card"">
-        <div class=""logo"">VNPAY SANDBOX</div>
-        <p style=""color: #cbd5e1;"">Bạn đang thực hiện nạp tiền vào ví hệ thống MCWPMS</p>
-        
-        <div class=""amount-box"">
-            <div class=""label"">Số tiền thanh toán</div>
-            <div class=""amount"">{amount:N0} VND</div>
-        </div>
+            var query = HttpContext.Request.Query;
 
-        <div style=""margin-bottom: 32px; text-align: left; font-size: 15px; color: #cbd5e1;"">
-            <div style=""margin-bottom: 8px;""><strong>Mã giao dịch:</strong> <span class=""reference"">{referenceCode}</span></div>
-            <div><strong>Nội dung:</strong> Nạp tiền ví hệ thống</div>
-        </div>
+            // Bước 1: Kiểm tra có dữ liệu đầu vào không
+            if (query.Count == 0)
+            {
+                return Ok(new { RspCode = "99", Message = "Input data required" });
+            }
 
-        <a href=""http://localhost:5000/api/v1/wallets/deposit/callback?referenceCode={referenceCode}&status=Success"" class=""btn btn-success"">Xác nhận THANH TOÁN THÀNH CÔNG</a>
-        <a href=""http://localhost:5000/api/v1/wallets/deposit/callback?referenceCode={referenceCode}&status=Failed"" class=""btn btn-fail"">Huỷ giao dịch / THANH TOÁN THẤT BẠI</a>
-        
-        <div class=""footer"">
-            Đây là trang cổng thanh toán giả lập dành riêng cho mục đích thử nghiệm hệ thống.
-        </div>
-    </div>
-</body>
-</html>";
-            return Content(html, "text/html");
+            // Bước 2: Xác minh chữ ký HMAC-SHA512
+            var isSignatureValid = _vnPayService.ValidateCallback(
+                query,
+                out var referenceCode,
+                out var isPaymentSuccess);
+
+            if (!isSignatureValid)
+            {
+                return Ok(new { RspCode = "97", Message = "Invalid signature" });
+            }
+
+            // Bước 3: Truy vấn đơn hàng trong DB theo vnp_TxnRef
+            var order = await _walletService.GetDepositByReferenceCodeAsync(referenceCode);
+            if (order == null)
+            {
+                return Ok(new { RspCode = "01", Message = "Order not found" });
+            }
+
+            // Bước 4: So khớp số tiền — VNPay gửi amount đã nhân 100, chia lại để so sánh
+            if (query.TryGetValue("vnp_Amount", out var vnpAmountStr)
+                && long.TryParse(vnpAmountStr, out var vnpAmountRaw))
+            {
+                var vnpAmount = (decimal)(vnpAmountRaw / 100);
+                if (order.Amount != vnpAmount)
+                {
+                    return Ok(new { RspCode = "04", Message = "Invalid amount" });
+                }
+            }
+
+            // Bước 5: Kiểm tra idempotency — đơn hàng đã được xử lý chưa?
+            if (order.Status != "Pending")
+            {
+                return Ok(new { RspCode = "02", Message = "Order already confirmed" });
+            }
+
+            // Bước 6: Xác định kết quả — phải cả vnp_ResponseCode="00" VÀ vnp_TransactionStatus="00"
+            query.TryGetValue("vnp_TransactionStatus", out var txnStatus);
+            var isTransactionSuccess = isPaymentSuccess
+                && txnStatus.ToString() == "00";
+
+            // Bước 7: Cập nhật Database
+            try
+            {
+                var status = isTransactionSuccess ? "Success" : "Failed";
+                await _walletService.ConfirmDepositAsync(referenceCode, status);
+                return Ok(new { RspCode = "00", Message = "Confirm Success" });
+            }
+            catch (Exception)
+            {
+                return Ok(new { RspCode = "99", Message = "Unknown Error" });
+            }
         }
+
 
         private static WalletDto MapToWalletDto(MangaPublishingSystem.Domain.Entities.Wallet wallet)
         {
