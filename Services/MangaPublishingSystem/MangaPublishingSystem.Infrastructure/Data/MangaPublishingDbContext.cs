@@ -87,7 +87,5 @@ namespace MangaPublishingSystem.Infrastructure.Data
             }
         }
 
-        // VNPay transaction table
-        public DbSet<VNPayTransaction> VNPayTransactions { get; set; }
     }
 }
