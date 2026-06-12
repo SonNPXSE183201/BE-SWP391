@@ -85,7 +85,27 @@ namespace MangaPublishingSystem.Presentation.Controllers.Wallet
                 withdrawDto.BankAccountName);
 
             var result = MapToTransactionDto(transaction);
-            return Ok(ApiResponse<TransactionDto>.Success(result, "Rút tiền thành công. Số tiền đã được chuyển về tài khoản ngân hàng của bạn."));
+            return Ok(ApiResponse<TransactionDto>.Success(result, "Yêu cầu rút tiền thành công. Vui lòng chờ quản trị viên phê duyệt."));
+        }
+
+        [Authorize(Roles = "System Admin")]
+        [HttpGet("withdraw/pending")]
+        public async Task<ActionResult<ApiResponse<List<TransactionDto>>>> GetPendingWithdrawals()
+        {
+            var transactions = await _walletService.GetPendingWithdrawalsAsync();
+            var result = transactions.Select(MapToTransactionDto).ToList();
+            return Ok(ApiResponse<List<TransactionDto>>.Success(result, "Lấy danh sách yêu cầu rút tiền thành công."));
+        }
+
+        [Authorize(Roles = "System Admin")]
+        [HttpPost("withdraw/{id}/approve")]
+        public async Task<ActionResult<ApiResponse<TransactionDto>>> ApproveWithdraw(int id, [FromBody] ApproveWithdrawRequestDto dto)
+        {
+            var transaction = await _walletService.ApproveWithdrawAsync(id, dto.IsApproved, dto.AdminNote);
+            var result = MapToTransactionDto(transaction);
+            
+            var msg = dto.IsApproved ? "Phê duyệt rút tiền thành công." : "Từ chối rút tiền thành công. Tiền đã được hoàn lại.";
+            return Ok(ApiResponse<TransactionDto>.Success(result, msg));
         }
 
         /// <summary>

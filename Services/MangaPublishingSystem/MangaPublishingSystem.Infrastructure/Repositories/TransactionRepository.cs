@@ -24,5 +24,16 @@ namespace MangaPublishingSystem.Infrastructure.Repositories
                 .OrderByDescending(t => t.CreateAt)
                 .ToListAsync();
         }
+
+        public async System.Threading.Tasks.Task<System.Collections.Generic.IEnumerable<Transaction>> GetPendingWithdrawalsAsync()
+        {
+            return await _context.Transactions
+                .Include(t => t.Wallet)
+                .Include(t => t.FromUser)
+                .Include(t => t.ToUser)
+                .Where(t => t.Type == "Withdrawal" && t.Status == "Pending")
+                .OrderByDescending(t => t.CreateAt)
+                .ToListAsync();
+        }
     }
 }

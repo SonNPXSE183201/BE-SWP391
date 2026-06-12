@@ -10,5 +10,6 @@ namespace MangaPublishingSystem.Application.IRepositories
 
         // Existing method from older version
         System.Threading.Tasks.Task<IEnumerable<Transaction>> GetTransactionsByWalletIdAsync(int walletId);
+        System.Threading.Tasks.Task<IEnumerable<Transaction>> GetPendingWithdrawalsAsync();
     }
 }
