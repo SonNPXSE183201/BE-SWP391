@@ -66,6 +66,11 @@ namespace MangaPublishingSystem.Infrastructure
             services.AddScoped<IPasswordHasher, BCryptPasswordHasher>();
             services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
 
+            // VNPay Payment
+            services.Configure<VnPaySettings>(config.GetSection("VnPay"));
+            services.AddScoped<IVnPayService, VnPayService>();
+            services.AddHttpContextAccessor();
+
             return services;
         }
     }

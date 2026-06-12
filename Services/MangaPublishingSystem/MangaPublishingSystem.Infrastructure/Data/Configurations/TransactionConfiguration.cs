@@ -61,6 +61,20 @@ namespace MangaPublishingSystem.Infrastructure.Data.Configurations
                 .HasForeignKey(e => e.ToUserId)
                 .OnDelete(DeleteBehavior.NoAction);
 
+            // Thông tin ngân hàng (dùng cho giao dịch rút tiền)
+            builder.Property(e => e.BankName)
+                .HasMaxLength(100);
+
+            builder.Property(e => e.BankAccountNumber)
+                .HasMaxLength(50)
+                .IsUnicode(false);
+
+            builder.Property(e => e.BankAccountName)
+                .HasMaxLength(200);
+
+            builder.Property(e => e.AdminNote)
+                .HasMaxLength(500);
+
             builder.HasIndex(e => e.WalletId);
             builder.HasIndex(e => e.FromUserId);
             builder.HasIndex(e => e.ToUserId);

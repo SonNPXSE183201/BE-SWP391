@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using MangaPublishingSystem.Domain.Entities;
+
 using MangaPublishingSystem.Domain.Common;
 
 namespace MangaPublishingSystem.Infrastructure.Data
@@ -85,5 +86,6 @@ namespace MangaPublishingSystem.Infrastructure.Data
                 }
             }
         }
+
     }
 }

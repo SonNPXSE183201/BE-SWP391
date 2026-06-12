@@ -15,19 +15,22 @@ namespace MangaPublishingSystem.Application.Services
         private readonly ITransactionRepository _transactionRepository;
         private readonly ITasksRepository _tasksRepository;
         private readonly IUserRepository _userRepository;
+        private readonly IVnPayService _vnPayService;
 
         public WalletService(
-            IWalletRepository repository, 
+            IWalletRepository repository,
             IUnitOfWork unitOfWork,
             ITransactionRepository transactionRepository,
             ITasksRepository tasksRepository,
-            IUserRepository userRepository) 
+            IUserRepository userRepository,
+            IVnPayService vnPayService)
             : base(repository, unitOfWork)
         {
             _walletRepository = repository;
             _transactionRepository = transactionRepository;
             _tasksRepository = tasksRepository;
             _userRepository = userRepository;
+            _vnPayService = vnPayService;
         }
 
         public async Task<Wallet?> GetWalletByUserIdAsync(int userId)
@@ -40,7 +43,7 @@ namespace MangaPublishingSystem.Application.Services
             return wallet;
         }
 
-        public async Task<string> DepositAsync(int userId, decimal amount)
+        public async Task<string> DepositAsync(int userId, decimal amount, string ipAddr = "127.0.0.1")
         {
             var wallet = await _walletRepository.GetWalletByUserIdAsync(userId);
             if (wallet == null)
@@ -48,7 +51,12 @@ namespace MangaPublishingSystem.Application.Services
                 throw new NotFoundException("Ví của người dùng không tồn tại.");
             }
 
-            var referenceCode = "DEP_" + DateTime.UtcNow.Ticks;
+            if (amount < 10000)
+            {
+                throw new BadRequestException("Số tiền nạp tối thiểu là 10,000 VND.");
+            }
+
+            var referenceCode = "DEP" + DateTime.UtcNow.ToString("yyyyMMddHHmmss") + userId;
 
             var transaction = new Transaction
             {
@@ -64,8 +72,9 @@ namespace MangaPublishingSystem.Application.Services
             await _transactionRepository.AddAsync(transaction);
             await _unitOfWork.SaveChangesAsync();
 
-            // Trả về link thanh toán giả lập tới API Gateway cổng 5000
-            return $"http://localhost:5000/api/v1/wallets/deposit/checkout-mock?referenceCode={referenceCode}&amount={amount}";
+            var orderInfo = $"Nap tien vi he thong cho nguoi dung {userId}";
+            var paymentUrl = _vnPayService.BuildPaymentUrl(referenceCode, amount, ipAddr, orderInfo);
+            return paymentUrl;
         }
 
         public async Task<bool> ConfirmDepositAsync(string referenceCode, string status)
@@ -103,6 +112,18 @@ namespace MangaPublishingSystem.Application.Services
             return transaction.Status == "Success";
         }
 
+        /// <summary>
+        /// Tìm giao dịch nạp tiền theo mã tham chiếu — không ném exception, trả null nếu không tìm thấy.
+        /// Dùng cho IPN để kiểm tra trước khi confirm.
+        /// </summary>
+        public async Task<Transaction?> GetDepositByReferenceCodeAsync(string referenceCode)
+        {
+            var transactions = await _transactionRepository.FindAsync(
+                t => t.ReferenceCode == referenceCode && t.Type == "Deposit");
+            return transactions.FirstOrDefault();
+        }
+
+
         public async Task<Transaction> WithdrawAsync(int userId, decimal amount, string bankName, string accountNumber, string accountName)
         {
             var wallet = await _walletRepository.GetWalletByUserIdAsync(userId);
@@ -111,24 +132,33 @@ namespace MangaPublishingSystem.Application.Services
                 throw new NotFoundException("Ví của người dùng không tồn tại.");
             }
 
+            if (amount < 10000)
+            {
+                throw new BadRequestException("Số tiền rút tối thiểu là 10,000 VND.");
+            }
+
             if (wallet.WithdrawableBalance < amount)
             {
                 throw new BadRequestException("Số dư khả dụng không đủ để thực hiện rút tiền.");
             }
 
+            // Trừ số dư khả dụng ngay lập tức (giả lập chuyển khoản tự động qua Sandbox)
             wallet.WithdrawableBalance -= amount;
             _walletRepository.Update(wallet);
 
-            var referenceCode = "WDR_" + DateTime.UtcNow.Ticks;
+            var referenceCode = "WDR" + DateTime.UtcNow.ToString("yyyyMMddHHmmss") + userId;
             var transaction = new Transaction
             {
                 WalletId = wallet.Id,
                 Type = "Withdrawal",
                 Amount = amount,
                 WithdrawableAmount = -amount,
-                Status = "Success", // Giả lập rút tiền thành công ngay lập tức ở Sandbox
+                Status = "Success", // Giả lập rút tiền thành công tự động (Sandbox)
                 ReferenceCode = referenceCode,
-                ToUserId = userId
+                ToUserId = userId,
+                BankName = bankName,
+                BankAccountNumber = accountNumber,
+                BankAccountName = accountName
             };
 
             await _transactionRepository.AddAsync(transaction);
