@@ -10,6 +10,8 @@ namespace MangaPublishingSystem.Application.IRepositories
 
         Task<bool> ExistsByUserNameAsync(string userName);
 
+        Task<bool> ExistsByPenNameAsync(string penName);
+
         Task<User?> GetUserWithRoleByUsernameOrEmailAsync(string identifier);
     }
 }

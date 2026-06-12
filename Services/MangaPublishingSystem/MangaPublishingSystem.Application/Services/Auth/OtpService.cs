@@ -20,12 +20,14 @@ namespace MangaPublishingSystem.Application.Services.Auth
 
         public async Task SendOtpAsync(string email)
         {
+            email = NormalizeEmail(email);
+
             // Tạo mã OTP ngẫu nhiên 6 chữ số
             var random = new Random();
             var otpCode = random.Next(100000, 999999).ToString();
 
             // Lưu OTP vào cache với thời hạn 5 phút
-            var cacheKey = $"otp:{email}";
+            var cacheKey = GetCacheKey(email);
             _cache.Set(cacheKey, otpCode, TimeSpan.FromMinutes(5));
 
             // Log OTP ra console để hỗ trợ dev test nhanh mà không cần check mail
@@ -40,12 +42,14 @@ namespace MangaPublishingSystem.Application.Services.Auth
 
         public async Task SendForgotPasswordOtpAsync(string email)
         {
+            email = NormalizeEmail(email);
+
             // Tạo mã OTP ngẫu nhiên 6 chữ số
             var random = new Random();
             var otpCode = random.Next(100000, 999999).ToString();
 
             // Lưu OTP vào cache với thời hạn 5 phút
-            var cacheKey = $"otp:{email}";
+            var cacheKey = GetCacheKey(email);
             _cache.Set(cacheKey, otpCode, TimeSpan.FromMinutes(5));
 
             // Log OTP ra console để hỗ trợ dev test nhanh mà không cần check mail
@@ -60,7 +64,10 @@ namespace MangaPublishingSystem.Application.Services.Auth
 
         public bool VerifyOtp(string email, string code)
         {
-            var cacheKey = $"otp:{email}";
+            email = NormalizeEmail(email);
+            code = code.Trim();
+
+            var cacheKey = GetCacheKey(email);
             if (_cache.TryGetValue(cacheKey, out string? cachedCode))
             {
                 if (cachedCode == code)
@@ -71,5 +78,9 @@ namespace MangaPublishingSystem.Application.Services.Auth
             }
             return false;
         }
+
+        private static string NormalizeEmail(string email) => email.Trim().ToLowerInvariant();
+
+        private static string GetCacheKey(string email) => $"otp:{email}";
     }
 }

@@ -1,0 +1,138 @@
+{
+  "info": {
+    "name": "MCWPMS Admin Test (Nộp bài)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:5010/api" },
+    { "key": "token", "value": "" },
+    { "key": "suffix", "value": "001" },
+    { "key": "approveId", "value": "20" },
+    { "key": "rejectId", "value": "21" },
+    { "key": "lockId", "value": "22" }
+  ],
+  "item": [
+    {
+      "name": "0. Chuẩn bị DB (chạy patch_test_pending_assistants.sql trong SSMS trước)",
+      "request": { "method": "GET", "url": "{{baseUrl}}/auth/login" }
+    },
+    {
+      "name": "1. Login Admin",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "const json = pm.response.json();",
+              "pm.collectionVariables.set('token', json.Data.Token);",
+              "pm.collectionVariables.set('suffix', Date.now().toString());",
+              "pm.test('Login 200', () => pm.response.to.have.status(200));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"Identifier\": \"admin\",\n  \"Password\": \"12345\"\n}" },
+        "url": "{{baseUrl}}/auth/login"
+      }
+    },
+    {
+      "name": "2. Create Mangaka",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "if (pm.response.code === 200) pm.collectionVariables.set('lockId', pm.response.json().Data.Id);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"RoleId\": 4,\n  \"UserName\": \"mangaka_{{suffix}}\",\n  \"Email\": \"mangaka.{{suffix}}@gmail.com\",\n  \"FullName\": \"Trần Văn Nam\",\n  \"PenName\": \"NamArt\"\n}"
+        },
+        "url": "{{baseUrl}}/admin/users"
+      }
+    },
+    {
+      "name": "3. Create Editor",
+      "request": {
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"RoleId\": 2,\n  \"UserName\": \"editor_{{suffix}}\",\n  \"Email\": \"editor.{{suffix}}@gmail.com\",\n  \"FullName\": \"Lê Thị Biên Tập\"\n}"
+        },
+        "url": "{{baseUrl}}/admin/users"
+      }
+    },
+    {
+      "name": "4. Create Board",
+      "request": {
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"RoleId\": 3,\n  \"UserName\": \"board_{{suffix}}\",\n  \"Email\": \"board.{{suffix}}@gmail.com\",\n  \"FullName\": \"Phạm Văn Hội Đồng\"\n}"
+        },
+        "url": "{{baseUrl}}/admin/users"
+      }
+    },
+    {
+      "name": "5. Get Pending Assistants",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "const data = pm.response.json().Data || [];",
+              "if (data[0]) pm.collectionVariables.set('approveId', data[0].Id);",
+              "if (data[1]) pm.collectionVariables.set('rejectId', data[1].Id);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+        "method": "GET",
+        "url": "{{baseUrl}}/admin/users/pending"
+      }
+    },
+    {
+      "name": "6. Approve Assistant",
+      "request": {
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+        "method": "POST",
+        "url": "{{baseUrl}}/admin/users/{{approveId}}/approve"
+      }
+    },
+    {
+      "name": "7. Reject Assistant",
+      "request": {
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+        "method": "POST",
+        "url": "{{baseUrl}}/admin/users/{{rejectId}}/reject"
+      }
+    },
+    {
+      "name": "8. Lock User",
+      "request": {
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+        "method": "POST",
+        "url": "{{baseUrl}}/admin/users/{{lockId}}/lock"
+      }
+    }
+  ]
+}

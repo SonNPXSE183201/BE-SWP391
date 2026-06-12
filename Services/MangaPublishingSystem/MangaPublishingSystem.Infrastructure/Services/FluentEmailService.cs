@@ -30,25 +30,25 @@ namespace MangaPublishingSystem.Infrastructure.Services
 
         public async Task SendAccountInfoAsync(string toEmail, string userName, string password)
         {
-            var subject = "🎉 Your Manga Publishing Account";
+            var subject = "Tài khoản Manga Publishing System đã được tạo";
 
             var body = $@"
 <div style='background:#eef2f7;padding:40px;font-family:Arial,sans-serif'>
     <div style='max-width:600px;margin:auto;background:white;border-radius:10px;overflow:hidden'>
 
         <div style='background:#16a34a;color:white;text-align:center;padding:30px'>
-            <h1 style='margin:0'>🎉 CONGRATULATIONS!</h1>
+            <h1 style='margin:0'>Tài khoản đã được tạo thành công</h1>
             <p style='margin-top:10px'>
-                Your account has been created successfully.
+                Quản trị viên đã khởi tạo tài khoản cho bạn trên hệ thống.
             </p>
         </div>
 
         <div style='padding:30px'>
 
-            <p>Hello,</p>
+            <p>Xin chào,</p>
 
             <p>
-                Your Manga Publishing System account has been created successfully.
+                Tài khoản của bạn trên hệ thống Manga Publishing System đã được tạo thành công.
             </p>
 
             <div style='background:#f3f4f6;
@@ -57,11 +57,11 @@ namespace MangaPublishingSystem.Infrastructure.Services
                         margin-top:20px'>
 
                 <p>
-                    <strong>Username:</strong> {userName}
+                    <strong>Tên đăng nhập:</strong> {userName}
                 </p>
 
                 <p>
-                    <strong>Password:</strong> {password}
+                    <strong>Mật khẩu:</strong> {password}
                 </p>
 
             </div>
@@ -70,8 +70,7 @@ namespace MangaPublishingSystem.Infrastructure.Services
                       font-weight:bold;
                       margin-top:25px'>
 
-                Please log in and change your password
-                after your first login.
+                Vui lòng đăng nhập và đổi mật khẩu ngay sau lần đăng nhập đầu tiên.
 
             </p>
 

@@ -7,9 +7,6 @@ using FluentValidation;
 using FluentValidation.AspNetCore;
 using MangaPublishingSystem.Application;
 using MangaPublishingSystem.Application.IRepositories;
-using MangaPublishingSystem.Application.IServices;
-using MangaPublishingSystem.Application.Services;
-using MangaPublishingSystem.Infrastructure.Repositories;
 using MangaPublishingSystem.Presentation.Extensions;
 using MangaPublishingSystem.Presentation.Hubs;
 using MangaPublishingSystem.Infrastructure;
@@ -51,10 +48,7 @@ builder.Configuration.AddUserSecrets<Program>();
 
 builder.Services.AddInfrastructureServices(config);
 
-builder.Services.AddApplicationServices(config);
-
-builder.Services.AddScoped<IWalletRepository, WalletRepository>();
-builder.Services.AddScoped<IWalletService, WalletService>();
+builder.Services.AddApplicationServices();
 
 builder.Services.AddPresentationServices();
 

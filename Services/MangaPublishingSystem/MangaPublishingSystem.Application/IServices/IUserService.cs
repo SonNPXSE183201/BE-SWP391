@@ -6,12 +6,12 @@ namespace MangaPublishingSystem.Application.IServices
     {
         Task<UserResponseDto> CreateUserByAdminAsync(CreateUserByAdminDto dto);
 
-        Task<AssistantResponseDto> RegisterAssistantAsync(AssistantRegisterDto dto);
-
         Task<List<AssistantResponseDto>> GetPendingAssistantsAsync();
 
-        Task<AssistantResponseDto> ApproveAssistantAsync(int id);
+        Task<UserResponseDto> ApproveUserAsync(int id);
 
-        Task<AssistantResponseDto> RejectAssistantAsync(int id);
+        Task<UserResponseDto> RejectUserAsync(int id);
+
+        Task<UserResponseDto> LockUserAsync(int id);
     }
 }
