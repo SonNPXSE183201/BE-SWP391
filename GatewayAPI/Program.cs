@@ -76,7 +76,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 // Setup Ocelot Route pipeline
-app.UseOcelot().Wait();
+ app.UseOcelot().Wait();
 
 app.MapControllers();
 app.MapHealthChecks("/health");

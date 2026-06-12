@@ -35,24 +35,23 @@ builder.Services.AddControllers()
             return new BadRequestObjectResult(response);
         };
     });
+
 builder.Services.AddFluentValidationAutoValidation();
 builder.Services.AddValidatorsFromAssemblyContaining<IUnitOfWork>();
+
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerWithBearer();
+
 builder.Services.AddJwtAuthenticationFromEnv(config);
+
 builder.Configuration.AddUserSecrets<Program>();
 
-// Database & Infrastructure registrations
 builder.Services.AddInfrastructureServices(config);
 
-// Repositories, Services, Unit Of Work registrations
 builder.Services.AddApplicationServices();
 
-// Swagger & Auth configuration
-builder.Services.AddSwaggerAndAuth(config);
-
-// Presentation configurations
 builder.Services.AddPresentationServices();
+
 builder.Services.AddSignalR();
 
 builder.Services.AddCorsFromConfig(builder.Configuration);
