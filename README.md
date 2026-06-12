@@ -170,3 +170,23 @@ Khi bạn (hoặc AI) cần tạo một API chức năng mới (Ví dụ: Tạo 
   ```
 * **Cách sử dụng**:
   * Tiêm `IFluentEmail` vào các Service cần gửi thông báo (ví dụ: ở lớp xử lý Onboarding) và gọi `SendAsync()` để thực hiện gửi mail.
+
+### 5.4. Tích hợp thanh toán VNPay Sandbox
+* **Cách hoạt động**: Tích hợp quy trình nạp tiền thông qua cổng thanh toán VNPay Sandbox.
+* **Cấu hình trong `appsettings.json`**:
+  ```json
+  "VnPay": {
+    "TmnCode": "0NLJV3OJ",
+    "HashSecret": "4W2N65NBLLT0XAM4ULPMXF5MPY3JC18C",
+    "PaymentUrl": "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html",
+    "QueryUrl": "https://sandbox.vnpayment.vn/merchant_webapi/api/transaction",
+    "ReturnUrl": "http://localhost:5000/api/v1/wallets/deposit/return",
+    "IpnUrl": "http://localhost:5000/api/v1/wallets/deposit/ipn"
+  }
+  ```
+* **Quy trình hoạt động**:
+  * **Tạo URL thanh toán (Deposit)**: Client gọi API `POST /api/wallets/deposit`. Backend tạo một giao dịch `Pending` và trả về URL thanh toán của VNPay Sandbox.
+  * **Frontend Redirect**: Client chuyển hướng trình duyệt tới URL thanh toán để người dùng nhập thẻ (Thẻ test: Ngân hàng NCB, Số thẻ 9704198526191432198, Tên NGUYEN VAN A, Ngày phát hành 07/15, OTP 123456).
+  * **Nhận kết quả trực tiếp (Return URL)**: VNPay redirect về `ReturnUrl` kèm tham số. Backend xác thực chữ ký (HMAC-SHA512) và trả về kết quả cho Frontend hiển thị.
+  * **Cập nhật số dư ngầm (IPN URL)**: VNPay gọi ngầm tới `IpnUrl` (server-to-server webhook). Đây là bước bảo mật bắt buộc để Backend cập nhật số dư `WithdrawableBalance` và đổi trạng thái giao dịch thành `Success`, ngăn chặn mất mát dữ liệu khi Frontend bị tắt đột ngột.
+  * **Rút tiền (Withdraw)**: Hệ thống sử dụng quy trình Phê duyệt thủ công (Phương án 3). Tiền được khóa (chuyển sang `LockedWithdrawable`) khi user yêu cầu rút, và chỉ được giải ngân thực sự (hoặc hoàn tiền) khi System Admin duyệt qua API `POST /api/wallets/withdraw/{id}/approve`.
