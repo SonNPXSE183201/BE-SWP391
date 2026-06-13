@@ -103,6 +103,11 @@ dotnet build MangaPublishingSystem.slnx
 * **Quy tắc phân chia tầng độc lập (Clean Architecture Boundaries)**:
   * **Tầng Application (`MangaPublishingSystem.Application`)** phải luôn giữ **SẠCH** hoàn toàn, không phụ thuộc vào Entity Framework hay các thư viện hạ tầng cụ thể (`Microsoft.EntityFrameworkCore` hoặc `Microsoft.EntityFrameworkCore.Relational`).
   * Tất cả các helper truy vấn cơ sở dữ liệu (ví dụ: `WhereContainsUnsigned`) **bắt buộc phải đặt tại tầng Infrastructure** (trong thư mục `Extensions`). Tầng Application tuyệt đối không được gọi trực tiếp các phương thức mở rộng hoặc collation của EF Core.
+* **Quy tắc nghiêm ngặt về Ánh xạ DTO (DTO Mapping Rules - Thin Controllers)**:
+  * **CẤM TUYỆT ĐỐI** triển khai logic ánh xạ (mapping) hoặc chuyển đổi kiểu dữ liệu từ Domain Entities sang DTOs tại tầng Presentation (Controllers).
+  * Controllers phải cực kỳ tinh gọn (thin controllers), chỉ làm nhiệm vụ nhận yêu cầu, gọi Service, nhận DTO hoặc danh sách DTO đã được ánh xạ sẵn từ tầng Application, và trả về cho Client.
+  * Tầng Application (Services) **bắt buộc** phải tự thực hiện việc ánh xạ thực thể nghiệp vụ (Domain Entities) thành DTOs trước khi trả về cho Controller.
+  * Tất cả logic ánh xạ phải được triển khai dưới dạng các hàm mở rộng static (Extension Methods) đặt trong các tệp `<Feature>MappingExtensions.cs` thuộc thư mục DTO của từng tính năng thuộc tầng Application (ví dụ: `Application/DTOs/Series/SeriesMappingExtensions.cs`).
 * **Tự động hóa Kiểm toán (Audit Fields - CreateAt/UpdateAt)**:
   * Tất cả các thực thể kế thừa từ `BaseEntity` đều tự động có 2 cột `CreateAt` và `UpdateAt`.
   * **CẤM** tự cập nhật thủ công giá trị cho `CreateAt` và `UpdateAt` ở tầng nghiệp vụ (Service). `MangaPublishingDbContext.cs` đã được thiết lập tự động hóa: Gán `CreateAt = DateTime.UtcNow` khi thêm mới (Added) và `UpdateAt = DateTime.UtcNow` khi cập nhật (Modified).
