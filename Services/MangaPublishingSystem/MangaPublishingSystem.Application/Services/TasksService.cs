@@ -52,7 +52,7 @@ namespace MangaPublishingSystem.Application.Services
             _notificationPublisher = notificationPublisher;
         }
 
-        public async Task<Tasks> CreateTaskAsync(int mangakaId, CreateTaskDto createDto)
+        public async Task<TasksDto> CreateTaskAsync(int mangakaId, CreateTaskDto createDto)
         {
             var region = await _regionRepository.GetByIdAsync(createDto.RegionId);
             if (region == null)
@@ -98,7 +98,7 @@ namespace MangaPublishingSystem.Application.Services
             }
 
             await _unitOfWork.SaveChangesAsync();
-            return task;
+            return task.ToDto();
         }
 
         public async System.Threading.Tasks.Task ApproveSubmissionAsync(int taskId, int mangakaId, ApproveTaskDto approveDto)
@@ -320,19 +320,22 @@ namespace MangaPublishingSystem.Application.Services
             await _unitOfWork.SaveChangesAsync();
         }
 
-        public async Task<IEnumerable<Tasks>> GetTasksByMangakaIdAsync(int mangakaId)
+        public async Task<IEnumerable<TasksDto>> GetTasksByMangakaIdAsync(int mangakaId)
         {
-            return await _tasksRepository.FindAsync(t => t.MangakaId == mangakaId);
+            var list = await _tasksRepository.FindAsync(t => t.MangakaId == mangakaId);
+            return list.ToDtoList();
         }
 
-        public async Task<IEnumerable<Tasks>> GetTasksByAssistantIdAsync(int assistantId)
+        public async Task<IEnumerable<TasksDto>> GetTasksByAssistantIdAsync(int assistantId)
         {
-            return await _tasksRepository.FindAsync(t => t.AssistantId == assistantId);
+            var list = await _tasksRepository.FindAsync(t => t.AssistantId == assistantId);
+            return list.ToDtoList();
         }
 
-        public async Task<IEnumerable<TaskVersion>> GetTaskVersionsAsync(int taskId)
+        public async Task<IEnumerable<TaskVersionDto>> GetTaskVersionsAsync(int taskId)
         {
-            return await _taskVersionRepository.FindAsync(v => v.TaskId == taskId);
+            var list = await _taskVersionRepository.FindAsync(v => v.TaskId == taskId);
+            return list.ToDtoList();
         }
 
         public async Task<byte[]> GetCompositedPageAsync(int pageId)
