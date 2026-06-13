@@ -46,13 +46,10 @@ namespace MangaPublishingSystem.Presentation.Controllers.Wallet
 
             var transactions = await _walletService.GetTransactionHistoryAsync(userId);
 
-            var walletDto = MapToWalletDto(wallet);
-            var transactionDtos = transactions.Select(MapToTransactionDto).ToList();
-
             var result = new WalletDetailsDto
             {
-                Wallet = walletDto,
-                Transactions = transactionDtos
+                Wallet = wallet,
+                Transactions = transactions.ToList()
             };
 
             return Ok(ApiResponse<WalletDetailsDto>.Success(result, "Lấy thông tin ví thành công."));
@@ -84,8 +81,7 @@ namespace MangaPublishingSystem.Presentation.Controllers.Wallet
                 withdrawDto.BankAccountNumber, 
                 withdrawDto.BankAccountName);
 
-            var result = MapToTransactionDto(transaction);
-            return Ok(ApiResponse<TransactionDto>.Success(result, "Yêu cầu rút tiền thành công. Vui lòng chờ quản trị viên phê duyệt."));
+            return Ok(ApiResponse<TransactionDto>.Success(transaction, "Yêu cầu rút tiền thành công. Vui lòng chờ quản trị viên phê duyệt."));
         }
 
         [Authorize(Roles = "System Admin")]
@@ -93,8 +89,7 @@ namespace MangaPublishingSystem.Presentation.Controllers.Wallet
         public async Task<ActionResult<ApiResponse<List<TransactionDto>>>> GetPendingWithdrawals()
         {
             var transactions = await _walletService.GetPendingWithdrawalsAsync();
-            var result = transactions.Select(MapToTransactionDto).ToList();
-            return Ok(ApiResponse<List<TransactionDto>>.Success(result, "Lấy danh sách yêu cầu rút tiền thành công."));
+            return Ok(ApiResponse<List<TransactionDto>>.Success(transactions.ToList(), "Lấy danh sách yêu cầu rút tiền thành công."));
         }
 
         [Authorize(Roles = "System Admin")]
@@ -102,10 +97,8 @@ namespace MangaPublishingSystem.Presentation.Controllers.Wallet
         public async Task<ActionResult<ApiResponse<TransactionDto>>> ApproveWithdraw(int id, [FromBody] ApproveWithdrawRequestDto dto)
         {
             var transaction = await _walletService.ApproveWithdrawAsync(id, dto.IsApproved, dto.AdminNote);
-            var result = MapToTransactionDto(transaction);
-            
             var msg = dto.IsApproved ? "Phê duyệt rút tiền thành công." : "Từ chối rút tiền thành công. Tiền đã được hoàn lại.";
-            return Ok(ApiResponse<TransactionDto>.Success(result, msg));
+            return Ok(ApiResponse<TransactionDto>.Success(transaction, msg));
         }
 
         /// <summary>
@@ -272,46 +265,6 @@ namespace MangaPublishingSystem.Presentation.Controllers.Wallet
         }
 
 
-        private static WalletDto MapToWalletDto(MangaPublishingSystem.Domain.Entities.Wallet wallet)
-        {
-            return new WalletDto
-            {
-                Id = wallet.Id,
-                UserId = wallet.UserId,
-                SetupFundBalance = wallet.SetupFundBalance,
-                WithdrawableBalance = wallet.WithdrawableBalance,
-                LockedFund = wallet.LockedFund,
-                LockedWithdrawable = wallet.LockedWithdrawable,
-                CreateAt = wallet.CreateAt,
-                UpdateAt = wallet.UpdateAt
-            };
-        }
 
-        private static TransactionDto MapToTransactionDto(MangaPublishingSystem.Domain.Entities.Transaction t)
-        {
-            return new TransactionDto
-            {
-                Id = t.Id,
-                WalletId = t.WalletId,
-                Type = t.Type,
-                ReferenceId = t.ReferenceId,
-                SetupFundAmount = t.SetupFundAmount,
-                WithdrawableAmount = t.WithdrawableAmount,
-                Amount = t.Amount,
-                Status = t.Status,
-                ReferenceCode = t.ReferenceCode,
-                FromUserId = t.FromUserId,
-                ToUserId = t.ToUserId,
-                FromUserName = t.FromUser?.UserName,
-                FromUserFullName = t.FromUser?.FullName,
-                ToUserName = t.ToUser?.UserName,
-                ToUserFullName = t.ToUser?.FullName,
-                BankName = t.BankName,
-                BankAccountNumber = t.BankAccountNumber,
-                BankAccountName = t.BankAccountName,
-                CreateAt = t.CreateAt,
-                UpdateAt = t.UpdateAt
-            };
-        }
     }
 }
