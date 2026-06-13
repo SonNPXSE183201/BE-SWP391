@@ -8,7 +8,7 @@ namespace MangaPublishingSystem.Application.Validations.Wallet
         public WithdrawRequestDtoValidator()
         {
             RuleFor(x => x.Amount)
-                .GreaterThan(0).WithMessage("Số tiền rút phải lớn hơn 0.")
+                .GreaterThanOrEqualTo(10000).WithMessage("Số tiền rút tối thiểu là 10,000 VND.")
                 .Must(value => decimal.Round(value, 2, System.MidpointRounding.AwayFromZero) == value)
                 .WithMessage("Số tiền rút chỉ hỗ trợ tối đa 2 chữ số thập phân.");
 
