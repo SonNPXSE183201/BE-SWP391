@@ -1,4 +1,4 @@
-﻿-- =========================================================================
+-- =========================================================================
 -- DATABASE CREATION & SCHEMA INITIALIZATION SCRIPT
 -- PROJECT: Manga Creation Workflow & Publishing Management System (MCWPMS)
 -- DATABASE NAME: MangaPublishing
@@ -136,6 +136,10 @@ CREATE TABLE dbo.[Transaction] (
     ReferenceCode VARCHAR(100) NULL,
     FromUserId INT NULL,
     ToUserId INT NULL,
+    BankName NVARCHAR(100) NULL,
+    BankAccountNumber VARCHAR(50) NULL,
+    BankAccountName NVARCHAR(200) NULL,
+    AdminNote NVARCHAR(500) NULL,
     CreateAt DATETIME2 NOT NULL CONSTRAINT DF_Transaction_CreateAt DEFAULT GETUTCDATE(),
     UpdateAt DATETIME2 NULL,
     CONSTRAINT PK_Transaction PRIMARY KEY CLUSTERED (TransactionId),
