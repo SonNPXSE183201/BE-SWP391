@@ -4,6 +4,7 @@
     <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>36a2c1ea-ed6e-44fb-ac37-d0b34fd40ed2</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
@@ -16,7 +17,6 @@
     <ProjectReference Include="..\BuildingBlocks\BuildingBlocks.csproj" />
   </ItemGroup>
 
-  <!-- Tự động restore local tools và cài đặt Git Hooks của Husky khi build ở môi trường local Debug -->
   <Target Name="Husky" BeforeTargets="Restore" Condition="'$(Configuration)' == 'Debug' And Exists('$(MSBuildThisFileDirectory)../.git')">
     <Exec Command="dotnet tool restore" WorkingDirectory="$(MSBuildThisFileDirectory)../" />
     <Exec Command="dotnet husky install" WorkingDirectory="$(MSBuildThisFileDirectory)../" ContinueOnError="true" />
