@@ -31,8 +31,7 @@ namespace MangaPublishingSystem.Presentation.Controllers.Tasks
         {
             int mangakaId = CurrentUserId;
             var task = await _tasksService.CreateTaskAsync(mangakaId, createDto);
-            var result = MapToTasksDto(task);
-            return Ok(ApiResponse<TasksDto>.Success(result, "Tạo nhiệm vụ vẽ và ký quỹ thù lao thành công."));
+            return Ok(ApiResponse<TasksDto>.Success(task, "Tạo nhiệm vụ vẽ và ký quỹ thù lao thành công."));
         }
 
         [Authorize(Roles = "Mangaka")]
@@ -78,8 +77,7 @@ namespace MangaPublishingSystem.Presentation.Controllers.Tasks
         {
             int mangakaId = CurrentUserId;
             var tasks = await _tasksService.GetTasksByMangakaIdAsync(mangakaId);
-            var result = tasks.Select(MapToTasksDto).ToList();
-            return Ok(ApiResponse<IEnumerable<TasksDto>>.Success(result, "Lấy danh sách nhiệm vụ thành công."));
+            return Ok(ApiResponse<IEnumerable<TasksDto>>.Success(tasks, "Lấy danh sách nhiệm vụ thành công."));
         }
 
         [Authorize(Roles = "Mangaka,Assistant")]
@@ -87,8 +85,7 @@ namespace MangaPublishingSystem.Presentation.Controllers.Tasks
         public async Task<ActionResult<ApiResponse<IEnumerable<TaskVersionDto>>>> GetVersions([FromRoute] int id)
         {
             var versions = await _tasksService.GetTaskVersionsAsync(id);
-            var result = versions.Select(MapToTaskVersionDto).ToList();
-            return Ok(ApiResponse<IEnumerable<TaskVersionDto>>.Success(result, "Lấy lịch sử các phiên bản vẽ nộp thành công."));
+            return Ok(ApiResponse<IEnumerable<TaskVersionDto>>.Success(versions, "Lấy lịch sử các phiên bản vẽ nộp thành công."));
         }
 
         [HttpGet("pages/{pageId}/composite")]
@@ -98,44 +95,6 @@ namespace MangaPublishingSystem.Presentation.Controllers.Tasks
             return File(imageBytes, "image/png");
         }
 
-        private static TasksDto MapToTasksDto(MangaPublishingSystem.Domain.Entities.Tasks t)
-        {
-            return new TasksDto
-            {
-                Id = t.Id,
-                MangakaId = t.MangakaId,
-                RegionId = t.RegionId,
-                AssistantId = t.AssistantId,
-                Description = t.Description,
-                PaymentAmount = t.PaymentAmount,
-                Deadline = t.Deadline,
-                ExtensionRequestDays = t.ExtensionRequestDays,
-                ExtensionReason = t.ExtensionReason,
-                ExtensionStatus = t.ExtensionStatus,
-                ZIndex_Order = t.ZIndex_Order,
-                Status = t.Status,
-                Rating = t.Rating,
-                FeedbackComment = t.FeedbackComment,
-                MangakaName = t.Mangaka?.FullName,
-                AssistantName = t.Assistant?.FullName,
-                PageNumber = t.Region?.PageId ?? 0,
-                PageImageUrl = t.Region?.Page?.RawImageUrl,
-                CreateAt = t.CreateAt,
-                UpdateAt = t.UpdateAt
-            };
-        }
 
-        private static TaskVersionDto MapToTaskVersionDto(TaskVersion v)
-        {
-            return new TaskVersionDto
-            {
-                Id = v.Id,
-                TaskId = v.TaskId,
-                VersionNumber = v.VersionNumber,
-                SubmittedFileUrl = v.SubmittedFileUrl,
-                Status = v.Status,
-                SubmittedAt = v.SubmittedAt
-            };
-        }
     }
 }
