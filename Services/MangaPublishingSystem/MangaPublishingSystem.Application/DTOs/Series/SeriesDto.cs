@@ -16,6 +16,9 @@ namespace MangaPublishingSystem.Application.DTOs.Series
         public string? PublicationSchedule { get; set; }
         public string Status { get; set; } = null!;
         public string? ResourceFolderUrl { get; set; }
+        public string? DraftManuscriptUrl { get; set; }
+        public string? EditorReport { get; set; }
+        public decimal? SuggestedBudget { get; set; }
         public string? MangakaName { get; set; }
         public string? EditorName { get; set; }
         public DateTime CreateAt { get; set; }
