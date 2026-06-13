@@ -10,23 +10,23 @@ namespace MangaPublishingSystem.Application.Validations
         public const decimal MaxMoneyValue = 9999999999999999.99m; // decimal(18,2) limit
 
         // General Error Messages
-        public const string RequiredField = "{PropertyName} is required.";
-        public const string InvalidId = "{PropertyName} must be greater than 0.";
-        public const string LengthExceeded = "{PropertyName} must not exceed {MaxLength} characters.";
+        public const string RequiredField = "{PropertyName} không được để trống.";
+        public const string InvalidId = "{PropertyName} phải lớn hơn 0.";
+        public const string LengthExceeded = "{PropertyName} không được vượt quá {MaxLength} ký tự.";
         
         // Financial Messages
-        public const string MoneyNegativeInvalid = "{PropertyName} cannot be negative.";
-        public const string MoneyScaleInvalid = "{PropertyName} supports up to 2 decimal places.";
-        public const string MoneyPrecisionInvalid = "{PropertyName} exceeds maximum database precision.";
+        public const string MoneyNegativeInvalid = "{PropertyName} không được là số âm.";
+        public const string MoneyScaleInvalid = "{PropertyName} chỉ hỗ trợ tối đa 2 chữ số thập phân.";
+        public const string MoneyPrecisionInvalid = "{PropertyName} vượt quá giới hạn lưu trữ của hệ thống.";
 
         // Percentage Messages
-        public const string PercentageOutOfRange = "{PropertyName} must be between 0 and 100.";
-        public const string PercentageScaleInvalid = "{PropertyName} supports up to 2 decimal places.";
+        public const string PercentageOutOfRange = "{PropertyName} phải nằm trong khoảng từ 0 đến 100.";
+        public const string PercentageScaleInvalid = "{PropertyName} chỉ hỗ trợ tối đa 2 chữ số thập phân.";
 
         // Tasks / Performance Messages
-        public const string RatingOutOfRange = "Rating must be between 1 and 5.";
-        public const string ZIndexNegative = "Z-Index order cannot be negative.";
-        public const string OrderDeadlineInvalid = "Deadline must be a date in the future.";
+        public const string RatingOutOfRange = "Đánh giá phải nằm trong khoảng từ 1 đến 5.";
+        public const string ZIndexNegative = "Thứ tự Z-Index không được là số âm.";
+        public const string OrderDeadlineInvalid = "Hạn chót phải là một ngày trong tương lai.";
 
         // Extension Methods for common validation rules
         
