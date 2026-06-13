@@ -6,6 +6,10 @@
 -- DATE: 2026-06-06
 -- =========================================================================
 
+SET QUOTED_IDENTIFIER ON;
+SET ANSI_NULLS ON;
+GO
+
 USE master;
 GO
 
@@ -201,6 +205,9 @@ CREATE TABLE dbo.Series (
     PublicationSchedule NVARCHAR(50) NULL,
     Status NVARCHAR(50) NOT NULL CONSTRAINT DF_Series_Status DEFAULT N'Draft',
     ResourceFolderUrl NVARCHAR(500) NULL,
+    DraftManuscriptUrl NVARCHAR(500) NULL,
+    EditorReport NVARCHAR(MAX) NULL,
+    SuggestedBudget DECIMAL(18,2) NULL,
     CreateAt DATETIME2 NOT NULL CONSTRAINT DF_Series_CreateAt DEFAULT GETUTCDATE(),
     UpdateAt DATETIME2 NULL,
     CONSTRAINT PK_Series PRIMARY KEY CLUSTERED (SeriesId),
