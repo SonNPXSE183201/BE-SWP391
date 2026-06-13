@@ -27,4 +27,6 @@ Thumbs.db
 /artifacts/
 
 # Appsettings
-*.appsettings.json
+**/appsettings.json
+**/appsettings.Development.json
+**/appsettings.Local.json
