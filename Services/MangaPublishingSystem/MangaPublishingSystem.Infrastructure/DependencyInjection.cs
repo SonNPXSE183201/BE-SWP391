@@ -62,6 +62,17 @@ namespace MangaPublishingSystem.Infrastructure
             services.AddScoped<IEmailService, FluentEmailService>();
             services.AddScoped<IImageCompositor, ImageCompositor>();
 
+            // Storage Service (Multi-environment configuration)
+            var storageProvider = config["StorageSettings:Provider"] ?? "Local";
+            if (storageProvider.Equals("Firebase", StringComparison.OrdinalIgnoreCase))
+            {
+                services.AddScoped<MangaPublishingSystem.Application.IServices.Storage.IStorageService, Services.Storage.FirebaseStorageService>();
+            }
+            else
+            {
+                services.AddScoped<MangaPublishingSystem.Application.IServices.Storage.IStorageService, Services.Storage.LocalStorageService>();
+            }
+
             // Security services
             services.AddScoped<IPasswordHasher, BCryptPasswordHasher>();
             services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
