@@ -1,10 +1,14 @@
-﻿-- =========================================================================
+-- =========================================================================
 -- SEED DATA SETUP SCRIPT WITH RESET
 -- PROJECT: Manga Creation Workflow & Publishing Management System (MCWPMS)
 -- DATABASE NAME: MangaPublishing
 -- PASSWORD FOR ALL SEEDED ACCOUNTS: 12345 (BCrypt Hash)
 -- DATE: 2026-06-06
 -- =========================================================================
+
+SET QUOTED_IDENTIFIER ON;
+SET ANSI_NULLS ON;
+GO
 
 USE MangaPublishing;
 GO
@@ -35,6 +39,7 @@ DELETE FROM dbo.Notification;
 DELETE FROM dbo.AssistantProfile;
 DELETE FROM dbo.[Transaction];
 DELETE FROM dbo.Wallet;
+DELETE FROM dbo.RefreshToken;
 DELETE FROM dbo.[User];
 DELETE FROM dbo.Role;
 
@@ -60,6 +65,7 @@ DBCC CHECKIDENT ('dbo.Notification', RESEED, 0);
 DBCC CHECKIDENT ('dbo.AssistantProfile', RESEED, 0);
 DBCC CHECKIDENT ('dbo.[Transaction]', RESEED, 0);
 DBCC CHECKIDENT ('dbo.Wallet', RESEED, 0);
+DBCC CHECKIDENT ('dbo.RefreshToken', RESEED, 0);
 DBCC CHECKIDENT ('dbo.[User]', RESEED, 0);
 DBCC CHECKIDENT ('dbo.Role', RESEED, 0);
 GO
