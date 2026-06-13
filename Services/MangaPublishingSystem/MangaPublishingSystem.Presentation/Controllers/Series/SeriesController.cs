@@ -29,8 +29,7 @@ namespace MangaPublishingSystem.Presentation.Controllers.Series
         {
             int mangakaId = CurrentUserId;
             var series = await _seriesService.CreateSeriesAsync(mangakaId, createDto);
-            var result = MapToSeriesDto(series);
-            return Ok(ApiResponse<SeriesDto>.Success(result, "Tạo hồ sơ bộ truyện mới thành công."));
+            return Ok(ApiResponse<SeriesDto>.Success(series, "Tạo hồ sơ bộ truyện mới thành công."));
         }
 
         [Authorize(Roles = "Mangaka")]
@@ -58,31 +57,55 @@ namespace MangaPublishingSystem.Presentation.Controllers.Series
         {
             int mangakaId = CurrentUserId;
             var seriesList = await _seriesService.GetSeriesByMangakaIdAsync(mangakaId);
-            var result = seriesList.Select(MapToSeriesDto).ToList();
-            return Ok(ApiResponse<IEnumerable<SeriesDto>>.Success(result, "Lấy danh sách bộ truyện thành công."));
+            return Ok(ApiResponse<IEnumerable<SeriesDto>>.Success(seriesList, "Lấy danh sách bộ truyện thành công."));
         }
 
-        private static SeriesDto MapToSeriesDto(MangaPublishingSystem.Domain.Entities.Series series)
+        [Authorize(Roles = "Mangaka")]
+        [HttpPut("{id}/manuscript")]
+        public async Task<ActionResult<ApiResponse<object>>> SubmitDraftManuscript([FromRoute] int id, [FromBody] SubmitDraftManuscriptDto dto)
         {
-            return new SeriesDto
-            {
-                Id = series.Id,
-                MangakaId = series.MangakaId,
-                EditorId = series.EditorId,
-                Title = series.Title,
-                Genre = series.Genre,
-                Synopsis = series.Synopsis,
-                CoverArtworkUrl = series.CoverArtworkUrl,
-                EstimatedProductionBudget = series.EstimatedProductionBudget,
-                ApprovedProductionBudget = series.ApprovedProductionBudget,
-                PublicationSchedule = series.PublicationSchedule,
-                Status = series.Status,
-                ResourceFolderUrl = series.ResourceFolderUrl,
-                MangakaName = series.Mangaka?.FullName,
-                EditorName = series.Editor?.FullName,
-                CreateAt = series.CreateAt,
-                UpdateAt = series.UpdateAt
-            };
+            int mangakaId = CurrentUserId;
+            await _seriesService.SubmitDraftManuscriptAsync(id, mangakaId, dto.DraftManuscriptUrl);
+            return Ok(ApiResponse<object>.Success(null, "Cập nhật bản thảo nháp của bộ truyện thành công."));
         }
+
+        [Authorize(Roles = "Tantou Editor")]
+        [HttpPost("{id}/editor-evaluate")]
+        public async Task<ActionResult<ApiResponse<object>>> EvaluateSeries([FromRoute] int id, [FromBody] EditorEvaluationDto dto)
+        {
+            int editorId = CurrentUserId;
+            await _seriesService.EvaluateSeriesByEditorAsync(id, editorId, dto);
+            var msg = dto.IsApproved 
+                ? "Thẩm định bản thảo nháp thành công. Truyện đã được trình lên Hội đồng duyệt."
+                : "Từ chối bản thảo nháp thành công. Truyện đã được trả về trạng thái Draft.";
+            return Ok(ApiResponse<object>.Success(null, msg));
+        }
+
+        [Authorize(Roles = "Editorial Board")]
+        [HttpPost("{id}/votes")]
+        public async Task<ActionResult<ApiResponse<object>>> CastVote([FromRoute] int id, [FromBody] BoardVoteDto dto)
+        {
+            int boardMemberId = CurrentUserId;
+            await _seriesService.CastBoardVoteAsync(id, boardMemberId, dto);
+            return Ok(ApiResponse<object>.Success(null, "Bỏ phiếu bình chọn bộ truyện thành công."));
+        }
+
+        [Authorize(Roles = "Editorial Board")]
+        [HttpPost("{id}/board-decision")]
+        public async Task<ActionResult<ApiResponse<object>>> FinalizeDecision([FromRoute] int id, [FromBody] BoardDecisionDto dto)
+        {
+            await _seriesService.FinalizeBoardDecisionAsync(id, dto);
+            var msg = dto.IsApproved
+                ? "Hội đồng quyết định thông qua bộ truyện thành công."
+                : "Hội đồng quyết định từ chối bộ truyện thành công.";
+            return Ok(ApiResponse<object>.Success(null, msg));
+        }
+
+
+    }
+
+    public class SubmitDraftManuscriptDto
+    {
+        public string DraftManuscriptUrl { get; set; } = null!;
     }
 }
