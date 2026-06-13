@@ -65,6 +65,7 @@ if (app.Environment.IsDevelopment() || app.Environment.EnvironmentName == "Docke
     app.UseSwaggerUI();
 }
 
+app.UseStaticFiles();
 app.UseCors("Default");
 app.UseGlobalExceptionHandler();
 app.UseAuthentication();
