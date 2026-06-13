@@ -6,6 +6,7 @@ namespace MangaPublishingSystem.Application.DTOs.Series
         public string? Genre { get; set; }
         public string? Synopsis { get; set; }
         public string? CoverArtworkUrl { get; set; }
+        public string? DraftManuscriptUrl { get; set; }
         public decimal EstimatedProductionBudget { get; set; }
     }
 }
