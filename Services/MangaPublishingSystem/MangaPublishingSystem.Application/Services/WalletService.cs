@@ -6,6 +6,7 @@ using BuildingBlocks.Exceptions;
 using MangaPublishingSystem.Domain.Entities;
 using MangaPublishingSystem.Application.IRepositories;
 using MangaPublishingSystem.Application.IServices;
+using MangaPublishingSystem.Application.DTOs.Wallet;
 
 namespace MangaPublishingSystem.Application.Services
 {
@@ -33,14 +34,14 @@ namespace MangaPublishingSystem.Application.Services
             _vnPayService = vnPayService;
         }
 
-        public async Task<Wallet?> GetWalletByUserIdAsync(int userId)
+        public async Task<WalletDto?> GetWalletByUserIdAsync(int userId)
         {
             var wallet = await _walletRepository.GetWalletByUserIdAsync(userId);
             if (wallet == null)
             {
                 throw new NotFoundException("Ví của người dùng không tồn tại trên hệ thống.");
             }
-            return wallet;
+            return wallet.ToDto();
         }
 
         public async Task<string> DepositAsync(int userId, decimal amount, string ipAddr = "127.0.0.1")
@@ -116,15 +117,15 @@ namespace MangaPublishingSystem.Application.Services
         /// Tìm giao dịch nạp tiền theo mã tham chiếu — không ném exception, trả null nếu không tìm thấy.
         /// Dùng cho IPN để kiểm tra trước khi confirm.
         /// </summary>
-        public async Task<Transaction?> GetDepositByReferenceCodeAsync(string referenceCode)
+        public async Task<TransactionDto?> GetDepositByReferenceCodeAsync(string referenceCode)
         {
             var transactions = await _transactionRepository.FindAsync(
                 t => t.ReferenceCode == referenceCode && t.Type == "Deposit");
-            return transactions.FirstOrDefault();
+            return transactions.FirstOrDefault()?.ToDto();
         }
 
 
-        public async Task<Transaction> WithdrawAsync(int userId, decimal amount, string bankName, string accountNumber, string accountName)
+        public async Task<TransactionDto> WithdrawAsync(int userId, decimal amount, string bankName, string accountNumber, string accountName)
         {
             var wallet = await _walletRepository.GetWalletByUserIdAsync(userId);
             if (wallet == null)
@@ -165,15 +166,16 @@ namespace MangaPublishingSystem.Application.Services
             await _transactionRepository.AddAsync(transaction);
             await _unitOfWork.SaveChangesAsync();
 
-            return transaction;
+            return transaction.ToDto();
         }
 
-        public async Task<IEnumerable<Transaction>> GetPendingWithdrawalsAsync()
+        public async Task<IEnumerable<TransactionDto>> GetPendingWithdrawalsAsync()
         {
-            return await _transactionRepository.GetPendingWithdrawalsAsync();
+            var list = await _transactionRepository.GetPendingWithdrawalsAsync();
+            return list.ToDtoList();
         }
 
-        public async Task<Transaction> ApproveWithdrawAsync(int transactionId, bool isApproved, string? adminNote)
+        public async Task<TransactionDto> ApproveWithdrawAsync(int transactionId, bool isApproved, string? adminNote)
         {
             var transaction = await _transactionRepository.GetByIdAsync(transactionId);
             if (transaction == null || transaction.Type != "Withdrawal")
@@ -215,7 +217,7 @@ namespace MangaPublishingSystem.Application.Services
             _transactionRepository.Update(transaction);
             await _unitOfWork.SaveChangesAsync();
 
-            return transaction;
+            return transaction.ToDto();
         }
 
         public async System.Threading.Tasks.Task LockFundsAsync(int userId, decimal amount, int taskId)
@@ -403,15 +405,42 @@ namespace MangaPublishingSystem.Application.Services
             await _unitOfWork.SaveChangesAsync();
         }
 
-        public async Task<IEnumerable<Transaction>> GetTransactionHistoryAsync(int userId)
+        public async Task<IEnumerable<TransactionDto>> GetTransactionHistoryAsync(int userId)
         {
             var wallet = await _walletRepository.GetWalletByUserIdAsync(userId);
             if (wallet == null)
             {
-                return Enumerable.Empty<Transaction>();
+                return Enumerable.Empty<TransactionDto>();
             }
 
-            return await _transactionRepository.GetTransactionsByWalletIdAsync(wallet.Id);
+            var list = await _transactionRepository.GetTransactionsByWalletIdAsync(wallet.Id);
+            return list.ToDtoList();
+        }
+
+        public async System.Threading.Tasks.Task FundWalletAsync(int userId, decimal amount, int seriesId)
+        {
+            var wallet = await _walletRepository.GetWalletByUserIdAsync(userId);
+            if (wallet == null)
+            {
+                throw new NotFoundException("Ví của người dùng không tồn tại trên hệ thống.");
+            }
+
+            wallet.SetupFundBalance += amount;
+            _walletRepository.Update(wallet);
+
+            var transaction = new Transaction
+            {
+                WalletId = wallet.Id,
+                Type = "Funding",
+                ReferenceId = seriesId,
+                SetupFundAmount = amount,
+                Amount = amount,
+                Status = "Success",
+                ToUserId = userId
+            };
+
+            await _transactionRepository.AddAsync(transaction);
+            await _unitOfWork.SaveChangesAsync();
         }
     }
 }
