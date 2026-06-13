@@ -48,6 +48,15 @@ namespace MangaPublishingSystem.Infrastructure.Data.Configurations
             builder.Property(e => e.ResourceFolderUrl)
                 .HasMaxLength(500);
 
+            builder.Property(e => e.DraftManuscriptUrl)
+                .HasMaxLength(500);
+
+            builder.Property(e => e.EditorReport)
+                .HasColumnType("nvarchar(max)");
+
+            builder.Property(e => e.SuggestedBudget)
+                .HasColumnType("decimal(18,2)");
+
             builder.HasOne(e => e.Mangaka)
                 .WithMany(u => u.MangakaSeries)
                 .HasForeignKey(e => e.MangakaId)
