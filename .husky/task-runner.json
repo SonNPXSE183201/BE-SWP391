@@ -1,0 +1,17 @@
+{
+   "$schema": "https://alirezanet.github.io/Husky.Net/schema.json",
+   "tasks": [
+      {
+         "name": "build-on-commit",
+         "group": "pre-commit",
+         "command": "dotnet",
+         "args": [ "build", "MangaPublishingSystem.slnx" ]
+      },
+      {
+         "name": "build-on-push",
+         "group": "pre-push",
+         "command": "dotnet",
+         "args": [ "build", "MangaPublishingSystem.slnx" ]
+      }
+   ]
+}
