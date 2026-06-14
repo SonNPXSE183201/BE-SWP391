@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using BuildingBlocks.Web.Responses;
 using MangaPublishingSystem.Domain.Entities;
 using MangaPublishingSystem.Application.DTOs.Tasks;
 
@@ -16,5 +17,6 @@ namespace MangaPublishingSystem.Application.IServices
         Task<IEnumerable<Tasks>> GetTasksByAssistantIdAsync(int assistantId);
         Task<IEnumerable<TaskVersion>> GetTaskVersionsAsync(int taskId);
         Task<byte[]> GetCompositedPageAsync(int pageId);
+        Task<PagedResult<TasksDto>> GetAvailableTasksAsync(GetAvailableTasksRequest request);
     }
 }
