@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using BuildingBlocks.Exceptions;
+using BuildingBlocks.Web.Responses;
 using MangaPublishingSystem.Domain.Entities;
 using MangaPublishingSystem.Application.DTOs.Tasks;
 using MangaPublishingSystem.Application.IRepositories;
@@ -366,6 +367,44 @@ namespace MangaPublishingSystem.Application.Services
             return await _imageCompositor.CompositeLayersAsync(page.BaseLayerUrl ?? page.RawImageUrl, sortedLayers);
         }
 
+        public async Task<PagedResult<TasksDto>> GetAvailableTasksAsync(GetAvailableTasksRequest request)
+        {
+            var pagedTasks = await _tasksRepository.GetAvailableTasksAsync(
+                request.Skill, request.PageNumber, request.PageSize);
+
+            // Ánh xạ từ Tasks entity sang TasksDto
+            var dtoItems = pagedTasks.Items.Select(t => new TasksDto
+            {
+                Id = t.Id,
+                MangakaId = t.MangakaId,
+                RegionId = t.RegionId,
+                AssistantId = t.AssistantId,
+                Description = t.Description,
+                PaymentAmount = t.PaymentAmount,
+                Deadline = t.Deadline,
+                ExtensionRequestDays = t.ExtensionRequestDays,
+                ExtensionReason = t.ExtensionReason,
+                ExtensionStatus = t.ExtensionStatus,
+                ZIndex_Order = t.ZIndex_Order,
+                Status = t.Status,
+                Rating = t.Rating,
+                FeedbackComment = t.FeedbackComment,
+                MangakaName = t.Mangaka?.FullName,
+                AssistantName = t.Assistant?.FullName,
+                PageNumber = t.Region?.PageId ?? 0,
+                PageImageUrl = t.Region?.Page?.RawImageUrl,
+                CreateAt = t.CreateAt,
+                UpdateAt = t.UpdateAt
+            }).ToList();
+
+            return new PagedResult<TasksDto>(
+                dtoItems,
+                pagedTasks.PageNumber,
+                pagedTasks.PageSize,
+                pagedTasks.TotalItems,
+                pagedTasks.TotalPages);
+        }
+
         private async System.Threading.Tasks.Task UpdateAssistantProfileMetricsAsync(int assistantId)
         {
             var profileList = await _assistantProfileRepository.FindAsync(p => p.AssistantId == assistantId);
@@ -414,4 +453,4 @@ namespace MangaPublishingSystem.Application.Services
             _assistantProfileRepository.Update(profile);
         }
     }
-}
+}
