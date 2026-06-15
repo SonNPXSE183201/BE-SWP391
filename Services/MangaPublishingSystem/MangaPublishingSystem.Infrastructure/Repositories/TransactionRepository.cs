@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -23,5 +24,36 @@ namespace MangaPublishingSystem.Infrastructure.Repositories
                 .OrderByDescending(t => t.CreateAt)
                 .ToListAsync();
         }
+
+        public async Task<List<Transaction>> GetPaymentTransactionsAsync(DateTime? from, DateTime? to, string? referenceCode)
+        {
+            var query = _context.Transactions
+                .Include(t => t.ToUser)
+                .Include(t => t.FromUser)
+                .Include(t => t.Wallet)
+                    .ThenInclude(w => w!.User)
+                .Where(t => t.Type == "Deposit" || t.Type == "Withdrawal")
+                .AsQueryable();
+
+            if (from.HasValue)
+            {
+                query = query.Where(t => t.CreateAt >= from.Value);
+            }
+
+            if (to.HasValue)
+            {
+                query = query.Where(t => t.CreateAt <= to.Value);
+            }
+
+            if (!string.IsNullOrWhiteSpace(referenceCode))
+            {
+                var code = referenceCode.Trim();
+                query = query.Where(t =>
+                    (t.ReferenceCode != null && t.ReferenceCode.Contains(code)) ||
+                    t.Id.ToString().Contains(code));
+            }
+
+            return await query.OrderByDescending(t => t.CreateAt).ToListAsync();
+        }
     }
-}
+}

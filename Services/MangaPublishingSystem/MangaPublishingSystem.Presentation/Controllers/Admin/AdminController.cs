@@ -27,6 +27,17 @@ namespace MangaPublishingSystem.Presentation.Controllers.Admin
             return Ok(ApiResponse<UserResponseDto>.Success(result, result.Message ?? "Tạo tài khoản thành công."));
         }
 
+        [HttpGet]
+        public async Task<ActionResult<ApiResponse<List<UserListItemDto>>>> GetUsers(
+            [FromQuery] string? role,
+            [FromQuery] string? status,
+            [FromQuery] int? page,
+            [FromQuery] int? pageSize)
+        {
+            var result = await _userService.GetUsersAsync(role, status);
+            return Ok(ApiResponse<List<UserListItemDto>>.Success(result, "Lấy danh sách người dùng thành công."));
+        }
+
         [HttpGet("pending")]
         public async Task<ActionResult<ApiResponse<List<AssistantResponseDto>>>> GetPendingAssistants()
         {
@@ -39,6 +50,18 @@ namespace MangaPublishingSystem.Presentation.Controllers.Admin
         {
             var result = await _userService.ApproveUserAsync(id);
             return Ok(ApiResponse<UserResponseDto>.Success(result, result.Message ?? "Phê duyệt tài khoản thành công."));
+        }
+
+        [HttpPut("{id}/approve")]
+        public async Task<ActionResult<ApiResponse<AssistantProfileResponseDto>>> ApprovePut(
+            int id,
+            [FromBody] ApproveAssistantRequestDto dto)
+        {
+            var result = await _userService.ApproveAssistantAsync(id, dto);
+            var message = dto.Approved
+                ? "Phê duyệt tài khoản trợ lý thành công."
+                : "Từ chối phê duyệt tài khoản trợ lý thành công.";
+            return Ok(ApiResponse<AssistantProfileResponseDto>.Success(result, message));
         }
 
         [HttpPost("{id}/reject")]

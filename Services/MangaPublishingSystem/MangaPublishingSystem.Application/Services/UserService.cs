@@ -1,4 +1,5 @@
-using MangaPublishingSystem.Domain.Entities;
+using DomainUser = MangaPublishingSystem.Domain.Entities.User;
+using DomainWallet = MangaPublishingSystem.Domain.Entities.Wallet;
 using MangaPublishingSystem.Domain.Enums;
 using MangaPublishingSystem.Application.IRepositories;
 using MangaPublishingSystem.Application.IServices;
@@ -15,8 +16,6 @@ namespace MangaPublishingSystem.Application.Services
     public class UserService : IUserService
     {
         private const int RoleIdSystemAdmin = 1;
-        private const int RoleIdTantouEditor = 2;
-        private const int RoleIdEditorialBoard = 3;
         private const int RoleIdMangaka = 4;
         private const int RoleIdAssistant = 5;
 
@@ -63,7 +62,7 @@ namespace MangaPublishingSystem.Application.Services
             var randomPassword = GenerateRandomPassword();
             var passwordHash = _passwordHasher.HashPassword(randomPassword);
 
-            var user = new User
+            var user = new DomainUser
             {
                 RoleId = dto.RoleId,
                 UserName = dto.UserName,
@@ -84,7 +83,7 @@ namespace MangaPublishingSystem.Application.Services
 
                 if (dto.RoleId == RoleIdMangaka)
                 {
-                    var wallet = new Wallet
+                    var wallet = new DomainWallet
                     {
                         UserId = user.Id,
                         SetupFundBalance = 0.00m,
@@ -107,11 +106,7 @@ namespace MangaPublishingSystem.Application.Services
 
             try
             {
-                await _emailService.SendAccountInfoAsync(
-                    dto.Email,
-                    dto.UserName,
-                    randomPassword
-                );
+                await _emailService.SendAccountInfoAsync(dto.Email, dto.UserName, randomPassword);
             }
             catch (Exception)
             {
@@ -125,6 +120,42 @@ namespace MangaPublishingSystem.Application.Services
         {
             var assistants = await _userRepository.GetPendingAssistantsAsync();
             return assistants.Select(MapAssistant).ToList();
+        }
+
+        public async Task<List<UserListItemDto>> GetUsersAsync(string? role, string? status)
+        {
+            var users = await _userRepository.GetUsersFilteredAsync(role, status);
+            return users.Select(MapUserListItem).ToList();
+        }
+
+        public async Task<AssistantProfileResponseDto> ApproveAssistantAsync(int id, ApproveAssistantRequestDto dto)
+        {
+            if (dto.Approved)
+            {
+                await ApproveUserAsync(id);
+            }
+            else
+            {
+                await RejectUserAsync(id);
+            }
+
+            var user = await _userRepository.GetByIdWithDetailsAsync(id)
+                ?? throw new NotFoundException("Không tìm thấy người dùng trên hệ thống.");
+
+            var profile = user.AssistantProfile;
+
+            return new AssistantProfileResponseDto
+            {
+                Id = (profile?.Id ?? user.Id).ToString(),
+                CreatedAt = (profile?.CreateAt ?? user.CreateAt).ToUniversalTime().ToString("o"),
+                UpdatedAt = (profile?.UpdateAt ?? user.UpdateAt)?.ToUniversalTime().ToString("o"),
+                UserId = user.Id.ToString(),
+                PortfolioUrl = user.PortfolioUrl,
+                SpecialtyTags = ParseSpecialtyTags(profile?.SpecialtyTags ?? user.Skills),
+                TotalTasksCompleted = profile?.TotalCompletedTasks ?? 0,
+                AverageRating = profile?.AverageRating ?? 0,
+                AccountStatus = MapAccountStatus(user.Status)
+            };
         }
 
         public async Task<UserResponseDto> ApproveUserAsync(int id)
@@ -169,7 +200,7 @@ namespace MangaPublishingSystem.Application.Services
             return MapUserResponse(user, "Khóa tài khoản thành công.");
         }
 
-        private async Task<User> GetUserOrThrowAsync(int id)
+        private async Task<DomainUser> GetUserOrThrowAsync(int id)
         {
             var user = await _userRepository.GetByIdAsync(id);
 
@@ -181,7 +212,7 @@ namespace MangaPublishingSystem.Application.Services
             return user;
         }
 
-        private static void ValidatePendingAssistant(User user, string action)
+        private static void ValidatePendingAssistant(DomainUser user, string action)
         {
             if (user.RoleId != RoleIdAssistant)
             {
@@ -194,7 +225,7 @@ namespace MangaPublishingSystem.Application.Services
             }
         }
 
-        private static UserResponseDto MapUserResponse(User user, string message)
+        private static UserResponseDto MapUserResponse(DomainUser user, string message)
         {
             return new UserResponseDto
             {
@@ -209,7 +240,7 @@ namespace MangaPublishingSystem.Application.Services
             };
         }
 
-        private static AssistantResponseDto MapAssistant(User user)
+        private static AssistantResponseDto MapAssistant(DomainUser user)
         {
             return new AssistantResponseDto
             {
@@ -221,6 +252,51 @@ namespace MangaPublishingSystem.Application.Services
                 PortfolioUrl = user.PortfolioUrl,
                 Skills = user.Skills
             };
+        }
+
+        private static UserListItemDto MapUserListItem(DomainUser user)
+        {
+            return new UserListItemDto
+            {
+                Id = user.Id.ToString(),
+                Email = user.Email,
+                FullName = user.FullName,
+                Role = MapRoleForFe(user.Role?.RoleName ?? string.Empty),
+                Status = user.Status.ToString(),
+                CreatedAt = user.CreateAt.ToUniversalTime().ToString("o")
+            };
+        }
+
+        private static string MapRoleForFe(string roleName)
+        {
+            return roleName switch
+            {
+                "Tantou Editor" => "Editor",
+                "Editorial Board" => "Board",
+                _ => roleName
+            };
+        }
+
+        private static string MapAccountStatus(UserStatus status)
+        {
+            return status switch
+            {
+                UserStatus.Pending => "PendingApproval",
+                UserStatus.Active => "Active",
+                UserStatus.Rejected => "Deactivated",
+                UserStatus.Locked => "Suspended",
+                _ => status.ToString()
+            };
+        }
+
+        private static List<string> ParseSpecialtyTags(string? tags)
+        {
+            if (string.IsNullOrWhiteSpace(tags))
+            {
+                return new List<string>();
+            }
+
+            return tags.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
         }
 
         private string GenerateRandomPassword()

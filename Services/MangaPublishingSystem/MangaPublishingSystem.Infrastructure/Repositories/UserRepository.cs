@@ -1,3 +1,6 @@
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 using MangaPublishingSystem.Application.IRepositories;
 using MangaPublishingSystem.Domain.Entities;
 using MangaPublishingSystem.Domain.Enums;
@@ -17,6 +20,32 @@ namespace MangaPublishingSystem.Infrastructure.Repositories
             return await _context.Users
                 .Where(x => x.RoleId == 5 && x.Status == UserStatus.Pending)
                 .ToListAsync();
+        }
+
+        public async Task<List<User>> GetUsersFilteredAsync(string? role, string? status)
+        {
+            var query = _context.Users.Include(u => u.Role).AsQueryable();
+
+            if (!string.IsNullOrWhiteSpace(role))
+            {
+                var roleName = role.Trim() switch
+                {
+                    "Assistant" => "Assistant",
+                    "Mangaka" => "Mangaka",
+                    "Editor" => "Tantou Editor",
+                    "Board" => "Editorial Board",
+                    _ => role.Trim()
+                };
+
+                query = query.Where(u => u.Role != null && u.Role.RoleName == roleName);
+            }
+
+            if (!string.IsNullOrWhiteSpace(status) && Enum.TryParse<UserStatus>(status, true, out var userStatus))
+            {
+                query = query.Where(u => u.Status == userStatus);
+            }
+
+            return await query.OrderByDescending(u => u.CreateAt).ToListAsync();
         }
 
         public async Task<bool> ExistsByEmailAsync(string email)
@@ -43,6 +72,14 @@ namespace MangaPublishingSystem.Infrastructure.Repositories
                 .FirstOrDefaultAsync(x =>
                     x.UserName == identifier ||
                     x.Email == identifier);
+        }
+
+        public async Task<User?> GetByIdWithDetailsAsync(int id)
+        {
+            return await _context.Users
+                .Include(u => u.Role)
+                .Include(u => u.AssistantProfile)
+                .FirstOrDefaultAsync(u => u.Id == id);
         }
     }
 }
