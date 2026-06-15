@@ -25,6 +25,8 @@ GO
 
 USE MangaPublishing;
 GO
+SET QUOTED_IDENTIFIER ON;
+GO
 
 -- Drop existing tables in reverse dependency order to avoid constraints conflicts
 IF OBJECT_ID('dbo.Report', 'U') IS NOT NULL DROP TABLE dbo.Report;
