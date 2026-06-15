@@ -142,8 +142,9 @@ namespace MangaPublishingSystem.Application.Services
                 throw new BadRequestException("Số dư khả dụng không đủ để thực hiện rút tiền.");
             }
 
-            // Trừ số dư khả dụng ngay lập tức (giả lập chuyển khoản tự động qua Sandbox)
             wallet.WithdrawableBalance -= amount;
+            wallet.LockedWithdrawable += amount;
+
             _walletRepository.Update(wallet);
 
             var referenceCode = "WDR" + DateTime.UtcNow.ToString("yyyyMMddHHmmss") + userId;
@@ -153,7 +154,7 @@ namespace MangaPublishingSystem.Application.Services
                 Type = "Withdrawal",
                 Amount = amount,
                 WithdrawableAmount = -amount,
-                Status = "Success", // Giả lập rút tiền thành công tự động (Sandbox)
+                Status = "Pending", // Giao dịch chờ duyệt
                 ReferenceCode = referenceCode,
                 ToUserId = userId,
                 BankName = bankName,
@@ -162,6 +163,56 @@ namespace MangaPublishingSystem.Application.Services
             };
 
             await _transactionRepository.AddAsync(transaction);
+            await _unitOfWork.SaveChangesAsync();
+
+            return transaction;
+        }
+
+        public async Task<IEnumerable<Transaction>> GetPendingWithdrawalsAsync()
+        {
+            return await _transactionRepository.GetPendingWithdrawalsAsync();
+        }
+
+        public async Task<Transaction> ApproveWithdrawAsync(int transactionId, bool isApproved, string? adminNote)
+        {
+            var transaction = await _transactionRepository.GetByIdAsync(transactionId);
+            if (transaction == null || transaction.Type != "Withdrawal")
+            {
+                throw new NotFoundException("Không tìm thấy giao dịch rút tiền hợp lệ.");
+            }
+
+            if (transaction.Status != "Pending")
+            {
+                throw new BadRequestException("Giao dịch này đã được xử lý.");
+            }
+
+            var wallet = await _walletRepository.GetByIdAsync(transaction.WalletId);
+            if (wallet == null)
+            {
+                throw new NotFoundException("Không tìm thấy ví liên kết với giao dịch.");
+            }
+
+            if (isApproved)
+            {
+                // Phê duyệt: trừ hẳn tiền khỏi LockedWithdrawable
+                wallet.LockedWithdrawable -= transaction.Amount;
+                transaction.Status = "Success";
+            }
+            else
+            {
+                // Từ chối: hoàn tiền từ LockedWithdrawable về WithdrawableBalance
+                wallet.LockedWithdrawable -= transaction.Amount;
+                wallet.WithdrawableBalance += transaction.Amount;
+                transaction.Status = "Failed";
+                // Đảo ngược lại Amount trong transaction record để báo cáo khớp
+                transaction.WithdrawableAmount = 0; // Không trừ nữa
+            }
+
+            transaction.AdminNote = adminNote;
+            transaction.UpdateAt = DateTime.UtcNow;
+
+            _walletRepository.Update(wallet);
+            _transactionRepository.Update(transaction);
             await _unitOfWork.SaveChangesAsync();
 
             return transaction;
