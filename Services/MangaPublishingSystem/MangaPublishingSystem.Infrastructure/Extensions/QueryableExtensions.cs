@@ -30,13 +30,15 @@ namespace MangaPublishingSystem.Infrastructure.Extensions
             var efFunctionsProp = typeof(EF).GetProperty(nameof(EF.Functions));
             var efFunctionsAccess = Expression.MakeMemberAccess(null, efFunctionsProp!);
 
-            // Tìm phương thức EF.Functions.Collate(string property, string collation)
-            var collateMethod = typeof(RelationalDbFunctionsExtensions).GetMethod(
-                nameof(RelationalDbFunctionsExtensions.Collate),
-                new[] { typeof(DbFunctions), typeof(string), typeof(string) });
+            // Tìm phương thức EF.Functions.Collate<TProperty>(DbFunctions, TProperty, string)
+            var genericCollateMethod = typeof(RelationalDbFunctionsExtensions)
+                .GetMethods()
+                .FirstOrDefault(m => m.Name == nameof(RelationalDbFunctionsExtensions.Collate) && m.IsGenericMethod);
 
-            if (collateMethod == null)
+            if (genericCollateMethod == null)
                 throw new InvalidOperationException("Không tìm thấy phương thức EF.Functions.Collate.");
+
+            var collateMethod = genericCollateMethod.MakeGenericMethod(propertyAccess.Type);
 
             var collationConstant = Expression.Constant("SQL_Latin1_General_CP1_CI_AI");
             var collateCall = Expression.Call(null, collateMethod, efFunctionsAccess, propertyAccess, collationConstant);

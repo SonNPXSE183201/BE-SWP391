@@ -10,5 +10,7 @@ namespace MangaPublishingSystem.Application.IRepositories
         Task<IEnumerable<Transaction>> GetTransactionsByWalletIdAsync(int walletId);
 
         Task<List<Transaction>> GetPaymentTransactionsAsync(DateTime? from, DateTime? to, string? referenceCode);
+
+        Task<IEnumerable<Transaction>> GetPendingWithdrawalsAsync();
     }
 }

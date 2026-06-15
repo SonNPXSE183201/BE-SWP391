@@ -25,3 +25,8 @@ Thumbs.db
 .env
 *.local.json
 /artifacts/
+
+# Appsettings
+**/appsettings.json
+**/appsettings.Development.json
+**/appsettings.Local.json

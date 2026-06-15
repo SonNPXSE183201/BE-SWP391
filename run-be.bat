@@ -2,6 +2,21 @@
 title MCWPMS Dev Launcher
 cd /d "%~dp0"
 
+:: 1. Force kill existing dotnet processes to release locked dll files
+echo Stopping existing dotnet processes...
+taskkill /f /im dotnet.exe >nul 2>nul
+taskkill /f /im VBCSCompiler.exe >nul 2>nul
+
+:: 2. Clean temporary build artifacts
+echo Cleaning solution...
+dotnet clean MangaPublishingSystem.slnx -c Debug >nul 2>nul
+
+:: 3. Build the solution sequentially to prevent parallel write conflicts on shared dependencies
+echo Building solution...
+dotnet build MangaPublishingSystem.slnx -c Debug
+
+
+
 :: Check if Windows Terminal (wt.exe) is available
 where wt >nul 2>nul
 if %ERRORLEVEL% equ 0 (

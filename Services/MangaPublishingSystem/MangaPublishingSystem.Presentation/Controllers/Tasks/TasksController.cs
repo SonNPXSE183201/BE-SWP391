@@ -91,6 +91,14 @@ namespace MangaPublishingSystem.Presentation.Controllers.Tasks
             return Ok(ApiResponse<IEnumerable<TaskVersionDto>>.Success(result, "Lấy lịch sử các phiên bản vẽ nộp thành công."));
         }
 
+        [Authorize(Roles = "Assistant")]
+        [HttpGet("available")]
+        public async Task<ActionResult<ApiResponse<PagedResult<TasksDto>>>> GetAvailableTasks([FromQuery] GetAvailableTasksRequest request)
+        {
+            var result = await _tasksService.GetAvailableTasksAsync(request);
+            return Ok(ApiResponse<PagedResult<TasksDto>>.Success(result, "Lấy danh sách nhiệm vụ khả dụng thành công."));
+        }
+
         [HttpGet("pages/{pageId}/composite")]
         public async Task<IActionResult> GetCompositePage([FromRoute] int pageId)
         {

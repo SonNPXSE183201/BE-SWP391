@@ -127,6 +127,12 @@ Khi bạn (hoặc AI) cần tạo một API chức năng mới (Ví dụ: Tạo 
   ```powershell
   dotnet build MangaPublishingSystem.slnx
   ```
+* **Khởi tạo và nạp dữ liệu Database (Hỗ trợ tiếng Việt UTF-8)**:
+  * Do cơ sở dữ liệu chứa dữ liệu tiếng Việt Unicode, khi nạp schema và seed data bằng `sqlcmd` bắt buộc phải sử dụng tham số `-f 65001` để chỉ định encoding UTF-8, tránh lỗi hỏng font (mojibake) trong database:
+  ```powershell
+  sqlcmd -S localhost -f 65001 -i Database\schema.sql
+  sqlcmd -S localhost -f 65001 -i Database\seed.sql
+  ```
 * **Chạy API dịch vụ chính (Manga Service)**:
   ```powershell
   dotnet run --project Services/MangaPublishingSystem/MangaPublishingSystem.Presentation/MangaPublishingSystem.Presentation.csproj
@@ -135,6 +141,12 @@ Khi bạn (hoặc AI) cần tạo một API chức năng mới (Ví dụ: Tạo 
   ```powershell
   dotnet run --project GatewayAPI/GatewayAPI.csproj
   ```
+* **Chạy Script Test API tự động**:
+  * Để hiển thị tiếng Việt chính xác trên console Windows (cmd/powershell), bạn cần đổi code page của terminal sang UTF-8 trước khi chạy script test:
+  ```powershell
+  chcp 65001
+  node test-api.js
+  ```
 
 ---
 
@@ -142,9 +154,11 @@ Khi bạn (hoặc AI) cần tạo một API chức năng mới (Ví dụ: Tạo 
 
 ### 5.1. Cấu hình thông báo thời gian thực (SignalR)
 * **Hub Endpoint**: `/hubs/notification` (Địa chỉ upstream qua Gateway: `/api/v1/hubs/notification`).
-* **Định tuyến qua Gateway (Ocelot)**: 
+* **Cấu hình WebSockets & Gateway (Ocelot)**:
+  * API Gateway và Manga Service (downstream) đều được cấu hình hỗ trợ WebSockets thông qua middleware `app.UseWebSockets()`.
   * Ocelot được cấu hình chia 2 route: Route bắt tay (HTTP Post/Options `/negotiate`) và Route kết nối chính (WebSockets `ws://`).
-  * **Lưu ý về CORS**: Trình duyệt sẽ chặn kết nối nếu CORS để wildcard `*` khi dùng Credentials. Bắt buộc phải khai báo chính xác địa chỉ Client trong khóa `"Cors:AllowedOrigins"` tại tệp `appsettings.json`.
+* **Xác thực JWT Token qua WebSockets**: Do trình duyệt không hỗ trợ gửi custom HTTP Header (`Authorization: Bearer...`) khi khởi tạo kết nối WebSocket, Frontend sẽ truyền token qua URL query string dưới dạng `?access_token=...`. JwtBearer ở Backend được cấu hình sự kiện `OnMessageReceived` để tự động trích xuất token này đối với các kết nối có đường dẫn chứa `/hubs`.
+* **Lưu ý về CORS**: Trình duyệt sẽ chặn kết nối nếu CORS để wildcard `*` khi dùng Credentials. Để đảm bảo SignalR hoạt động ổn định khi cho phép credentials, cấu hình CORS ở Backend được cập nhật sử dụng `builder.SetIsOriginAllowed(_ => true).AllowCredentials()` (động hóa origin) khi bật chế độ AllowAnyOrigin, hoặc khai báo chính xác địa chỉ Client trong khóa `"Cors:AllowedOrigins"` tại tệp `appsettings.json`.
 
 ### 5.2. Công cụ tự động hóa Git Hooks (Husky.Net)
 * **Mục tiêu**: Ngăn chặn commit/push mã nguồn gặp lỗi biên dịch.
@@ -170,3 +184,27 @@ Khi bạn (hoặc AI) cần tạo một API chức năng mới (Ví dụ: Tạo 
   ```
 * **Cách sử dụng**:
   * Tiêm `IFluentEmail` vào các Service cần gửi thông báo (ví dụ: ở lớp xử lý Onboarding) và gọi `SendAsync()` để thực hiện gửi mail.
+
+### 5.4. Tích hợp thanh toán VNPay Sandbox
+* **Cách hoạt động**: Tích hợp quy trình nạp tiền thông qua cổng thanh toán VNPay Sandbox.
+* **Cấu hình trong `appsettings.json`**:
+  ```json
+  "VnPay": {
+    "TmnCode": "0NLJV3OJ",
+    "HashSecret": "4W2N65NBLLT0XAM4ULPMXF5MPY3JC18C",
+    "PaymentUrl": "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html",
+    "QueryUrl": "https://sandbox.vnpayment.vn/merchant_webapi/api/transaction",
+    "ReturnUrl": "http://localhost:5000/api/v1/wallets/deposit/return",
+    "IpnUrl": "http://localhost:5000/api/v1/wallets/deposit/ipn"
+  }
+  ```
+* **Quy trình hoạt động**:
+  * **Tạo URL thanh toán (Deposit)**: Client gọi API `POST /api/wallets/deposit`. Backend tạo một giao dịch `Pending` và trả về URL thanh toán của VNPay Sandbox.
+  * **Frontend Redirect**: Client chuyển hướng trình duyệt tới URL thanh toán để người dùng nhập thẻ (Thẻ test: Ngân hàng NCB, Số thẻ 9704198526191432198, Tên NGUYEN VAN A, Ngày phát hành 07/15, OTP 123456).
+  * **Nhận kết quả trực tiếp (Return URL)**: VNPay redirect về `ReturnUrl` kèm tham số. Backend xác thực chữ ký (HMAC-SHA512) và trả về kết quả cho Frontend hiển thị.
+  * **Cập nhật số dư ngầm (IPN URL)**: VNPay gọi ngầm tới `IpnUrl` (server-to-server webhook). Đây là bước bảo mật bắt buộc để Backend cập nhật số dư `WithdrawableBalance` và đổi trạng thái giao dịch thành `Success`, ngăn chặn mất mát dữ liệu khi Frontend bị tắt đột ngột.
+  * **Rút tiền (Withdraw)**: Hệ thống sử dụng quy trình Phê duyệt thủ công (Phương án 3). Tiền được khóa (chuyển sang `LockedWithdrawable`) khi user yêu cầu rút, và chỉ được giải ngân thực sự (hoặc hoàn tiền) khi System Admin duyệt qua API `POST /api/wallets/withdraw/{id}/approve`.
+
+### 5.5. Định dạng phản hồi API thống nhất (JSON camelCase)
+* **Quy chuẩn định dạng**: Mọi dữ liệu trả về client đều sử dụng lớp `ApiResponse<T>` với thuộc tính `Success` (kiểu `bool`). Khi serialize sang JSON camelCase, thuộc tính này sẽ được chuyển thành `success` để đồng bộ hoàn toàn với Frontend, tránh lỗi `success is undefined` (do sử dụng `IsSuccess` cũ bị serialize thành `isSuccess`).
+

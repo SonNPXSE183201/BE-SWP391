@@ -75,6 +75,8 @@ app.UseStatusCodePages(async context =>
 app.UseAuthentication();
 app.UseAuthorization();
 
+app.UseWebSockets();
+
 // Setup Ocelot Route pipeline
  app.UseOcelot().Wait();
 

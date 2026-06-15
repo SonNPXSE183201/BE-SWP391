@@ -10,7 +10,6 @@ namespace BuildingBlocks.Web
             services.AddSwaggerGen(c =>
             {
                 c.EnableAnnotations();
-
                 var securityScheme = new OpenApiSecurityScheme
                 {
                     Name = "Authorization",
