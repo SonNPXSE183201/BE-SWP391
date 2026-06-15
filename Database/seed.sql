@@ -1,4 +1,4 @@
-﻿-- =========================================================================
+-- =========================================================================
 -- SEED DATA SETUP SCRIPT WITH RESET
 -- PROJECT: Manga Creation Workflow & Publishing Management System (MCWPMS)
 -- DATABASE NAME: MangaPublishing
@@ -110,5 +110,56 @@ INSERT INTO dbo.AssistantProfile (ProfileId, AssistantId, SpecialtyTags, TotalCo
 SET IDENTITY_INSERT dbo.AssistantProfile OFF;
 GO
 
+-- 5. Insert Sample Series for mangaka1 (UserId = 4)
+SET IDENTITY_INSERT dbo.Series ON;
+INSERT INTO dbo.Series (SeriesId, MangakaId, EditorId, Title, Genre, Synopsis, Status, EstimatedProductionBudget, ApprovedProductionBudget, CreateAt)
+VALUES
+(1, 4, 2, N'Vùng Đất Lửa', N'Action', N'Bộ truyện về các chiến binh trong thế giới lửa.', N'In_Production', 5000000.00, 5000000.00, GETUTCDATE());
+SET IDENTITY_INSERT dbo.Series OFF;
+GO
+
+-- 6. Insert Sample Chapter
+SET IDENTITY_INSERT dbo.Chapter ON;
+INSERT INTO dbo.Chapter (ChapterId, SeriesId, ChapterNumber, Title, Status, CreateAt)
+VALUES
+(1, 1, 1, N'Chương 1 - Khởi nguồn ngọn lửa', N'In_Progress', GETUTCDATE());
+SET IDENTITY_INSERT dbo.Chapter OFF;
+GO
+
+-- 7. Insert Sample Pages
+SET IDENTITY_INSERT dbo.Page ON;
+INSERT INTO dbo.Page (PageId, ChapterId, PageNumber, RawImageUrl, BaseLayerUrl, Status, IsApproved, CreateAt)
+VALUES
+(1, 1, 1, N'https://picsum.photos/seed/page1/800/1200', N'https://picsum.photos/seed/base1/800/1200', N'Draft', 0, GETUTCDATE()),
+(2, 1, 2, N'https://picsum.photos/seed/page2/800/1200', N'https://picsum.photos/seed/base2/800/1200', N'Draft', 0, GETUTCDATE());
+SET IDENTITY_INSERT dbo.Page OFF;
+GO
+
+-- 8. Insert Sample Regions (drawing zones on pages)
+SET IDENTITY_INSERT dbo.Region ON;
+INSERT INTO dbo.Region (RegionId, PageId, CoordinatesJson, Name, CreateAt)
+VALUES
+(1, 1, N'{"x":0,"y":0,"width":800,"height":400}', N'Vùng nền phía trên - Trang 1', GETUTCDATE()),
+(2, 1, N'{"x":0,"y":400,"width":800,"height":400}', N'Vùng hiệu ứng lửa - Trang 1', GETUTCDATE()),
+(3, 1, N'{"x":200,"y":100,"width":400,"height":800}', N'Vùng đi nét nhân vật - Trang 1', GETUTCDATE()),
+(4, 2, N'{"x":0,"y":0,"width":800,"height":600}', N'Vùng tô màu nền - Trang 2', GETUTCDATE()),
+(5, 2, N'{"x":100,"y":200,"width":600,"height":800}', N'Vùng bóng đổ - Trang 2', GETUTCDATE());
+SET IDENTITY_INSERT dbo.Region OFF;
+GO
+
+-- 9. Insert Sample Pending Tasks (Mangaka giao việc cho các Region chưa có người nhận)
+-- Mangaka (UserId=4) tạo task với tiền ký quỹ từ ví (ví setup fund có 10,000,000 VND)
+SET IDENTITY_INSERT dbo.Tasks ON;
+INSERT INTO dbo.Tasks (TaskId, MangakaId, RegionId, AssistantId, Description, PaymentAmount, Deadline, ZIndex_Order, Status, ExtensionStatus, CreateAt)
+VALUES
+(1, 4, 1, NULL, N'Vẽ nền phía trên trang 1: Phong cảnh núi lửa đang phun trào, tone màu đỏ cam, kỹ thuật tô màu gradient', 500000.00, DATEADD(DAY, 7, GETUTCDATE()), 1, N'Pending', N'None', GETUTCDATE()),
+(2, 4, 2, NULL, N'Vẽ hiệu ứng lửa trang 1: Các ngọn lửa bùng cháy xung quanh nhân vật, PNG trong suốt', 750000.00, DATEADD(DAY, 5, GETUTCDATE()), 2, N'Pending', N'None', GETUTCDATE()),
+(3, 4, 3, NULL, N'Đi nét nhân vật chính trang 1: Line art sắc nét, độ dày nét 2px, không tô màu', 600000.00, DATEADD(DAY, 10, GETUTCDATE()), 3, N'Pending', N'None', GETUTCDATE()),
+(4, 4, 4, 5,    N'Tô màu nền trang 2: Rừng rậm về đêm, tone màu xanh lá tối, kỹ năng coloring', 450000.00, DATEADD(DAY, 6, GETUTCDATE()), 1, N'In_Progress', N'None', GETUTCDATE()),
+(5, 4, 5, 5,    N'Vẽ bóng đổ trang 2: Bóng đổ thực tế cho nhân vật theo nguồn sáng từ phía tay phải', 350000.00, DATEADD(DAY, 4, GETUTCDATE()), 2, N'Submitted', N'None', GETUTCDATE());
+SET IDENTITY_INSERT dbo.Tasks OFF;
+GO
+
 PRINT 'Mock data seeded successfully with password ''12345'' for all users.';
+PRINT 'Series/Chapter/Page/Region/Tasks sample data also created.';
 GO

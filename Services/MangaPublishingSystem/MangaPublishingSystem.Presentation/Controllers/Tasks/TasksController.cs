@@ -99,6 +99,15 @@ namespace MangaPublishingSystem.Presentation.Controllers.Tasks
             return Ok(ApiResponse<PagedResult<TasksDto>>.Success(result, "Lấy danh sách nhiệm vụ khả dụng thành công."));
         }
 
+        [Authorize(Roles = "Assistant")]
+        [HttpGet("my-tasks")]
+        public async Task<ActionResult<ApiResponse<PagedResult<TasksDto>>>> GetMyAssistantTasks([FromQuery] GetAssistantTasksRequest request)
+        {
+            int assistantId = CurrentUserId;
+            var result = await _tasksService.GetAssistantTasksAsync(assistantId, request);
+            return Ok(ApiResponse<PagedResult<TasksDto>>.Success(result, "Lấy danh sách nhiệm vụ của bạn thành công."));
+        }
+
         [HttpGet("pages/{pageId}/composite")]
         public async Task<IActionResult> GetCompositePage([FromRoute] int pageId)
         {
