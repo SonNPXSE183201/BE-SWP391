@@ -18,5 +18,7 @@ namespace MangaPublishingSystem.Application.IServices
         Task<IEnumerable<TaskVersion>> GetTaskVersionsAsync(int taskId);
         Task<byte[]> GetCompositedPageAsync(int pageId);
         Task<PagedResult<TasksDto>> GetAvailableTasksAsync(GetAvailableTasksRequest request);
+        Task<PagedResult<TasksDto>> GetAssistantTasksAsync(int assistantId, GetAssistantTasksRequest request);
     }
-}
+}
+

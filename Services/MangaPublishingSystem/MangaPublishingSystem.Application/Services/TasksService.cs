@@ -61,11 +61,16 @@ namespace MangaPublishingSystem.Application.Services
                 throw new NotFoundException("Phân vùng vẽ không tồn tại trên hệ thống.");
             }
 
+            // Chuẩn hóa: AssistantId = 0 được coi là null (Swagger tự sinh default 0 cho int?)
+            var normalizedAssistantId = createDto.AssistantId.HasValue && createDto.AssistantId.Value > 0
+                ? createDto.AssistantId
+                : null;
+
             var task = new Tasks
             {
                 MangakaId = mangakaId,
                 RegionId = createDto.RegionId,
-                AssistantId = createDto.AssistantId,
+                AssistantId = normalizedAssistantId,
                 Description = createDto.Description,
                 PaymentAmount = createDto.PaymentAmount,
                 Deadline = createDto.Deadline,
@@ -73,6 +78,7 @@ namespace MangaPublishingSystem.Application.Services
                 Status = "Draft",
                 ExtensionStatus = "None"
             };
+
 
             await _tasksRepository.AddAsync(task);
             await _unitOfWork.SaveChangesAsync(); // Lưu để sinh TaskId tự động
@@ -371,6 +377,44 @@ namespace MangaPublishingSystem.Application.Services
         {
             var pagedTasks = await _tasksRepository.GetAvailableTasksAsync(
                 request.Skill, request.PageNumber, request.PageSize);
+
+            // Ánh xạ từ Tasks entity sang TasksDto
+            var dtoItems = pagedTasks.Items.Select(t => new TasksDto
+            {
+                Id = t.Id,
+                MangakaId = t.MangakaId,
+                RegionId = t.RegionId,
+                AssistantId = t.AssistantId,
+                Description = t.Description,
+                PaymentAmount = t.PaymentAmount,
+                Deadline = t.Deadline,
+                ExtensionRequestDays = t.ExtensionRequestDays,
+                ExtensionReason = t.ExtensionReason,
+                ExtensionStatus = t.ExtensionStatus,
+                ZIndex_Order = t.ZIndex_Order,
+                Status = t.Status,
+                Rating = t.Rating,
+                FeedbackComment = t.FeedbackComment,
+                MangakaName = t.Mangaka?.FullName,
+                AssistantName = t.Assistant?.FullName,
+                PageNumber = t.Region?.PageId ?? 0,
+                PageImageUrl = t.Region?.Page?.RawImageUrl,
+                CreateAt = t.CreateAt,
+                UpdateAt = t.UpdateAt
+            }).ToList();
+
+            return new PagedResult<TasksDto>(
+                dtoItems,
+                pagedTasks.PageNumber,
+                pagedTasks.PageSize,
+                pagedTasks.TotalItems,
+                pagedTasks.TotalPages);
+        }
+
+        public async Task<PagedResult<TasksDto>> GetAssistantTasksAsync(int assistantId, GetAssistantTasksRequest request)
+        {
+            var pagedTasks = await _tasksRepository.GetAssistantTasksAsync(
+                assistantId, request.Status, request.PageNumber, request.PageSize);
 
             // Ánh xạ từ Tasks entity sang TasksDto
             var dtoItems = pagedTasks.Items.Select(t => new TasksDto
