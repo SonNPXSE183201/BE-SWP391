@@ -1,9 +1,11 @@
 using System.Net;
+using System.Text.Json.Serialization;
 
 namespace BuildingBlocks.Web.Responses
 {
     public class ApiResponse<T>
     {
+        [JsonPropertyName("success")]
         public bool IsSuccess { get; set; }
         public int StatusCode { get; set; }
         public string Message { get; set; } = string.Empty;

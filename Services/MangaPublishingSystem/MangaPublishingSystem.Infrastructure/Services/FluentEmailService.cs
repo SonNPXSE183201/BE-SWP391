@@ -16,15 +16,22 @@ namespace MangaPublishingSystem.Infrastructure.Services
 
         public async Task SendEmailAsync(string toEmail, string subject, string body)
         {
-            var response = await _fluentEmail
-                .To(toEmail)
-                .Subject(subject)
-                .Body(body, isHtml: true)
-                .SendAsync();
-
-            if (!response.Successful)
+            try
             {
-                throw new Exception(string.Join(", ", response.ErrorMessages));
+                var response = await _fluentEmail
+                    .To(toEmail)
+                    .Subject(subject)
+                    .Body(body, isHtml: true)
+                    .SendAsync();
+
+                if (!response.Successful)
+                {
+                    Console.WriteLine($"\n[WARNING] FluentEmail failed to send to {toEmail}: {string.Join(", ", response.ErrorMessages)}\n");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"\n[WARNING] FluentEmail exception while sending to {toEmail}: {ex.Message}\n");
             }
         }
 

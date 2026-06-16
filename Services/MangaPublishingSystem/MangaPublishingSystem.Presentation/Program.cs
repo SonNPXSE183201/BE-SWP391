@@ -67,6 +67,7 @@ if (app.Environment.IsDevelopment() || app.Environment.EnvironmentName == "Docke
 
 app.UseCors("Default");
 app.UseGlobalExceptionHandler();
+app.UseWebSockets();
 app.UseAuthentication();
 app.UseAuthorization();
 
