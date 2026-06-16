@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using BuildingBlocks.Web.Responses;
 using MangaPublishingSystem.Domain.Entities;
 
 namespace MangaPublishingSystem.Application.IRepositories
@@ -8,7 +9,7 @@ namespace MangaPublishingSystem.Application.IRepositories
     {
         Task<List<User>> GetPendingAssistantsAsync();
 
-        Task<List<User>> GetUsersFilteredAsync(string? role, string? status);
+        Task<PagedResult<User>> GetUsersFilteredPagedAsync(string? role, string? status, int pageNumber, int pageSize);
 
         Task<bool> ExistsByEmailAsync(string email);
 

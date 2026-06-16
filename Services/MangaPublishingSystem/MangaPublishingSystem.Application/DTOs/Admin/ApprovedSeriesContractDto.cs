@@ -29,25 +29,4 @@ namespace MangaPublishingSystem.Application.DTOs.Admin
         [JsonPropertyName("genres")]
         public List<string> Genres { get; set; } = new();
     }
-
-    public class CreateContractRequestDto
-    {
-        [JsonPropertyName("seriesId")]
-        public string SeriesId { get; set; } = null!;
-
-        [JsonPropertyName("baseGenkouryoPrice")]
-        public decimal BaseGenkouryoPrice { get; set; }
-    }
-
-    public class UpdateContractRequestDto
-    {
-        [JsonPropertyName("contractId")]
-        public string ContractId { get; set; } = null!;
-
-        [JsonPropertyName("genkouryoPrice")]
-        public decimal? GenkouryoPrice { get; set; }
-
-        [JsonPropertyName("endDate")]
-        public string? EndDate { get; set; }
-    }
 }

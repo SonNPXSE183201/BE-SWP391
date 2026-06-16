@@ -41,16 +41,19 @@ namespace MangaPublishingSystem.Application.Services.Admin
         {
             var userName = tx.ToUser?.FullName ?? tx.FromUser?.FullName ?? tx.Wallet?.User?.FullName ?? "N/A";
             var internalStatus = MapInternalStatus(tx.Status);
-            var reconciliationStatus = internalStatus switch
-            {
-                "Completed" or "Success" => "Matched",
-                "Pending" => "Pending",
-                "Failed" => "Mismatch",
-                _ => "Pending"
-            };
-
             var reference = string.IsNullOrWhiteSpace(tx.ReferenceCode) ? $"TXN-{tx.Id:D6}" : tx.ReferenceCode;
+            var hasReferenceCode = !string.IsNullOrWhiteSpace(tx.ReferenceCode);
             var vnpayId = reference.StartsWith("VNP", StringComparison.OrdinalIgnoreCase) ? reference : $"VNP{tx.Id:D8}";
+
+            var reconciliationStatus = !hasReferenceCode && (tx.Type == "Deposit" || tx.Type == "Withdraw")
+                ? "Missing"
+                : internalStatus switch
+                {
+                    "Completed" or "Success" => "Matched",
+                    "Pending" => "Pending",
+                    "Failed" => "Mismatch",
+                    _ => "Pending"
+                };
 
             return new ReconciliationRecordDto
             {
@@ -67,9 +70,12 @@ namespace MangaPublishingSystem.Application.Services.Admin
                 Status = reconciliationStatus,
                 UserName = userName,
                 Description = tx.Type == "Deposit" ? "Nạp tiền vào ví — Deposit" : "Rút tiền — Withdrawal",
-                DiscrepancyNote = reconciliationStatus == "Mismatch"
-                    ? "Trạng thái giao dịch nội bộ không khớp đối soát VNPay."
-                    : null
+                DiscrepancyNote = reconciliationStatus switch
+                {
+                    "Mismatch" => "Trạng thái giao dịch nội bộ không khớp đối soát VNPay.",
+                    "Missing" => "Giao dịch thiếu mã tham chiếu ReferenceCode theo quy tắc F04.",
+                    _ => null
+                }
             };
         }
 

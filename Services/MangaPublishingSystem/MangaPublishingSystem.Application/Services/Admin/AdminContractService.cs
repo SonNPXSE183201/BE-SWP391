@@ -41,15 +41,7 @@ namespace MangaPublishingSystem.Application.Services.Admin
 
         public async Task<bool> CreateContractAsync(CreateContractRequestDto dto)
         {
-            if (!int.TryParse(dto.SeriesId, out var seriesId))
-            {
-                throw new BadRequestException("Mã series không hợp lệ.");
-            }
-
-            if (dto.BaseGenkouryoPrice <= 0)
-            {
-                throw new BadRequestException("Đơn giá nhuận bút phải lớn hơn 0.");
-            }
+            var seriesId = int.Parse(dto.SeriesId);
 
             var series = await _seriesRepository.GetByIdAsync(seriesId);
             if (series == null)
@@ -90,22 +82,26 @@ namespace MangaPublishingSystem.Application.Services.Admin
                 throw new NotFoundException("Không tìm thấy hợp đồng.");
             }
 
-            if (dto.GenkouryoPrice.HasValue)
+            if (!dto.GenkouryoPrice.HasValue)
             {
-                if (dto.GenkouryoPrice.Value <= 0)
-                {
-                    throw new BadRequestException("Đơn giá nhuận bút phải lớn hơn 0.");
-                }
-
-                contract.BaseGenkouryoPrice = dto.GenkouryoPrice.Value;
+                throw new BadRequestException("Phải cung cấp đơn giá nhuận bút mới khi cập nhật phụ lục hợp đồng.");
             }
 
-            if (!string.IsNullOrWhiteSpace(dto.EndDate) && DateTime.TryParse(dto.EndDate, out var endDate))
+            var effectiveDate = DateTime.UtcNow;
+            if (!string.IsNullOrWhiteSpace(dto.EndDate) && DateTime.TryParse(dto.EndDate, out var parsedEffectiveDate))
             {
-                contract.SignedDate = endDate.ToUniversalTime();
+                effectiveDate = parsedEffectiveDate.ToUniversalTime();
             }
 
-            _contractRepository.Update(contract);
+            var addendum = new ContractAddendum
+            {
+                ContractId = contractId,
+                NewGenkouryoPrice = dto.GenkouryoPrice.Value,
+                EffectiveDate = effectiveDate,
+                SignedDate = DateTime.UtcNow
+            };
+
+            await _contractRepository.AddAddendumAsync(addendum);
             await _unitOfWork.SaveChangesAsync();
         }
 

@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using System.Text.Json.Serialization;
 
 namespace MangaPublishingSystem.Application.DTOs.Admin
@@ -46,41 +45,5 @@ namespace MangaPublishingSystem.Application.DTOs.Admin
 
         [JsonPropertyName("discrepancyNote")]
         public string? DiscrepancyNote { get; set; }
-    }
-
-    public class ReconciliationSummaryDto
-    {
-        [JsonPropertyName("totalRecords")]
-        public int TotalRecords { get; set; }
-
-        [JsonPropertyName("matchedCount")]
-        public int MatchedCount { get; set; }
-
-        [JsonPropertyName("mismatchCount")]
-        public int MismatchCount { get; set; }
-
-        [JsonPropertyName("missingCount")]
-        public int MissingCount { get; set; }
-
-        [JsonPropertyName("pendingCount")]
-        public int PendingCount { get; set; }
-
-        [JsonPropertyName("totalVnpayAmount")]
-        public decimal TotalVnpayAmount { get; set; }
-
-        [JsonPropertyName("totalInternalAmount")]
-        public decimal TotalInternalAmount { get; set; }
-
-        [JsonPropertyName("differenceAmount")]
-        public decimal DifferenceAmount { get; set; }
-    }
-
-    public class ReconciliationResponseDto
-    {
-        [JsonPropertyName("records")]
-        public List<ReconciliationRecordDto> Records { get; set; } = new();
-
-        [JsonPropertyName("summary")]
-        public ReconciliationSummaryDto Summary { get; set; } = null!;
     }
 }

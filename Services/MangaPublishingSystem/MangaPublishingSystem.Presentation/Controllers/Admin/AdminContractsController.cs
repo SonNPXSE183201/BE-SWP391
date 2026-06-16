@@ -38,7 +38,7 @@ namespace MangaPublishingSystem.Presentation.Controllers.Admin
         public async Task<ActionResult<ApiResponse<object>>> UpdateContract(int contractId, [FromBody] UpdateContractRequestDto dto)
         {
             await _adminContractService.UpdateContractAsync(contractId, dto);
-            return Ok(ApiResponse<object>.Success(null!, "Cập nhật hợp đồng thành công."));
+            return Ok(ApiResponse<object>.Success(null!, "Đã tạo phụ lục hợp đồng và cập nhật đơn giá nhuận bút thành công."));
         }
     }
 }

@@ -11,5 +11,7 @@ namespace MangaPublishingSystem.Application.IRepositories
         Task<Contract?> GetBySeriesIdAsync(int seriesId);
 
         Task<Contract?> GetWithSeriesAsync(int contractId);
+
+        System.Threading.Tasks.Task AddAddendumAsync(ContractAddendum addendum);
     }
 }

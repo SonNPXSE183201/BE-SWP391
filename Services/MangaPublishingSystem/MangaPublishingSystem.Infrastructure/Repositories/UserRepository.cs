@@ -1,10 +1,12 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using BuildingBlocks.Web.Responses;
 using MangaPublishingSystem.Application.IRepositories;
 using MangaPublishingSystem.Domain.Entities;
 using MangaPublishingSystem.Domain.Enums;
 using MangaPublishingSystem.Infrastructure.Data;
+using MangaPublishingSystem.Infrastructure.Extensions;
 using Microsoft.EntityFrameworkCore;
 
 namespace MangaPublishingSystem.Infrastructure.Repositories
@@ -22,7 +24,7 @@ namespace MangaPublishingSystem.Infrastructure.Repositories
                 .ToListAsync();
         }
 
-        public async Task<List<User>> GetUsersFilteredAsync(string? role, string? status)
+        public async Task<PagedResult<User>> GetUsersFilteredPagedAsync(string? role, string? status, int pageNumber, int pageSize)
         {
             var query = _context.Users.Include(u => u.Role).AsQueryable();
 
@@ -45,7 +47,9 @@ namespace MangaPublishingSystem.Infrastructure.Repositories
                 query = query.Where(u => u.Status == userStatus);
             }
 
-            return await query.OrderByDescending(u => u.CreateAt).ToListAsync();
+            return await query
+                .OrderByDescending(u => u.CreateAt)
+                .ToPagedListAsync(pageNumber, pageSize);
         }
 
         public async Task<bool> ExistsByEmailAsync(string email)

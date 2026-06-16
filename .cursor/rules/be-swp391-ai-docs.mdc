@@ -1,0 +1,33 @@
+---
+description: Bắt buộc đọc GEMINI/SRS/README trước khi code BE-SWP391
+alwaysApply: true
+---
+
+# BE-SWP391 — Quy tắc AI bắt buộc
+
+Trước khi viết/sửa API, Service, DTO, Repository trên `BE-SWP391`:
+
+1. **Đọc và tuân thủ** `GEMINI.md`, `SRS.md`, `README.md` tại gốc repo.
+2. **Prompt phải @** 3 file trên khi nhờ AI implement hoặc review.
+3. **Sau khi code**, tự review lại theo 3 file: cấu trúc 4 tầng, feature folder, nghiệp vụ SRS.
+
+## Cấu trúc bắt buộc
+
+- DTO: **1 class = 1 file** trong `DTOs/[Feature]/`
+- Validator: FluentValidation trong `Validations/[Feature]/`
+- Controller mỏng → gọi Service → Repository qua `IUnitOfWork`
+- Phân trang: `PagedRequest` + `PagedResult<T>` (max pageSize 50)
+- Response: `ApiResponse<T>`, message **tiếng Việt**
+- Controller mới: thêm route vào `GatewayAPI/ocelot.json` và `ocelot.Development.json`
+
+## Nghiệp vụ Admin (SRS F5.x)
+
+- F5.1: Chỉ Assistant tự đăng ký; Admin duyệt `Pending` → `Active`/`Rejected`
+- F5.3: `POST /api/admin/contracts` lưu `BaseGenkouryoPrice`
+- F5.5: Cập nhật giá → tạo `ContractAddendum`, không sửa giá gốc ngược
+- F5.6: Đối soát Deposit/Withdraw qua `ReferenceCode`
+
+## Git
+
+- **Cấm** `git add .` — chỉ add từng file code feature
+- **Không commit** `*.bat`, `*.code-workspace`, script secrets local

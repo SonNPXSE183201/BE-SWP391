@@ -28,14 +28,14 @@ namespace MangaPublishingSystem.Presentation.Controllers.Admin
         }
 
         [HttpGet]
-        public async Task<ActionResult<ApiResponse<List<UserListItemDto>>>> GetUsers(
+        public async Task<ActionResult<ApiResponse<PagedResult<UserListItemDto>>>> GetUsers(
             [FromQuery] string? role,
             [FromQuery] string? status,
-            [FromQuery] int? page,
-            [FromQuery] int? pageSize)
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 10)
         {
-            var result = await _userService.GetUsersAsync(role, status);
-            return Ok(ApiResponse<List<UserListItemDto>>.Success(result, "Lấy danh sách người dùng thành công."));
+            var result = await _userService.GetUsersAsync(role, status, page, pageSize);
+            return Ok(ApiResponse<PagedResult<UserListItemDto>>.Success(result, "Lấy danh sách người dùng thành công."));
         }
 
         [HttpGet("pending")]

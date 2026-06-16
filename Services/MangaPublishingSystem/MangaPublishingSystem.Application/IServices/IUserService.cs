@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using BuildingBlocks.Web.Responses;
 using MangaPublishingSystem.Application.DTOs.User;
 
 namespace MangaPublishingSystem.Application.IServices
@@ -16,7 +17,7 @@ namespace MangaPublishingSystem.Application.IServices
 
         Task<UserResponseDto> LockUserAsync(int id);
 
-        Task<List<UserListItemDto>> GetUsersAsync(string? role, string? status);
+        Task<PagedResult<UserListItemDto>> GetUsersAsync(string? role, string? status, int pageNumber, int pageSize);
 
         Task<AssistantProfileResponseDto> ApproveAssistantAsync(int id, ApproveAssistantRequestDto dto);
     }

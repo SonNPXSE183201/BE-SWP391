@@ -6,6 +6,7 @@ using MangaPublishingSystem.Application.IServices;
 using MangaPublishingSystem.Application.DTOs.User;
 using MangaPublishingSystem.Application.Common.Security;
 using BuildingBlocks.Exceptions;
+using BuildingBlocks.Web.Responses;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -122,14 +123,25 @@ namespace MangaPublishingSystem.Application.Services
             return assistants.Select(MapAssistant).ToList();
         }
 
-        public async Task<List<UserListItemDto>> GetUsersAsync(string? role, string? status)
+        public async Task<PagedResult<UserListItemDto>> GetUsersAsync(string? role, string? status, int pageNumber, int pageSize)
         {
-            var users = await _userRepository.GetUsersFilteredAsync(role, status);
-            return users.Select(MapUserListItem).ToList();
+            var pagedUsers = await _userRepository.GetUsersFilteredPagedAsync(role, status, pageNumber, pageSize);
+            var items = pagedUsers.Items.Select(MapUserListItem).ToList();
+
+            return new PagedResult<UserListItemDto>(
+                items,
+                pagedUsers.PageNumber,
+                pagedUsers.PageSize,
+                pagedUsers.TotalItems,
+                pagedUsers.TotalPages);
         }
 
         public async Task<AssistantProfileResponseDto> ApproveAssistantAsync(int id, ApproveAssistantRequestDto dto)
         {
+            if (!int.TryParse(dto.UserId, out var dtoUserId) || dtoUserId != id)
+            {
+                throw new BadRequestException("Mã người dùng trong yêu cầu không khớp với đường dẫn API.");
+            }
             if (dto.Approved)
             {
                 await ApproveUserAsync(id);
