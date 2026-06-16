@@ -26,20 +26,25 @@ namespace MangaPublishingSystem.Application.Services.Admin
         {
             var seriesList = await _contractRepository.GetApprovedSeriesForContractsAsync();
 
-            return seriesList.Select(s => new ApprovedSeriesContractDto
+            return seriesList.Select(s =>
             {
-                Id = s.Id.ToString(),
-                Title = s.Title,
-                MangakaName = s.Mangaka?.FullName ?? "N/A",
-                ApprovedAt = (s.UpdateAt ?? s.CreateAt).ToUniversalTime().ToString("o"),
-                ApprovedBudget = s.ApprovedProductionBudget > 0 ? s.ApprovedProductionBudget : s.EstimatedProductionBudget,
-                PublishSchedule = string.IsNullOrWhiteSpace(s.PublicationSchedule) ? "Chưa thiết lập" : s.PublicationSchedule,
-                HasContract = s.Contracts.Any(),
-                Genres = ParseGenres(s.Genre)
+                var contract = s.Contracts.FirstOrDefault();
+                return new ApprovedSeriesContractDto
+                {
+                    Id = s.Id.ToString(),
+                    Title = s.Title,
+                    MangakaName = s.Mangaka?.FullName ?? "N/A",
+                    ApprovedAt = (s.UpdateAt ?? s.CreateAt).ToUniversalTime().ToString("o"),
+                    ApprovedBudget = s.ApprovedProductionBudget > 0 ? s.ApprovedProductionBudget : s.EstimatedProductionBudget,
+                    PublishSchedule = string.IsNullOrWhiteSpace(s.PublicationSchedule) ? "Chưa thiết lập" : s.PublicationSchedule,
+                    HasContract = contract != null,
+                    ContractId = contract?.Id.ToString(),
+                    Genres = ParseGenres(s.Genre)
+                };
             }).ToList();
         }
 
-        public async Task<bool> CreateContractAsync(CreateContractRequestDto dto)
+        public async Task<CreateContractResponseDto> CreateContractAsync(CreateContractRequestDto dto)
         {
             var seriesId = int.Parse(dto.SeriesId);
 
@@ -71,7 +76,13 @@ namespace MangaPublishingSystem.Application.Services.Admin
 
             await _contractRepository.AddAsync(contract);
             await _unitOfWork.SaveChangesAsync();
-            return true;
+
+            return new CreateContractResponseDto
+            {
+                ContractId = contract.Id.ToString(),
+                SeriesId = seriesId.ToString(),
+                BaseGenkouryoPrice = contract.BaseGenkouryoPrice
+            };
         }
 
         public async System.Threading.Tasks.Task UpdateContractAsync(int contractId, UpdateContractRequestDto dto)

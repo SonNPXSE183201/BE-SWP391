@@ -26,6 +26,9 @@ namespace MangaPublishingSystem.Application.DTOs.Admin
         [JsonPropertyName("hasContract")]
         public bool HasContract { get; set; }
 
+        [JsonPropertyName("contractId")]
+        public string? ContractId { get; set; }
+
         [JsonPropertyName("genres")]
         public List<string> Genres { get; set; } = new();
     }

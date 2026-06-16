@@ -31,10 +31,11 @@ namespace MangaPublishingSystem.Presentation.Controllers.Admin
         public async Task<ActionResult<ApiResponse<PagedResult<UserListItemDto>>>> GetUsers(
             [FromQuery] string? role,
             [FromQuery] string? status,
+            [FromQuery] string? search,
             [FromQuery] int page = 1,
             [FromQuery] int pageSize = 10)
         {
-            var result = await _userService.GetUsersAsync(role, status, page, pageSize);
+            var result = await _userService.GetUsersAsync(role, status, search, page, pageSize);
             return Ok(ApiResponse<PagedResult<UserListItemDto>>.Success(result, "Lấy danh sách người dùng thành công."));
         }
 

@@ -9,7 +9,7 @@ namespace MangaPublishingSystem.Application.IRepositories
     {
         Task<List<User>> GetPendingAssistantsAsync();
 
-        Task<PagedResult<User>> GetUsersFilteredPagedAsync(string? role, string? status, int pageNumber, int pageSize);
+        Task<PagedResult<User>> GetUsersFilteredPagedAsync(string? role, string? status, string? search, int pageNumber, int pageSize);
 
         Task<bool> ExistsByEmailAsync(string email);
 

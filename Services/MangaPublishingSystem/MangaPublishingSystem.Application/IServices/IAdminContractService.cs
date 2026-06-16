@@ -8,7 +8,7 @@ namespace MangaPublishingSystem.Application.IServices
     {
         Task<List<ApprovedSeriesContractDto>> GetApprovedSeriesAsync();
 
-        Task<bool> CreateContractAsync(CreateContractRequestDto dto);
+        Task<CreateContractResponseDto> CreateContractAsync(CreateContractRequestDto dto);
 
         System.Threading.Tasks.Task UpdateContractAsync(int contractId, UpdateContractRequestDto dto);
     }

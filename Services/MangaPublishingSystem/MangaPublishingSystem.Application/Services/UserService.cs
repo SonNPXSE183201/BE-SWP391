@@ -123,9 +123,14 @@ namespace MangaPublishingSystem.Application.Services
             return assistants.Select(MapAssistant).ToList();
         }
 
-        public async Task<PagedResult<UserListItemDto>> GetUsersAsync(string? role, string? status, int pageNumber, int pageSize)
+        public async Task<PagedResult<UserListItemDto>> GetUsersAsync(
+            string? role,
+            string? status,
+            string? search,
+            int pageNumber,
+            int pageSize)
         {
-            var pagedUsers = await _userRepository.GetUsersFilteredPagedAsync(role, status, pageNumber, pageSize);
+            var pagedUsers = await _userRepository.GetUsersFilteredPagedAsync(role, status, search, pageNumber, pageSize);
             var items = pagedUsers.Items.Select(MapUserListItem).ToList();
 
             return new PagedResult<UserListItemDto>(

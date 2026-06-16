@@ -24,7 +24,12 @@ namespace MangaPublishingSystem.Infrastructure.Repositories
                 .ToListAsync();
         }
 
-        public async Task<PagedResult<User>> GetUsersFilteredPagedAsync(string? role, string? status, int pageNumber, int pageSize)
+        public async Task<PagedResult<User>> GetUsersFilteredPagedAsync(
+            string? role,
+            string? status,
+            string? search,
+            int pageNumber,
+            int pageSize)
         {
             var query = _context.Users.Include(u => u.Role).AsQueryable();
 
@@ -45,6 +50,16 @@ namespace MangaPublishingSystem.Infrastructure.Repositories
             if (!string.IsNullOrWhiteSpace(status) && Enum.TryParse<UserStatus>(status, true, out var userStatus))
             {
                 query = query.Where(u => u.Status == userStatus);
+            }
+
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                var term = search.Trim();
+                query = query.Where(u =>
+                    EF.Functions.Collate(u.FullName, "SQL_Latin1_General_CP1_CI_AI").Contains(term)
+                    || EF.Functions.Collate(u.Email, "SQL_Latin1_General_CP1_CI_AI").Contains(term)
+                    || EF.Functions.Collate(u.UserName, "SQL_Latin1_General_CP1_CI_AI").Contains(term)
+                    || (u.PenName != null && EF.Functions.Collate(u.PenName, "SQL_Latin1_General_CP1_CI_AI").Contains(term)));
             }
 
             return await query

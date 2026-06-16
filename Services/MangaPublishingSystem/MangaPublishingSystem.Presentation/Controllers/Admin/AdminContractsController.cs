@@ -28,10 +28,10 @@ namespace MangaPublishingSystem.Presentation.Controllers.Admin
         }
 
         [HttpPost]
-        public async Task<ActionResult<ApiResponse<bool>>> CreateContract([FromBody] CreateContractRequestDto dto)
+        public async Task<ActionResult<ApiResponse<CreateContractResponseDto>>> CreateContract([FromBody] CreateContractRequestDto dto)
         {
             var result = await _adminContractService.CreateContractAsync(dto);
-            return Ok(ApiResponse<bool>.Success(result, "Đã tạo hợp đồng và thiết lập nhuận bút thành công."));
+            return Ok(ApiResponse<CreateContractResponseDto>.Success(result, "Đã tạo hợp đồng và thiết lập nhuận bút thành công."));
         }
 
         [HttpPut("{contractId}")]
