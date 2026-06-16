@@ -449,6 +449,46 @@ namespace MangaPublishingSystem.Application.Services
                 pagedTasks.TotalPages);
         }
 
+        public async Task<bool> AcceptTaskAsync(int taskId, int assistantId)
+        {
+            var task = await _tasksRepository.GetByIdAsync(taskId);
+            if (task == null)
+            {
+                throw new NotFoundException("Nhiệm vụ không tồn tại.");
+            }
+
+            if (task.Status != "Pending")
+            {
+                throw new ConflictException("Nhiệm vụ này không ở trạng thái chờ nhận.");
+            }
+
+            if (task.AssistantId.HasValue)
+            {
+                throw new ConflictException("Nhiệm vụ này đã được người khác nhận.");
+            }
+
+            var assistant = await _userRepository.GetByIdAsync(assistantId);
+            string assistantName = assistant?.FullName ?? "Một trợ lý";
+
+            task.AssistantId = assistantId;
+            task.Status = "In_Progress";
+            _tasksRepository.Update(task);
+
+            // Gửi thông báo cho Mangaka
+            var notif = new Notification
+            {
+                UserId = task.MangakaId,
+                Content = $"Trợ lý {assistantName} đã nhận nhiệm vụ '{task.Description}' của bạn.",
+                Type = "Task_Accepted",
+                IsRead = false
+            };
+            await _notificationRepository.AddAsync(notif);
+            await _notificationPublisher.PublishNotificationAsync(task.MangakaId, notif.Content, notif.Type);
+
+            await _unitOfWork.SaveChangesAsync();
+            return true;
+        }
+
         private async System.Threading.Tasks.Task UpdateAssistantProfileMetricsAsync(int assistantId)
         {
             var profileList = await _assistantProfileRepository.FindAsync(p => p.AssistantId == assistantId);

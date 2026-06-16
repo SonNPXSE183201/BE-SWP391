@@ -108,6 +108,15 @@ namespace MangaPublishingSystem.Presentation.Controllers.Tasks
             return Ok(ApiResponse<PagedResult<TasksDto>>.Success(result, "Lấy danh sách nhiệm vụ của bạn thành công."));
         }
 
+        [Authorize(Roles = "Assistant")]
+        [HttpPost("{id}/accept")]
+        public async Task<ActionResult<ApiResponse<bool>>> AcceptTask([FromRoute] int id)
+        {
+            int assistantId = CurrentUserId;
+            await _tasksService.AcceptTaskAsync(id, assistantId);
+            return Ok(ApiResponse<bool>.Success(true, "Nhận nhiệm vụ thành công."));
+        }
+
         [HttpGet("pages/{pageId}/composite")]
         public async Task<IActionResult> GetCompositePage([FromRoute] int pageId)
         {
