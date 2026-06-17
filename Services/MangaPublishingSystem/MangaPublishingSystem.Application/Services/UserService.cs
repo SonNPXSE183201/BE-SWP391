@@ -5,6 +5,7 @@ using MangaPublishingSystem.Application.IServices;
 using MangaPublishingSystem.Application.DTOs.User;
 using MangaPublishingSystem.Application.Common.Security;
 using BuildingBlocks.Exceptions;
+using BuildingBlocks.Web.Responses;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -245,6 +246,19 @@ namespace MangaPublishingSystem.Application.Services
             }
 
             return new string(chars.OrderBy(x => random.Next()).ToArray());
+        }
+
+        public async Task<PagedResult<UserResponseDto>> GetUsersPagedAsync(string? role, string? status, string? search, int pageNumber, int pageSize)
+        {
+            var pagedResult = await _userRepository.GetUsersPagedAsync(role, status, search, pageNumber, pageSize);
+            var mappedItems = pagedResult.Items.Select(u => MapUserResponse(u, "Lấy thông tin thành công."));
+            return new PagedResult<UserResponseDto>(
+                mappedItems,
+                pagedResult.PageNumber,
+                pagedResult.PageSize,
+                pagedResult.TotalItems,
+                pagedResult.TotalPages
+            );
         }
     }
 }

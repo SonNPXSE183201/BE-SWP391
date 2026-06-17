@@ -1,3 +1,5 @@
+using System.Threading.Tasks;
+using BuildingBlocks.Web.Responses;
 using MangaPublishingSystem.Domain.Entities;
 
 namespace MangaPublishingSystem.Application.IRepositories
@@ -13,5 +15,7 @@ namespace MangaPublishingSystem.Application.IRepositories
         Task<bool> ExistsByPenNameAsync(string penName);
 
         Task<User?> GetUserWithRoleByUsernameOrEmailAsync(string identifier);
+
+        Task<PagedResult<User>> GetUsersPagedAsync(string? role, string? status, string? search, int pageNumber, int pageSize);
     }
 }
