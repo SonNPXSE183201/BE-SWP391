@@ -15,6 +15,8 @@ namespace MangaPublishingSystem.Application.IServices
         Task<Transaction> ApproveWithdrawAsync(int transactionId, bool isApproved, string? adminNote);
         System.Threading.Tasks.Task LockFundsAsync(int userId, decimal amount, int taskId);
         System.Threading.Tasks.Task ReleaseFundsAsync(int taskId, bool isApproved, decimal? customPercentageForAssistant = null);
+        System.Threading.Tasks.Task ResolveDisputeAsync(int taskId, decimal assistantRate, int editorId);
+        Task<DTOs.Wallet.ReconciliationReportDto> ReconcileTransactionsAsync(List<DTOs.Wallet.ReconciliationRow> rows);
         Task<IEnumerable<Transaction>> GetTransactionHistoryAsync(int userId);
     }
 }
