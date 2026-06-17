@@ -110,11 +110,29 @@ namespace MangaPublishingSystem.Presentation.Controllers.Tasks
 
         [Authorize(Roles = "Assistant")]
         [HttpPost("{id}/accept")]
-        public async Task<ActionResult<ApiResponse<bool>>> AcceptTask([FromRoute] int id)
+        public async Task<ActionResult<ApiResponse<object>>> AcceptTask([FromRoute] int id)
         {
             int assistantId = CurrentUserId;
             await _tasksService.AcceptTaskAsync(id, assistantId);
-            return Ok(ApiResponse<bool>.Success(true, "Nhận nhiệm vụ thành công."));
+            return Ok(ApiResponse<object>.Success(null, "Nhận nhiệm vụ thành công."));
+        }
+
+        [Authorize(Roles = "Assistant")]
+        [HttpPost("{id}/submit")]
+        public async Task<ActionResult<ApiResponse<object>>> SubmitTask([FromRoute] int id, [FromBody] SubmitTaskDto submitDto)
+        {
+            int assistantId = CurrentUserId;
+            await _tasksService.SubmitTaskAsync(id, assistantId, submitDto);
+            return Ok(ApiResponse<object>.Success(null, "Nộp bài vẽ nhiệm vụ thành công. Đang chờ tác giả duyệt."));
+        }
+
+        [Authorize(Roles = "Assistant")]
+        [HttpPost("{id}/request-extension")]
+        public async Task<ActionResult<ApiResponse<object>>> RequestExtension([FromRoute] int id, [FromBody] RequestExtensionDto extensionDto)
+        {
+            int assistantId = CurrentUserId;
+            await _tasksService.RequestExtensionAsync(id, assistantId, extensionDto);
+            return Ok(ApiResponse<object>.Success(null, "Gửi yêu cầu xin gia hạn thành công. Đang chờ tác giả duyệt."));
         }
 
         [HttpGet("pages/{pageId}/composite")]

@@ -19,7 +19,9 @@ namespace MangaPublishingSystem.Application.IServices
         Task<byte[]> GetCompositedPageAsync(int pageId);
         Task<PagedResult<TasksDto>> GetAvailableTasksAsync(GetAvailableTasksRequest request);
         Task<PagedResult<TasksDto>> GetAssistantTasksAsync(int assistantId, GetAssistantTasksRequest request);
-        Task<bool> AcceptTaskAsync(int taskId, int assistantId);
+        System.Threading.Tasks.Task AcceptTaskAsync(int taskId, int assistantId);
+        System.Threading.Tasks.Task SubmitTaskAsync(int taskId, int assistantId, SubmitTaskDto dto);
+        System.Threading.Tasks.Task RequestExtensionAsync(int taskId, int assistantId, RequestExtensionDto dto);
     }
 }
 

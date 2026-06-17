@@ -4,6 +4,7 @@ using System.Security.Claims;
 using System.Threading.Tasks;
 using BuildingBlocks.Web.Responses;
 using MangaPublishingSystem.Application.DTOs.Series;
+using MangaPublishingSystem.Application.DTOs.Chapters;
 using MangaPublishingSystem.Application.IServices;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -15,13 +16,50 @@ namespace MangaPublishingSystem.Presentation.Controllers.Series
     public class SeriesController : ControllerBase
     {
         private readonly ISeriesService _seriesService;
+        private readonly IChapterService _chapterService;
 
-        public SeriesController(ISeriesService seriesService)
+        public SeriesController(ISeriesService seriesService, IChapterService chapterService)
         {
             _seriesService = seriesService;
+            _chapterService = chapterService;
         }
 
         private int CurrentUserId => int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+
+        [HttpGet("{id}")]
+        public async Task<ActionResult<ApiResponse<SeriesDto>>> GetSeriesById([FromRoute] int id)
+        {
+            var series = await _seriesService.GetByIdAsync(id);
+            if (series == null)
+            {
+                return NotFound(ApiResponse<SeriesDto>.Failure(404, "Không tìm thấy bộ truyện này."));
+            }
+
+            var result = MapToSeriesDto(series);
+            return Ok(ApiResponse<SeriesDto>.Success(result, "Lấy thông tin chi tiết bộ truyện thành công."));
+        }
+
+        [HttpGet("{id}/chapters")]
+        public async Task<ActionResult<ApiResponse<IEnumerable<ChapterDto>>>> GetChaptersBySeriesId([FromRoute] int id)
+        {
+            var chapters = await _chapterService.GetChaptersBySeriesIdAsync(id);
+            var result = chapters.Select(c => new ChapterDto
+            {
+                Id = c.Id,
+                SeriesId = c.SeriesId,
+                ChapterNumber = c.ChapterNumber,
+                Title = c.Title,
+                ValidPageCount = c.ValidPageCount,
+                AppliedGenkouryoPrice = c.AppliedGenkouryoPrice,
+                SubmissionDeadline = c.SubmissionDeadline,
+                QcChecklistData = c.QcChecklistData,
+                Status = c.Status,
+                CreateAt = c.CreateAt,
+                UpdateAt = c.UpdateAt
+            }).ToList();
+
+            return Ok(ApiResponse<IEnumerable<ChapterDto>>.Success(result, "Lấy danh sách chương truyện thành công."));
+        }
 
         [Authorize(Roles = "Mangaka")]
         [HttpPost]
@@ -60,6 +98,22 @@ namespace MangaPublishingSystem.Presentation.Controllers.Series
             var seriesList = await _seriesService.GetSeriesByMangakaIdAsync(mangakaId);
             var result = seriesList.Select(MapToSeriesDto).ToList();
             return Ok(ApiResponse<IEnumerable<SeriesDto>>.Success(result, "Lấy danh sách bộ truyện thành công."));
+        }
+
+        [Authorize(Roles = "Mangaka")]
+        [HttpPost("{id}/accept-fund")]
+        public async Task<ActionResult<ApiResponse<object>>> AcceptFund([FromRoute] int id)
+        {
+            await _seriesService.AcceptFundAsync(id, CurrentUserId);
+            return Ok(ApiResponse<object>.Success(null, "Xác nhận nhận vốn và kích hoạt bộ truyện thành công."));
+        }
+
+        [Authorize(Roles = "Editorial Board")]
+        [HttpPost("{id}/vote")]
+        public async Task<ActionResult<ApiResponse<object>>> VoteSeries([FromRoute] int id, [FromBody] VoteSeriesRequestDto dto)
+        {
+            await _seriesService.VoteSeriesAsync(id, CurrentUserId, dto.Approved, dto.Comment, dto.RecommendedBudget);
+            return Ok(ApiResponse<object>.Success(null, "Bỏ phiếu thẩm định bộ truyện thành công."));
         }
 
         private static SeriesDto MapToSeriesDto(MangaPublishingSystem.Domain.Entities.Series series)
