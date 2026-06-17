@@ -217,6 +217,21 @@ namespace MangaPublishingSystem.Application.Services
             return MapUserResponse(user, "Khóa tài khoản thành công.");
         }
 
+        public async Task<UserResponseDto> UnlockUserAsync(int id)
+        {
+            var user = await GetUserOrThrowAsync(id);
+
+            if (user.Status != UserStatus.Locked)
+            {
+                throw new BadRequestException("Chỉ có thể mở khóa tài khoản đang bị khóa.");
+            }
+
+            user.Status = UserStatus.Active;
+            await _unitOfWork.SaveChangesAsync();
+
+            return MapUserResponse(user, "Mở khóa tài khoản thành công.");
+        }
+
         private async Task<DomainUser> GetUserOrThrowAsync(int id)
         {
             var user = await _userRepository.GetByIdAsync(id);

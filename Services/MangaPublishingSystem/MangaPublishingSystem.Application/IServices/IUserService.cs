@@ -17,6 +17,8 @@ namespace MangaPublishingSystem.Application.IServices
 
         Task<UserResponseDto> LockUserAsync(int id);
 
+        Task<UserResponseDto> UnlockUserAsync(int id);
+
         Task<PagedResult<UserListItemDto>> GetUsersAsync(string? role, string? status, string? search, int pageNumber, int pageSize);
 
         Task<AssistantProfileResponseDto> ApproveAssistantAsync(int id, ApproveAssistantRequestDto dto);
