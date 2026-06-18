@@ -570,6 +570,7 @@ namespace MangaPublishingSystem.Application.Services
                 pagedTasks.TotalPages);
         }
 
+
         private async System.Threading.Tasks.Task UpdateAssistantProfileMetricsAsync(int assistantId)
         {
             var profileList = await _assistantProfileRepository.FindAsync(p => p.AssistantId == assistantId);

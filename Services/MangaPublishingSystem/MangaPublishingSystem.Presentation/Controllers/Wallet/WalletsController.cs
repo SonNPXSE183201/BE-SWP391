@@ -7,9 +7,12 @@ using BuildingBlocks.Web.Responses;
 using MangaPublishingSystem.Application.DTOs.Wallet;
 using MangaPublishingSystem.Application.IServices;
 using MangaPublishingSystem.Domain.Entities;
+using MangaPublishingSystem.Infrastructure.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.WebUtilities;
+using Microsoft.Extensions.Options;
 
 namespace MangaPublishingSystem.Presentation.Controllers.Wallet
 {
@@ -20,15 +23,18 @@ namespace MangaPublishingSystem.Presentation.Controllers.Wallet
         private readonly IWalletService _walletService;
         private readonly IVnPayService _vnPayService;
         private readonly IHttpContextAccessor _httpContextAccessor;
+        private readonly VnPaySettings _vnPaySettings;
 
         public WalletsController(
             IWalletService walletService,
             IVnPayService vnPayService,
-            IHttpContextAccessor httpContextAccessor)
+            IHttpContextAccessor httpContextAccessor,
+            IOptions<VnPaySettings> vnPayOptions)
         {
             _walletService = walletService;
             _vnPayService = vnPayService;
             _httpContextAccessor = httpContextAccessor;
+            _vnPaySettings = vnPayOptions.Value;
         }
 
         private int CurrentUserId => int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
@@ -117,7 +123,7 @@ namespace MangaPublishingSystem.Presentation.Controllers.Wallet
         ///   - Hiển thị: TerminalID, TxnRef, TransactionNo, Amount, BankCode
         /// </summary>
         [HttpGet("deposit/return")]
-        public async Task<ActionResult<ApiResponse<VnpayPaymentResultDto>>> DepositReturn([FromQuery] VnpayReturnDto dto)
+        public async Task<IActionResult> DepositReturn([FromQuery] VnpayReturnDto dto)
         {
             var query = HttpContext.Request.Query;
 
@@ -155,6 +161,7 @@ namespace MangaPublishingSystem.Presentation.Controllers.Wallet
                     TransactionStatus = transactionStatus,
                     Message           = "Có lỗi xảy ra trong quá trình xử lý. Chữ ký không hợp lệ."
                 };
+
                 return BadRequest(ApiResponse<VnpayPaymentResultDto>.Failure(400, "Chữ ký xác thực không hợp lệ."));
             }
 
@@ -193,7 +200,12 @@ namespace MangaPublishingSystem.Presentation.Controllers.Wallet
             };
 
             var apiMessage = isTransactionSuccess ? "Nạp tiền thành công." : "Giao dịch nạp tiền thất bại hoặc bị hủy.";
-            return Ok(ApiResponse<VnpayPaymentResultDto>.Success(result, apiMessage));
+            var finalResult = ApiResponse<VnpayPaymentResultDto>.Success(result, apiMessage);
+            if (!isTransactionSuccess)
+            {
+                finalResult.IsSuccess = false;
+            }
+            return Ok(finalResult);
         }
 
         /// <summary>
@@ -312,6 +324,29 @@ namespace MangaPublishingSystem.Presentation.Controllers.Wallet
                 CreateAt = t.CreateAt,
                 UpdateAt = t.UpdateAt
             };
+        }
+
+        private string? BuildFrontendRedirectUrl(VnpayPaymentResultDto paymentResult)
+        {
+            if (string.IsNullOrWhiteSpace(_vnPaySettings.FrontendReturnUrl))
+            {
+                return null;
+            }
+
+            var queryParams = new Dictionary<string, string?>
+            {
+                ["paymentProvider"] = "vnpay",
+                ["depositStatus"] = paymentResult.Success ? "success" : "failed",
+                ["referenceCode"] = paymentResult.ReferenceCode,
+                ["vnpayTransactionNo"] = paymentResult.VnpayTransactionNo,
+                ["amount"] = paymentResult.Amount.ToString("0"),
+                ["bankCode"] = paymentResult.BankCode,
+                ["responseCode"] = paymentResult.ResponseCode,
+                ["transactionStatus"] = paymentResult.TransactionStatus,
+                ["message"] = paymentResult.Message
+            };
+
+            return QueryHelpers.AddQueryString(_vnPaySettings.FrontendReturnUrl, queryParams);
         }
     }
 }

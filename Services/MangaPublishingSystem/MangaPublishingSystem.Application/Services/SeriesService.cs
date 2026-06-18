@@ -128,8 +128,7 @@ namespace MangaPublishingSystem.Application.Services
                 throw new NotFoundException("Không tìm thấy thông tin tác giả.");
             }
 
-            // Sử dụng trường Skills để lưu trữ nhãn vắng mặt để tránh thay đổi Check Constraint trên DB vật lý
-            user.Skills = onLeave ? "OnLeave" : null;
+            user.IsOnLeave = onLeave;
             _userRepository.Update(user);
 
             var notif = new Notification
