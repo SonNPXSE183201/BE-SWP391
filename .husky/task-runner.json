@@ -5,13 +5,13 @@
          "name": "build-on-commit",
          "group": "pre-commit",
          "command": "dotnet",
-         "args": [ "build", "MangaPublishingSystem.slnx" ]
+         "args": [ "build", "MangaPublishingSystem.sln" ]
       },
       {
          "name": "build-on-push",
          "group": "pre-push",
          "command": "dotnet",
-         "args": [ "build", "MangaPublishingSystem.slnx" ]
+         "args": [ "build", "MangaPublishingSystem.sln" ]
       }
    ]
 }

@@ -25,17 +25,17 @@ namespace BuildingBlocks.Web.Responses
 
         // --- Success Helpers ---
 
-        public static ApiResponse<T> Success(T data, string message = "Success", int statusCode = (int)HttpStatusCode.OK)
+        public static ApiResponse<T> Success(T? data, string message = "Success", int statusCode = (int)HttpStatusCode.OK)
         {
             return new ApiResponse<T>(statusCode, true, message, data);
         }
 
-        public static ApiResponse<T> Created(T data, string message = "Created")
+        public static ApiResponse<T> Created(T? data, string message = "Created")
         {
             return new ApiResponse<T>((int)HttpStatusCode.Created, true, message, data);
         }
 
-        public static ApiResponse<T> Accepted(T data, string message = "Accepted")
+        public static ApiResponse<T> Accepted(T? data, string message = "Accepted")
         {
             return new ApiResponse<T>((int)HttpStatusCode.Accepted, true, message, data);
         }
