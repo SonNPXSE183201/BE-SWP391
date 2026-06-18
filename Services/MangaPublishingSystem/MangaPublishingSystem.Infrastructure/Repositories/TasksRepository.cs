@@ -36,26 +36,5 @@ namespace MangaPublishingSystem.Infrastructure.Repositories
 
             return await query.ToPagedListAsync(pageNumber, pageSize);
         }
-
-        public async Task<PagedResult<Tasks>> GetAssistantTasksAsync(int assistantId, string? status, int pageNumber, int pageSize)
-        {
-            var query = _dbSet.AsQueryable()
-                .Include(t => t.Mangaka)
-                .Include(t => t.Assistant)
-                .Include(t => t.Region)
-                    .ThenInclude(r => r.Page)
-                .Where(t => t.AssistantId == assistantId);
-
-            // Lọc theo trạng thái nhiệm vụ nếu được truyền vào
-            if (!string.IsNullOrWhiteSpace(status))
-            {
-                query = query.Where(t => t.Status == status);
-            }
-
-            // Sắp xếp theo hạn chót gần nhất để ưu tiên việc cần làm trước
-            query = query.OrderBy(t => t.Deadline);
-
-            return await query.ToPagedListAsync(pageNumber, pageSize);
-        }
     }
 }

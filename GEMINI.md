@@ -131,14 +131,11 @@ dotnet build MangaPublishingSystem.slnx
 * **Xử lý lỗi (Exception Handling)**:
   * Ném các Exception chuẩn trong `BuildingBlocks.Exceptions` (ví dụ: `NotFoundException`, `ConflictException`) ở tầng Application/Service.
   * Tầng Presentation sẽ tự động kích hoạt `GlobalExceptionMiddleware` để chuyển lỗi thành JSON chuẩn, không sử dụng khối `try-catch` bọc bừa bãi trong Controller.
-* **Định dạng phản hồi**: Mọi dữ liệu trả về client từ Gateway hay API đều sẽ được chuẩn hóa qua lớp `ApiResponse<T>` của BuildingBlocks. Thuộc tính chỉ định trạng thái thành công bắt buộc phải đặt tên là `Success` (kiểu `bool`) để khi serialize sang JSON dạng camelCase sẽ khớp đúng với quy chuẩn của Frontend là `success` (tránh dùng `IsSuccess` vì sẽ bị serialize thành `isSuccess`).
+* **Định dạng phản hồi**: Mọi dữ liệu trả về client từ Gateway hay API đều sẽ được chuẩn hóa qua lớp `ApiResponse<T>` của BuildingBlocks.
 * **Quy tắc SignalR & WebSocket**:
   * Khi định nghĩa Hub mới (ví dụ `/hubs/my-hub`), bắt buộc phải cấu hình **2 Route định tuyến tương ứng** trong `ocelot.json` và `ocelot.Development.json` của GatewayAPI:
     1. Route HTTP cho request bắt tay (negotiate): Downstream `/hubs/my-hub/negotiate` trỏ tới `http` downstream scheme.
     2. Route WebSockets cho kết nối chính: Downstream `/hubs/my-hub` trỏ tới `ws` downstream scheme.
-  * API Gateway và Presentation service đều phải đăng ký middleware WebSockets thông qua `app.UseWebSockets()`.
-  * Sự kiện JwtBearerEvents `OnMessageReceived` phải được cấu hình để trích xuất token tự động từ URL query parameter `access_token` phục vụ cho việc xác thực kết nối WebSocket Hub.
-  * Cấu hình CORS khi cho phép credentials (`AllowCredentials()`) tuyệt đối không được dùng wildcard `*`. Nếu bật chế độ AllowAnyOrigin, bắt buộc phải dùng `SetIsOriginAllowed(_ => true)` để động hóa origin.
 * **Quy tắc gửi Email (FluentEmail)**:
   * Tiêm `IFluentEmail` trực tiếp vào constructor của Service ở tầng Application để gửi email. Tuyệt đối không khởi tạo thủ công đối tượng `SmtpClient`.
 * **Giữ sạch mã nguồn (Husky.Net)**:

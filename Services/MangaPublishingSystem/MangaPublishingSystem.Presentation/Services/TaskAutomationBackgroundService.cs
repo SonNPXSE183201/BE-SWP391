@@ -141,9 +141,9 @@ namespace MangaPublishingSystem.Presentation.Services
             {
                 try
                 {
-                    // Kiểm tra Mangaka có đang nghỉ phép (IsOnLeave) hay không
+                    // Kiểm tra Mangaka có đang nghỉ phép (OnLeave) hay không
                     var mangaka = await userRepository.GetByIdAsync(task.MangakaId);
-                    if (mangaka != null && mangaka.IsOnLeave)
+                    if (mangaka != null && mangaka.Skills == "OnLeave")
                     {
                         // Tạm đóng băng đếm ngược
                         continue;
