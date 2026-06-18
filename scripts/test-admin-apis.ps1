@@ -28,7 +28,7 @@ function Test-Step($name, $scriptBlock) {
 Write-Host "========== MCWPMS ADMIN API TEST =========="
 
 # Chuẩn bị data pending assistant trong DB
-$patch = "D:\code_du_an_swp\BE-SWP391\Database\patch_test_pending_assistants.sql"
+$patch = "d:\FPTU\SWP391\BE-SWP391\Database\patch_test_pending_assistants.sql"
 cmd /c "sqlcmd -S localhost\SQL2022 -U sa -P 12345 -i `"$patch`" -C" | Out-Host
 
 $login = Test-Step "POST /api/auth/login" {
@@ -40,19 +40,19 @@ $h = @{ Authorization = "Bearer $($login.Data.Token)" }
 $ts = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
 
 $mangaka = Test-Step "POST /api/admin/users (Mangaka)" {
-    $b = "{`"RoleId`":4,`"UserName`":`"mangaka_$ts`",`"Email`":`"mangaka.$ts@gmail.com`",`"FullName`":`"Trần Văn Nam`",`"PenName`":`"NamArt`"}"
+    $b = "{`"RoleId`":4,`"UserName`":`"mangaka_$ts`",`"Email`":`"mangaka.$ts@gmail.com`",`"FullName`":`"Tran Van Nam`",`"PenName`":`"NamArt_$ts`"}"
     $bytes = [System.Text.Encoding]::UTF8.GetBytes($b)
     Invoke-RestMethod -Uri "$base/admin/users" -Method POST -ContentType "application/json; charset=utf-8" -Headers $h -Body $bytes
 }
 
 Test-Step "POST /api/admin/users (Editor)" {
-    $b = "{`"RoleId`":2,`"UserName`":`"editor_$ts`",`"Email`":`"editor.$ts@gmail.com`",`"FullName`":`"Lê Thị Biên Tập`"}"
+    $b = "{`"RoleId`":2,`"UserName`":`"editor_$ts`",`"Email`":`"editor.$ts@gmail.com`",`"FullName`":`"Le Thi Bien Tap`"}"
     $bytes = [System.Text.Encoding]::UTF8.GetBytes($b)
     Invoke-RestMethod -Uri "$base/admin/users" -Method POST -ContentType "application/json; charset=utf-8" -Headers $h -Body $bytes
 } | Out-Null
 
 Test-Step "POST /api/admin/users (Board)" {
-    $b = "{`"RoleId`":3,`"UserName`":`"board_$ts`",`"Email`":`"board.$ts@gmail.com`",`"FullName`":`"Phạm Văn Hội Đồng`"}"
+    $b = "{`"RoleId`":3,`"UserName`":`"board_$ts`",`"Email`":`"board.$ts@gmail.com`",`"FullName`":`"Pham Van Hoi Dong`"}"
     $bytes = [System.Text.Encoding]::UTF8.GetBytes($b)
     Invoke-RestMethod -Uri "$base/admin/users" -Method POST -ContentType "application/json; charset=utf-8" -Headers $h -Body $bytes
 } | Out-Null

@@ -9,6 +9,7 @@ namespace MangaPublishingSystem.Application.DTOs.User
         public int RoleId { get; set; }
         public string Status { get; set; } = null!;
         public string? PenName { get; set; }
+        public bool IsOnLeave { get; set; }
         public string? Message { get; set; }
     }
 }

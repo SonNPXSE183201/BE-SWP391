@@ -205,6 +205,7 @@ namespace MangaPublishingSystem.Application.Services
                 RoleId = user.RoleId,
                 Status = user.Status.ToString(),
                 PenName = user.PenName,
+                IsOnLeave = user.IsOnLeave,
                 Message = message
             };
         }
