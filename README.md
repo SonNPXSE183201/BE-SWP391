@@ -125,7 +125,7 @@ Khi bạn (hoặc AI) cần tạo một API chức năng mới (Ví dụ: Tạo 
 ## 4. CÁC LỆNH CHẠY DỰ ÁN THƯỜNG DÙNG
 * **Biên dịch toàn bộ Solution**:
   ```powershell
-  dotnet build MangaPublishingSystem.slnx
+  dotnet build MangaPublishingSystem.sln
   ```
 * **Khởi tạo và nạp dữ liệu Database (Hỗ trợ tiếng Việt UTF-8)**:
   * Do cơ sở dữ liệu chứa dữ liệu tiếng Việt Unicode, khi nạp schema và seed data bằng `sqlcmd` bắt buộc phải sử dụng tham số `-f 65001` để chỉ định encoding UTF-8, tránh lỗi hỏng font (mojibake) trong database:
@@ -163,8 +163,8 @@ Khi bạn (hoặc AI) cần tạo một API chức năng mới (Ví dụ: Tạo 
 ### 5.2. Công cụ tự động hóa Git Hooks (Husky.Net)
 * **Mục tiêu**: Ngăn chặn commit/push mã nguồn gặp lỗi biên dịch.
 * **Cấu hình Git Hooks**:
-  * `pre-commit`: Tự động chạy lệnh `dotnet build MangaPublishingSystem.slnx` trước khi commit cục bộ.
-  * `pre-push`: Tự động chạy lệnh `dotnet build MangaPublishingSystem.slnx` trước khi push lên GitHub.
+  * `pre-commit`: Tự động chạy lệnh `dotnet build MangaPublishingSystem.sln` trước khi commit cục bộ.
+  * `pre-push`: Tự động chạy lệnh `dotnet build MangaPublishingSystem.sln` trước khi push lên GitHub.
 * **Tự động hóa cho team**:
   * Lập trình viên mới chỉ cần clone mã nguồn về và **Build lần đầu tiên**, MSBuild Target được cài sẵn trong tệp [GatewayAPI.csproj](file:///d:/SWP391/Project/BE-SWP391/GatewayAPI/GatewayAPI.csproj) sẽ tự động khôi phục công cụ Husky và cài đặt Git Hooks ngầm xuống thư mục `.git` mà không cần bất kỳ thao tác thủ công nào.
 

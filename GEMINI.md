@@ -69,7 +69,7 @@ AI phải thực hiện tuần tự theo quy trình dưới đây, không nhảy
 Mỗi khi chỉnh sửa mã nguồn, AI phải chạy lệnh sau tại thư mục gốc để đảm bảo hệ thống không bị lỗi cú pháp hay tham chiếu:
 
 ```powershell
-dotnet build MangaPublishingSystem.slnx
+dotnet build MangaPublishingSystem.sln
 ```
 
 ### 4.2. Cấu hình cổng chạy (Ports) & Routing của API Gateway
