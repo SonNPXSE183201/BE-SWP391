@@ -1,13 +1,34 @@
 @echo off
-echo Starting Ocelot Gateway (Port 5000)...
-start "Ocelot Gateway" cmd /c "cd GatewayAPI && dotnet run"
+title MCWPMS Dev Launcher
+cd /d "%~dp0"
 
-echo Starting Presentation API Logic (Port 5010)...
-start "Presentation API" cmd /c "cd Services\MangaPublishingSystem\MangaPublishingSystem.Presentation && dotnet run"
+:: 1. Force kill existing dotnet processes to release locked dll files
+echo Stopping existing dotnet processes...
+taskkill /f /im dotnet.exe >nul 2>nul
+taskkill /f /im VBCSCompiler.exe >nul 2>nul
 
-echo ========================================================
-echo [OK] Both Backend services have been started in new windows!
-echo - Gateway is running on: http://localhost:5000
-echo - Presentation is running on: http://localhost:5010
-echo ========================================================
-pause
+:: 2. Clean temporary build artifacts
+echo Cleaning solution...
+dotnet clean MangaPublishingSystem.slnx -c Debug >nul 2>nul
+
+:: 3. Build the solution sequentially to prevent parallel write conflicts on shared dependencies
+echo Building solution...
+dotnet build MangaPublishingSystem.slnx -c Debug
+
+
+
+:: Check if Windows Terminal (wt.exe) is available
+where wt >nul 2>nul
+if %ERRORLEVEL% equ 0 (
+    echo Launching services in Windows Terminal tabs...
+    wt -d "%cd%" cmd /k dotnet watch run --project GatewayAPI/GatewayAPI.csproj ^; new-tab -d "%cd%" cmd /k dotnet watch run --project Services/MangaPublishingSystem/MangaPublishingSystem.Presentation/MangaPublishingSystem.Presentation.csproj
+) else (
+    echo Windows Terminal not found.
+    echo Falling back to launching in 2 separate command windows...
+    
+    echo Launching GatewayAPI...
+    start "GatewayAPI - dotnet watch" cmd /k dotnet watch run --project GatewayAPI/GatewayAPI.csproj
+    
+    echo Launching MangaPublishingSystem...
+    start "MangaPublishingSystem - dotnet watch" cmd /k dotnet watch run --project Services/MangaPublishingSystem/MangaPublishingSystem.Presentation/MangaPublishingSystem.Presentation.csproj
+)
