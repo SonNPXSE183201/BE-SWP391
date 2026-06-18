@@ -1,5 +1,7 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using MangaPublishingSystem.Domain.Entities;
 using MangaPublishingSystem.Application.IRepositories;
@@ -13,9 +15,7 @@ namespace MangaPublishingSystem.Infrastructure.Repositories
         {
         }
 
-
-        // Existing method from older version
-        public async System.Threading.Tasks.Task<System.Collections.Generic.IEnumerable<Transaction>> GetTransactionsByWalletIdAsync(int walletId)
+        public async Task<IEnumerable<Transaction>> GetTransactionsByWalletIdAsync(int walletId)
         {
             return await _context.Transactions
                 .Include(t => t.FromUser)
@@ -25,7 +25,38 @@ namespace MangaPublishingSystem.Infrastructure.Repositories
                 .ToListAsync();
         }
 
-        public async System.Threading.Tasks.Task<System.Collections.Generic.IEnumerable<Transaction>> GetPendingWithdrawalsAsync()
+        public async Task<List<Transaction>> GetPaymentTransactionsAsync(DateTime? from, DateTime? to, string? referenceCode)
+        {
+            var query = _context.Transactions
+                .Include(t => t.ToUser)
+                .Include(t => t.FromUser)
+                .Include(t => t.Wallet)
+                    .ThenInclude(w => w!.User)
+                .Where(t => t.Type == "Deposit" || t.Type == "Withdrawal")
+                .AsQueryable();
+
+            if (from.HasValue)
+            {
+                query = query.Where(t => t.CreateAt >= from.Value);
+            }
+
+            if (to.HasValue)
+            {
+                query = query.Where(t => t.CreateAt <= to.Value);
+            }
+
+            if (!string.IsNullOrWhiteSpace(referenceCode))
+            {
+                var code = referenceCode.Trim();
+                query = query.Where(t =>
+                    (t.ReferenceCode != null && t.ReferenceCode.Contains(code)) ||
+                    t.Id.ToString().Contains(code));
+            }
+
+            return await query.OrderByDescending(t => t.CreateAt).ToListAsync();
+        }
+
+        public async Task<IEnumerable<Transaction>> GetPendingWithdrawalsAsync()
         {
             return await _context.Transactions
                 .Include(t => t.Wallet)

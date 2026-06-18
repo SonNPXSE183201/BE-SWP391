@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -23,6 +22,49 @@ namespace MangaPublishingSystem.Infrastructure.Repositories
             return await _context.Users
                 .Where(x => x.RoleId == 5 && x.Status == UserStatus.Pending)
                 .ToListAsync();
+        }
+
+        public async Task<PagedResult<User>> GetUsersFilteredPagedAsync(
+            string? role,
+            string? status,
+            string? search,
+            int pageNumber,
+            int pageSize)
+        {
+            var query = _context.Users.Include(u => u.Role).AsQueryable();
+
+            if (!string.IsNullOrWhiteSpace(role))
+            {
+                var roleName = role.Trim() switch
+                {
+                    "Assistant" => "Assistant",
+                    "Mangaka" => "Mangaka",
+                    "Editor" => "Tantou Editor",
+                    "Board" => "Editorial Board",
+                    _ => role.Trim()
+                };
+
+                query = query.Where(u => u.Role != null && u.Role.RoleName == roleName);
+            }
+
+            if (!string.IsNullOrWhiteSpace(status) && Enum.TryParse<UserStatus>(status, true, out var userStatus))
+            {
+                query = query.Where(u => u.Status == userStatus);
+            }
+
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                var term = search.Trim();
+                query = query.Where(u =>
+                    EF.Functions.Collate(u.FullName, "SQL_Latin1_General_CP1_CI_AI").Contains(term)
+                    || EF.Functions.Collate(u.Email, "SQL_Latin1_General_CP1_CI_AI").Contains(term)
+                    || EF.Functions.Collate(u.UserName, "SQL_Latin1_General_CP1_CI_AI").Contains(term)
+                    || (u.PenName != null && EF.Functions.Collate(u.PenName, "SQL_Latin1_General_CP1_CI_AI").Contains(term)));
+            }
+
+            return await query
+                .OrderByDescending(u => u.CreateAt)
+                .ToPagedListAsync(pageNumber, pageSize);
         }
 
         public async Task<bool> ExistsByEmailAsync(string email)
@@ -51,42 +93,12 @@ namespace MangaPublishingSystem.Infrastructure.Repositories
                     x.Email == identifier);
         }
 
-        public async Task<PagedResult<User>> GetUsersPagedAsync(string? role, string? status, string? search, int pageNumber, int pageSize)
+        public async Task<User?> GetByIdWithDetailsAsync(int id)
         {
-            var query = _context.Users.Include(x => x.Role).AsQueryable();
-
-            if (!string.IsNullOrWhiteSpace(role))
-            {
-                if (int.TryParse(role, out var roleId))
-                {
-                    query = query.Where(x => x.RoleId == roleId);
-                }
-                else
-                {
-                    var normalizedRoleName = role.Trim().ToLower();
-                    query = query.Where(x => x.Role.RoleName.ToLower() == normalizedRoleName);
-                }
-            }
-
-            if (!string.IsNullOrWhiteSpace(status))
-            {
-                if (Enum.TryParse<UserStatus>(status, true, out var userStatus))
-                {
-                    query = query.Where(x => x.Status == userStatus);
-                }
-            }
-
-            if (!string.IsNullOrWhiteSpace(search))
-            {
-                var searchLower = search.Trim().ToLower();
-                query = query.Where(x =>
-                    x.UserName.ToLower().Contains(searchLower) ||
-                    x.FullName.ToLower().Contains(searchLower) ||
-                    x.Email.ToLower().Contains(searchLower) ||
-                    (x.PenName != null && x.PenName.ToLower().Contains(searchLower)));
-            }
-
-            return await query.ToPagedListAsync(pageNumber, pageSize);
+            return await _context.Users
+                .Include(u => u.Role)
+                .Include(u => u.AssistantProfile)
+                .FirstOrDefaultAsync(u => u.Id == id);
         }
     }
 }

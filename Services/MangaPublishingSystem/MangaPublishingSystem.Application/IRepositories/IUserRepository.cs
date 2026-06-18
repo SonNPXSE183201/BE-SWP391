@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using BuildingBlocks.Web.Responses;
 using MangaPublishingSystem.Domain.Entities;
@@ -8,6 +9,8 @@ namespace MangaPublishingSystem.Application.IRepositories
     {
         Task<List<User>> GetPendingAssistantsAsync();
 
+        Task<PagedResult<User>> GetUsersFilteredPagedAsync(string? role, string? status, string? search, int pageNumber, int pageSize);
+
         Task<bool> ExistsByEmailAsync(string email);
 
         Task<bool> ExistsByUserNameAsync(string userName);
@@ -16,6 +19,6 @@ namespace MangaPublishingSystem.Application.IRepositories
 
         Task<User?> GetUserWithRoleByUsernameOrEmailAsync(string identifier);
 
-        Task<PagedResult<User>> GetUsersPagedAsync(string? role, string? status, string? search, int pageNumber, int pageSize);
+        Task<User?> GetByIdWithDetailsAsync(int id);
     }
 }

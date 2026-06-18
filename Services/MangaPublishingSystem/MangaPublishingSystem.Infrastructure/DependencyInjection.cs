@@ -20,7 +20,9 @@ namespace MangaPublishingSystem.Infrastructure
         {
             // Database Connection
             services.AddDbContext<MangaPublishingDbContext>(options =>
-                options.UseSqlServer(config.GetConnectionString("DefaultConnection")));
+                options.UseSqlServer(
+                    config.GetConnectionString("DefaultConnection"),
+                    sql => sql.CommandTimeout(120)));
 
             // Register Unit Of Work
             services.AddScoped<IUnitOfWork, UnitOfWork>();
