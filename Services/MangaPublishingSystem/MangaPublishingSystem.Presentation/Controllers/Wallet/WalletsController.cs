@@ -162,12 +162,6 @@ namespace MangaPublishingSystem.Presentation.Controllers.Wallet
                     Message           = "Có lỗi xảy ra trong quá trình xử lý. Chữ ký không hợp lệ."
                 };
 
-                var invalidRedirectUrl = BuildFrontendRedirectUrl(invalidResult);
-                if (!string.IsNullOrWhiteSpace(invalidRedirectUrl))
-                {
-                    return Redirect(invalidRedirectUrl);
-                }
-
                 return BadRequest(ApiResponse<VnpayPaymentResultDto>.Failure(400, "Chữ ký xác thực không hợp lệ."));
             }
 
@@ -206,7 +200,12 @@ namespace MangaPublishingSystem.Presentation.Controllers.Wallet
             };
 
             var apiMessage = isTransactionSuccess ? "Nạp tiền thành công." : "Giao dịch nạp tiền thất bại hoặc bị hủy.";
-            return Content("<html><body><script>window.close();</script>Thanh toán hoàn tất, đang tự động đóng trang...</body></html>", "text/html");
+            var finalResult = ApiResponse<VnpayPaymentResultDto>.Success(result, apiMessage);
+            if (!isTransactionSuccess)
+            {
+                finalResult.IsSuccess = false;
+            }
+            return Ok(finalResult);
         }
 
         /// <summary>
