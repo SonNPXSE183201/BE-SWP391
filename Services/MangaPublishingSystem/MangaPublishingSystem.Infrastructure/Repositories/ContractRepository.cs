@@ -42,5 +42,21 @@ namespace MangaPublishingSystem.Infrastructure.Repositories
         {
             await _context.ContractAddendums.AddAsync(addendum);
         }
+
+        public async Task<Contract?> GetContractWithDetailsAsync(int id)
+        {
+            return await _context.Contracts
+                .Include(c => c.User)
+                .Include(c => c.Series)
+                .FirstOrDefaultAsync(c => c.Id == id);
+        }
+
+        public async Task<List<Contract>> GetContractsWithDetailsAsync()
+        {
+            return await _context.Contracts
+                .Include(c => c.User)
+                .Include(c => c.Series)
+                .ToListAsync();
+        }
     }
 }
