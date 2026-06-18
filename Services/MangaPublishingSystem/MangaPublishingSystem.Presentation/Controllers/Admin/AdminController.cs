@@ -54,17 +54,5 @@ namespace MangaPublishingSystem.Presentation.Controllers.Admin
             var result = await _userService.LockUserAsync(id);
             return Ok(ApiResponse<UserResponseDto>.Success(result, result.Message ?? "Khóa tài khoản thành công."));
         }
-
-        [HttpGet]
-        public async Task<ActionResult<ApiResponse<PagedResult<UserResponseDto>>>> GetUsers(
-            [FromQuery] string? role,
-            [FromQuery] string? status,
-            [FromQuery] string? search,
-            [FromQuery] int page = 1,
-            [FromQuery] int pageSize = 10)
-        {
-            var result = await _userService.GetUsersPagedAsync(role, status, search, page, pageSize);
-            return Ok(ApiResponse<PagedResult<UserResponseDto>>.Success(result, "Lấy danh sách người dùng thành công."));
-        }
     }
 }

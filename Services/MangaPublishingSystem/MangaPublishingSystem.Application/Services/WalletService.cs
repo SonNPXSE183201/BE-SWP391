@@ -6,7 +6,6 @@ using BuildingBlocks.Exceptions;
 using MangaPublishingSystem.Domain.Entities;
 using MangaPublishingSystem.Application.IRepositories;
 using MangaPublishingSystem.Application.IServices;
-using MangaPublishingSystem.Application.DTOs.Notifications;
 
 namespace MangaPublishingSystem.Application.Services
 {
@@ -17,8 +16,6 @@ namespace MangaPublishingSystem.Application.Services
         private readonly ITasksRepository _tasksRepository;
         private readonly IUserRepository _userRepository;
         private readonly IVnPayService _vnPayService;
-        private readonly INotificationPublisher _notificationPublisher;
-        private readonly IDisputeLogRepository _disputeLogRepository;
 
         public WalletService(
             IWalletRepository repository,
@@ -26,9 +23,7 @@ namespace MangaPublishingSystem.Application.Services
             ITransactionRepository transactionRepository,
             ITasksRepository tasksRepository,
             IUserRepository userRepository,
-            IVnPayService vnPayService,
-            INotificationPublisher notificationPublisher,
-            IDisputeLogRepository disputeLogRepository)
+            IVnPayService vnPayService)
             : base(repository, unitOfWork)
         {
             _walletRepository = repository;
@@ -36,8 +31,6 @@ namespace MangaPublishingSystem.Application.Services
             _tasksRepository = tasksRepository;
             _userRepository = userRepository;
             _vnPayService = vnPayService;
-            _notificationPublisher = notificationPublisher;
-            _disputeLogRepository = disputeLogRepository;
         }
 
         public async Task<Wallet?> GetWalletByUserIdAsync(int userId)
@@ -116,20 +109,6 @@ namespace MangaPublishingSystem.Application.Services
             _transactionRepository.Update(transaction);
             await _unitOfWork.SaveChangesAsync();
 
-            if (transaction.Status == "Success")
-            {
-                var wallet = await _walletRepository.GetByIdAsync(transaction.WalletId);
-                if (wallet != null)
-                {
-                    await _notificationPublisher.PublishWalletUpdatedAsync(wallet.UserId, new WalletUpdatedPayload
-                    {
-                        WalletId = wallet.Id,
-                        SetupFundBalance = wallet.SetupFundBalance,
-                        WithdrawableBalance = wallet.WithdrawableBalance
-                    });
-                }
-            }
-
             return transaction.Status == "Success";
         }
 
@@ -186,13 +165,6 @@ namespace MangaPublishingSystem.Application.Services
             await _transactionRepository.AddAsync(transaction);
             await _unitOfWork.SaveChangesAsync();
 
-            await _notificationPublisher.PublishWalletUpdatedAsync(userId, new WalletUpdatedPayload
-            {
-                WalletId = wallet.Id,
-                SetupFundBalance = wallet.SetupFundBalance,
-                WithdrawableBalance = wallet.WithdrawableBalance
-            });
-
             return transaction;
         }
 
@@ -242,13 +214,6 @@ namespace MangaPublishingSystem.Application.Services
             _walletRepository.Update(wallet);
             _transactionRepository.Update(transaction);
             await _unitOfWork.SaveChangesAsync();
-
-            await _notificationPublisher.PublishWalletUpdatedAsync(wallet.UserId, new WalletUpdatedPayload
-            {
-                WalletId = wallet.Id,
-                SetupFundBalance = wallet.SetupFundBalance,
-                WithdrawableBalance = wallet.WithdrawableBalance
-            });
 
             return transaction;
         }
@@ -300,13 +265,6 @@ namespace MangaPublishingSystem.Application.Services
 
             await _transactionRepository.AddAsync(transaction);
             await _unitOfWork.SaveChangesAsync();
-
-            await _notificationPublisher.PublishWalletUpdatedAsync(userId, new WalletUpdatedPayload
-            {
-                WalletId = wallet.Id,
-                SetupFundBalance = wallet.SetupFundBalance,
-                WithdrawableBalance = wallet.WithdrawableBalance
-            });
         }
 
         public async System.Threading.Tasks.Task ReleaseFundsAsync(int taskId, bool isApproved, decimal? customPercentageForAssistant = null)
@@ -443,29 +401,6 @@ namespace MangaPublishingSystem.Application.Services
 
             _walletRepository.Update(wallet);
             await _unitOfWork.SaveChangesAsync();
-
-            // Phát sự kiện cập nhật ví cho tác giả
-            await _notificationPublisher.PublishWalletUpdatedAsync(task.MangakaId, new WalletUpdatedPayload
-            {
-                WalletId = wallet.Id,
-                SetupFundBalance = wallet.SetupFundBalance,
-                WithdrawableBalance = wallet.WithdrawableBalance
-            });
-
-            // Phát sự kiện cập nhật ví cho trợ lý nếu là luồng giải ngân thành công
-            if (isApproved && task.AssistantId.HasValue)
-            {
-                var assistantWallet = await _walletRepository.GetWalletByUserIdAsync(task.AssistantId.Value);
-                if (assistantWallet != null)
-                {
-                    await _notificationPublisher.PublishWalletUpdatedAsync(task.AssistantId.Value, new WalletUpdatedPayload
-                    {
-                        WalletId = assistantWallet.Id,
-                        SetupFundBalance = assistantWallet.SetupFundBalance,
-                        WithdrawableBalance = assistantWallet.WithdrawableBalance
-                    });
-                }
-            }
         }
 
         public async Task<IEnumerable<Transaction>> GetTransactionHistoryAsync(int userId)
@@ -477,140 +412,6 @@ namespace MangaPublishingSystem.Application.Services
             }
 
             return await _transactionRepository.GetTransactionsByWalletIdAsync(wallet.Id);
-        }
-
-        public async System.Threading.Tasks.Task ResolveDisputeAsync(int taskId, decimal assistantRate, int editorId)
-        {
-            var task = await _tasksRepository.GetByIdAsync(taskId);
-            if (task == null)
-            {
-                throw new NotFoundException("Nhiệm vụ vẽ tranh không tồn tại.");
-            }
-
-            if (task.Status == "Approved" || task.Status == "Cancelled")
-            {
-                throw new BadRequestException("Nhiệm vụ vẽ tranh này đã hoàn thành hoặc đã bị hủy, không thể giải quyết tranh chấp.");
-            }
-
-            if (assistantRate < 0 || assistantRate > 1)
-            {
-                throw new BadRequestException("Tỷ lệ phân chia cho trợ lý phải nằm trong khoảng [0, 1].");
-            }
-
-            // Gọi ReleaseFundsAsync để phân chia tiền ký quỹ
-            await ReleaseFundsAsync(taskId, isApproved: true, customPercentageForAssistant: assistantRate * 100m);
-
-            // Cập nhật trạng thái nhiệm vụ
-            task.Status = assistantRate > 0 ? "Approved" : "Cancelled";
-            _tasksRepository.Update(task);
-
-            // Ghi Dispute Log
-            var disputeLog = new DisputeLog
-            {
-                EditorId = editorId,
-                TaskId = taskId,
-                EditorComment = $"Editor quyết định phân xử tranh chấp: Trợ lý nhận {assistantRate * 100}%, Tác giả nhận {(1 - assistantRate) * 100}%.",
-                ResolutionType = "Arbitration",
-                AssistantPercentage = assistantRate * 100m,
-                MangakaPercentage = (1 - assistantRate) * 100m,
-                ResolvedAt = DateTime.UtcNow
-            };
-            await _disputeLogRepository.AddAsync(disputeLog);
-            await _unitOfWork.SaveChangesAsync();
-
-            // Gửi thông báo realtime cho Mangaka và Assistant
-            var taskStatusChanged = new TaskStatusChangedPayload
-            {
-                TaskId = task.Id,
-                Status = task.Status,
-                Message = $"Tranh chấp nhiệm vụ vẽ tranh đã được giải quyết bởi Editor. Trợ lý nhận {assistantRate * 100}% thù lao."
-            };
-
-            await _notificationPublisher.PublishTaskStatusChangedAsync(task.MangakaId, taskStatusChanged);
-            if (task.AssistantId.HasValue)
-            {
-                await _notificationPublisher.PublishTaskStatusChangedAsync(task.AssistantId.Value, taskStatusChanged);
-            }
-        }
-
-        public async Task<DTOs.Wallet.ReconciliationReportDto> ReconcileTransactionsAsync(List<DTOs.Wallet.ReconciliationRow> rows)
-        {
-            var report = new DTOs.Wallet.ReconciliationReportDto
-            {
-                TotalRows = rows.Count
-            };
-
-            foreach (var row in rows)
-            {
-                var txs = await _transactionRepository.FindAsync(t => t.ReferenceCode == row.TxnRef);
-                var tx = txs.FirstOrDefault();
-
-                if (tx == null)
-                {
-                    report.UnresolvedCount++;
-                    report.Details.Add($"Mã giao dịch {row.TxnRef}: Không tìm thấy trên hệ thống.");
-                    continue;
-                }
-
-                if (tx.Amount != row.Amount)
-                {
-                    report.UnresolvedCount++;
-                    report.Details.Add($"Mã giao dịch {row.TxnRef}: Số tiền không khớp (Hệ thống: {tx.Amount:N0}, VNPay: {row.Amount:N0}).");
-                    continue;
-                }
-
-                if (tx.Status == "Success")
-                {
-                    report.MatchedCount++;
-                    report.Details.Add($"Mã giao dịch {row.TxnRef}: Khớp (Success).");
-                }
-                else if (tx.Status == "Pending")
-                {
-                    if (row.ResponseCode == "00")
-                    {
-                        tx.Status = "Success";
-                        _transactionRepository.Update(tx);
-
-                        var wallet = await _walletRepository.GetByIdAsync(tx.WalletId);
-                        if (wallet != null)
-                        {
-                            wallet.WithdrawableBalance += tx.Amount;
-                            _walletRepository.Update(wallet);
-                        }
-
-                        report.ResolvedCount++;
-                        report.Details.Add($"Mã giao dịch {row.TxnRef}: Đã xử lý (Cập nhật từ Pending sang Success).");
-
-                        await _unitOfWork.SaveChangesAsync();
-
-                        if (wallet != null)
-                        {
-                            await _notificationPublisher.PublishWalletUpdatedAsync(wallet.UserId, new WalletUpdatedPayload
-                            {
-                                WalletId = wallet.Id,
-                                SetupFundBalance = wallet.SetupFundBalance,
-                                WithdrawableBalance = wallet.WithdrawableBalance
-                            });
-                        }
-                    }
-                    else
-                    {
-                        tx.Status = "Failed";
-                        _transactionRepository.Update(tx);
-                        await _unitOfWork.SaveChangesAsync();
-
-                        report.UnresolvedCount++;
-                        report.Details.Add($"Mã giao dịch {row.TxnRef}: VNPay báo lỗi (ResponseCode: {row.ResponseCode}). Cập nhật trạng thái thành Failed.");
-                    }
-                }
-                else
-                {
-                    report.UnresolvedCount++;
-                    report.Details.Add($"Mã giao dịch {row.TxnRef}: Trạng thái không hợp lệ để đối soát (Trạng thái hiện tại: {tx.Status}).");
-                }
-            }
-
-            return report;
         }
     }
 }

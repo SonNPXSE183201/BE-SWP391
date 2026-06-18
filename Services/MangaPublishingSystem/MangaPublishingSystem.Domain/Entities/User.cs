@@ -16,7 +16,6 @@ namespace MangaPublishingSystem.Domain.Entities
         public string? PenName { get; set; }
         public string? PortfolioUrl { get; set; }
         public string? Skills { get; set; }
-        public bool IsOnLeave { get; set; } = false;
 
         // Navigation properties
         public virtual Role Role { get; set; } = null!;
