@@ -16,7 +16,10 @@ namespace BuildingBlocks.Web
                 {
                     if (allowAny)
                     {
-                        builder.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod();
+                        builder.SetIsOriginAllowed(_ => true)
+                               .AllowAnyHeader()
+                               .AllowAnyMethod()
+                               .AllowCredentials();
                     }
                     else
                     {

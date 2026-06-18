@@ -3,8 +3,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using BuildingBlocks.Exceptions;
+using BuildingBlocks.Web.Responses;
 using MangaPublishingSystem.Domain.Entities;
 using MangaPublishingSystem.Application.DTOs.Tasks;
+using MangaPublishingSystem.Application.DTOs.Notifications;
 using MangaPublishingSystem.Application.IRepositories;
 using MangaPublishingSystem.Application.IServices;
 
@@ -60,11 +62,16 @@ namespace MangaPublishingSystem.Application.Services
                 throw new NotFoundException("Phân vùng vẽ không tồn tại trên hệ thống.");
             }
 
+            // Chuẩn hóa: AssistantId = 0 được coi là null (Swagger tự sinh default 0 cho int?)
+            var normalizedAssistantId = createDto.AssistantId.HasValue && createDto.AssistantId.Value > 0
+                ? createDto.AssistantId
+                : null;
+
             var task = new Tasks
             {
                 MangakaId = mangakaId,
                 RegionId = createDto.RegionId,
-                AssistantId = createDto.AssistantId,
+                AssistantId = normalizedAssistantId,
                 Description = createDto.Description,
                 PaymentAmount = createDto.PaymentAmount,
                 Deadline = createDto.Deadline,
@@ -72,6 +79,7 @@ namespace MangaPublishingSystem.Application.Services
                 Status = "Draft",
                 ExtensionStatus = "None"
             };
+
 
             await _tasksRepository.AddAsync(task);
             await _unitOfWork.SaveChangesAsync(); // Lưu để sinh TaskId tự động
@@ -94,7 +102,27 @@ namespace MangaPublishingSystem.Application.Services
                     IsRead = false
                 };
                 await _notificationRepository.AddAsync(notif);
-                await _notificationPublisher.PublishNotificationAsync(task.AssistantId.Value, notif.Content, notif.Type);
+                await _unitOfWork.SaveChangesAsync(); // Để sinh Id cho notif
+
+                var notifPayload = new NotificationPayload
+                {
+                    Id = notif.Id,
+                    Title = "Nhiệm vụ vẽ mới được giao",
+                    Message = notif.Content,
+                    Link = $"/tasks/{task.Id}",
+                    Type = notif.Type,
+                    CreateAt = notif.CreateAt
+                };
+                await _notificationPublisher.PublishNotificationPayloadAsync(task.AssistantId.Value, notifPayload);
+
+                var taskStatusChanged = new TaskStatusChangedPayload
+                {
+                    TaskId = task.Id,
+                    Status = task.Status,
+                    Message = "Nhiệm vụ vẽ mới được tạo."
+                };
+                await _notificationPublisher.PublishTaskStatusChangedAsync(task.AssistantId.Value, taskStatusChanged);
+                await _notificationPublisher.PublishTaskStatusChangedAsync(mangakaId, taskStatusChanged);
             }
 
             await _unitOfWork.SaveChangesAsync();
@@ -147,7 +175,27 @@ namespace MangaPublishingSystem.Application.Services
                     IsRead = false
                 };
                 await _notificationRepository.AddAsync(notif);
-                await _notificationPublisher.PublishNotificationAsync(task.AssistantId.Value, notif.Content, notif.Type);
+                await _unitOfWork.SaveChangesAsync(); // Để sinh Id cho notif
+
+                var notifPayload = new NotificationPayload
+                {
+                    Id = notif.Id,
+                    Title = "Nhiệm vụ vẽ đã được duyệt",
+                    Message = notif.Content,
+                    Link = $"/tasks/{task.Id}",
+                    Type = notif.Type,
+                    CreateAt = notif.CreateAt
+                };
+                await _notificationPublisher.PublishNotificationPayloadAsync(task.AssistantId.Value, notifPayload);
+
+                var taskStatusChanged = new TaskStatusChangedPayload
+                {
+                    TaskId = task.Id,
+                    Status = task.Status,
+                    Message = "Nhiệm vụ vẽ đã được tác giả phê duyệt nghiệm thu."
+                };
+                await _notificationPublisher.PublishTaskStatusChangedAsync(task.AssistantId.Value, taskStatusChanged);
+                await _notificationPublisher.PublishTaskStatusChangedAsync(mangakaId, taskStatusChanged);
 
                 // Cập nhật các chỉ số của Assistant (T09)
                 await UpdateAssistantProfileMetricsAsync(task.AssistantId.Value);
@@ -212,7 +260,27 @@ namespace MangaPublishingSystem.Application.Services
                     IsRead = false
                 };
                 await _notificationRepository.AddAsync(notif);
-                await _notificationPublisher.PublishNotificationAsync(task.AssistantId.Value, notif.Content, notif.Type);
+                await _unitOfWork.SaveChangesAsync(); // Để sinh Id cho notif
+
+                var notifPayload = new NotificationPayload
+                {
+                    Id = notif.Id,
+                    Title = "Yêu cầu sửa đổi nhiệm vụ vẽ",
+                    Message = notif.Content,
+                    Link = $"/tasks/{task.Id}",
+                    Type = notif.Type,
+                    CreateAt = notif.CreateAt
+                };
+                await _notificationPublisher.PublishNotificationPayloadAsync(task.AssistantId.Value, notifPayload);
+
+                var taskStatusChanged = new TaskStatusChangedPayload
+                {
+                    TaskId = task.Id,
+                    Status = task.Status,
+                    Message = $"Tác giả yêu cầu sửa đổi bài vẽ: {rejectDto.FeedbackComment}"
+                };
+                await _notificationPublisher.PublishTaskStatusChangedAsync(task.AssistantId.Value, taskStatusChanged);
+                await _notificationPublisher.PublishTaskStatusChangedAsync(mangakaId, taskStatusChanged);
             }
 
             await _unitOfWork.SaveChangesAsync();
@@ -251,7 +319,27 @@ namespace MangaPublishingSystem.Application.Services
                         IsRead = false
                     };
                     await _notificationRepository.AddAsync(notif);
-                    await _notificationPublisher.PublishNotificationAsync(task.AssistantId.Value, notif.Content, notif.Type);
+                    await _unitOfWork.SaveChangesAsync(); // Để sinh Id cho notif
+
+                    var notifPayload = new NotificationPayload
+                    {
+                        Id = notif.Id,
+                        Title = "Yêu cầu gia hạn được chấp nhận",
+                        Message = notif.Content,
+                        Link = $"/tasks/{task.Id}",
+                        Type = notif.Type,
+                        CreateAt = notif.CreateAt
+                    };
+                    await _notificationPublisher.PublishNotificationPayloadAsync(task.AssistantId.Value, notifPayload);
+
+                    var taskStatusChanged = new TaskStatusChangedPayload
+                    {
+                        TaskId = task.Id,
+                        Status = task.Status,
+                        Message = $"Yêu cầu gia hạn thêm {task.ExtensionRequestDays} ngày đã được chấp nhận."
+                    };
+                    await _notificationPublisher.PublishTaskStatusChangedAsync(task.AssistantId.Value, taskStatusChanged);
+                    await _notificationPublisher.PublishTaskStatusChangedAsync(mangakaId, taskStatusChanged);
                 }
             }
             else
@@ -268,7 +356,27 @@ namespace MangaPublishingSystem.Application.Services
                         IsRead = false
                     };
                     await _notificationRepository.AddAsync(notif);
-                    await _notificationPublisher.PublishNotificationAsync(task.AssistantId.Value, notif.Content, notif.Type);
+                    await _unitOfWork.SaveChangesAsync(); // Để sinh Id cho notif
+
+                    var notifPayload = new NotificationPayload
+                    {
+                        Id = notif.Id,
+                        Title = "Yêu cầu gia hạn bị từ chối",
+                        Message = notif.Content,
+                        Link = $"/tasks/{task.Id}",
+                        Type = notif.Type,
+                        CreateAt = notif.CreateAt
+                    };
+                    await _notificationPublisher.PublishNotificationPayloadAsync(task.AssistantId.Value, notifPayload);
+
+                    var taskStatusChanged = new TaskStatusChangedPayload
+                    {
+                        TaskId = task.Id,
+                        Status = task.Status,
+                        Message = "Yêu cầu gia hạn đã bị từ chối."
+                    };
+                    await _notificationPublisher.PublishTaskStatusChangedAsync(task.AssistantId.Value, taskStatusChanged);
+                    await _notificationPublisher.PublishTaskStatusChangedAsync(mangakaId, taskStatusChanged);
                 }
             }
 
@@ -311,7 +419,27 @@ namespace MangaPublishingSystem.Application.Services
                     IsRead = false
                 };
                 await _notificationRepository.AddAsync(notif);
-                await _notificationPublisher.PublishNotificationAsync(task.AssistantId.Value, notif.Content, notif.Type);
+                await _unitOfWork.SaveChangesAsync(); // Để sinh Id cho notif
+
+                var notifPayload = new NotificationPayload
+                {
+                    Id = notif.Id,
+                    Title = "Nhiệm vụ vẽ bị hủy bỏ khẩn cấp",
+                    Message = notif.Content,
+                    Link = $"/tasks/{task.Id}",
+                    Type = notif.Type,
+                    CreateAt = notif.CreateAt
+                };
+                await _notificationPublisher.PublishNotificationPayloadAsync(task.AssistantId.Value, notifPayload);
+
+                var taskStatusChanged = new TaskStatusChangedPayload
+                {
+                    TaskId = task.Id,
+                    Status = task.Status,
+                    Message = "Nhiệm vụ vẽ đã bị tác giả hủy bỏ khẩn cấp."
+                };
+                await _notificationPublisher.PublishTaskStatusChangedAsync(task.AssistantId.Value, taskStatusChanged);
+                await _notificationPublisher.PublishTaskStatusChangedAsync(mangakaId, taskStatusChanged);
 
                 // Cập nhật lại chỉ số Assistant
                 await UpdateAssistantProfileMetricsAsync(task.AssistantId.Value);
@@ -366,6 +494,82 @@ namespace MangaPublishingSystem.Application.Services
             return await _imageCompositor.CompositeLayersAsync(page.BaseLayerUrl ?? page.RawImageUrl, sortedLayers);
         }
 
+        public async Task<PagedResult<TasksDto>> GetAvailableTasksAsync(GetAvailableTasksRequest request)
+        {
+            var pagedTasks = await _tasksRepository.GetAvailableTasksAsync(
+                request.Skill, request.PageNumber, request.PageSize);
+
+            // Ánh xạ từ Tasks entity sang TasksDto
+            var dtoItems = pagedTasks.Items.Select(t => new TasksDto
+            {
+                Id = t.Id,
+                MangakaId = t.MangakaId,
+                RegionId = t.RegionId,
+                AssistantId = t.AssistantId,
+                Description = t.Description,
+                PaymentAmount = t.PaymentAmount,
+                Deadline = t.Deadline,
+                ExtensionRequestDays = t.ExtensionRequestDays,
+                ExtensionReason = t.ExtensionReason,
+                ExtensionStatus = t.ExtensionStatus,
+                ZIndex_Order = t.ZIndex_Order,
+                Status = t.Status,
+                Rating = t.Rating,
+                FeedbackComment = t.FeedbackComment,
+                MangakaName = t.Mangaka?.FullName,
+                AssistantName = t.Assistant?.FullName,
+                PageNumber = t.Region?.PageId ?? 0,
+                PageImageUrl = t.Region?.Page?.RawImageUrl,
+                CreateAt = t.CreateAt,
+                UpdateAt = t.UpdateAt
+            }).ToList();
+
+            return new PagedResult<TasksDto>(
+                dtoItems,
+                pagedTasks.PageNumber,
+                pagedTasks.PageSize,
+                pagedTasks.TotalItems,
+                pagedTasks.TotalPages);
+        }
+
+        public async Task<PagedResult<TasksDto>> GetAssistantTasksAsync(int assistantId, GetAssistantTasksRequest request)
+        {
+            var pagedTasks = await _tasksRepository.GetAssistantTasksAsync(
+                assistantId, request.Status, request.PageNumber, request.PageSize);
+
+            // Ánh xạ từ Tasks entity sang TasksDto
+            var dtoItems = pagedTasks.Items.Select(t => new TasksDto
+            {
+                Id = t.Id,
+                MangakaId = t.MangakaId,
+                RegionId = t.RegionId,
+                AssistantId = t.AssistantId,
+                Description = t.Description,
+                PaymentAmount = t.PaymentAmount,
+                Deadline = t.Deadline,
+                ExtensionRequestDays = t.ExtensionRequestDays,
+                ExtensionReason = t.ExtensionReason,
+                ExtensionStatus = t.ExtensionStatus,
+                ZIndex_Order = t.ZIndex_Order,
+                Status = t.Status,
+                Rating = t.Rating,
+                FeedbackComment = t.FeedbackComment,
+                MangakaName = t.Mangaka?.FullName,
+                AssistantName = t.Assistant?.FullName,
+                PageNumber = t.Region?.PageId ?? 0,
+                PageImageUrl = t.Region?.Page?.RawImageUrl,
+                CreateAt = t.CreateAt,
+                UpdateAt = t.UpdateAt
+            }).ToList();
+
+            return new PagedResult<TasksDto>(
+                dtoItems,
+                pagedTasks.PageNumber,
+                pagedTasks.PageSize,
+                pagedTasks.TotalItems,
+                pagedTasks.TotalPages);
+        }
+
         private async System.Threading.Tasks.Task UpdateAssistantProfileMetricsAsync(int assistantId)
         {
             var profileList = await _assistantProfileRepository.FindAsync(p => p.AssistantId == assistantId);
@@ -413,5 +617,195 @@ namespace MangaPublishingSystem.Application.Services
 
             _assistantProfileRepository.Update(profile);
         }
+
+        public async System.Threading.Tasks.Task AcceptTaskAsync(int taskId, int assistantId)
+        {
+            var task = await _tasksRepository.GetByIdAsync(taskId);
+            if (task == null)
+            {
+                throw new NotFoundException("Nhiệm vụ không tồn tại.");
+            }
+
+            if (task.Status != "Pending")
+            {
+                throw new ConflictException("Nhiệm vụ không ở trạng thái chờ nhận.");
+            }
+
+            if (task.AssistantId.HasValue && task.AssistantId.Value != assistantId)
+            {
+                throw new ForbiddenException("Nhiệm vụ đã được giao cho trợ lý khác.");
+            }
+
+            task.AssistantId = assistantId;
+            task.Status = "In_Progress";
+            _tasksRepository.Update(task);
+
+            // Gửi thông báo đến Mangaka
+            var notif = new Notification
+            {
+                UserId = task.MangakaId,
+                Content = $"Trợ lý đã đồng ý nhận nhiệm vụ vẽ '{task.Description}'. Trạng thái hiện tại: Đang thực hiện.",
+                Type = "Task_Accepted",
+                IsRead = false
+            };
+            await _notificationRepository.AddAsync(notif);
+            await _unitOfWork.SaveChangesAsync(); // Để sinh Id cho notif
+
+            var notifPayload = new NotificationPayload
+            {
+                Id = notif.Id,
+                Title = "Trợ lý nhận nhiệm vụ vẽ",
+                Message = notif.Content,
+                Link = $"/tasks/{task.Id}",
+                Type = notif.Type,
+                CreateAt = notif.CreateAt
+            };
+            await _notificationPublisher.PublishNotificationPayloadAsync(task.MangakaId, notifPayload);
+
+            var taskStatusChanged = new TaskStatusChangedPayload
+            {
+                TaskId = task.Id,
+                Status = task.Status,
+                Message = "Trợ lý đã nhận nhiệm vụ vẽ."
+            };
+            await _notificationPublisher.PublishTaskStatusChangedAsync(task.MangakaId, taskStatusChanged);
+            await _notificationPublisher.PublishTaskStatusChangedAsync(assistantId, taskStatusChanged);
+
+            // Cập nhật các chỉ số của Assistant
+            await UpdateAssistantProfileMetricsAsync(assistantId);
+
+            await _unitOfWork.SaveChangesAsync();
+        }
+
+        public async System.Threading.Tasks.Task SubmitTaskAsync(int taskId, int assistantId, SubmitTaskDto dto)
+        {
+            var task = await _tasksRepository.GetByIdAsync(taskId);
+            if (task == null)
+            {
+                throw new NotFoundException("Nhiệm vụ không tồn tại.");
+            }
+
+            if (task.AssistantId != assistantId)
+            {
+                throw new ForbiddenException("Bạn không có quyền nộp bài cho nhiệm vụ này.");
+            }
+
+            if (task.Status != "In_Progress" && task.Status != "Revision")
+            {
+                throw new ConflictException("Chỉ có thể nộp bài khi nhiệm vụ đang thực hiện hoặc đang yêu cầu sửa đổi.");
+            }
+
+            var versions = await _taskVersionRepository.FindAsync(v => v.TaskId == taskId);
+            var maxVersionNum = versions.Any() ? versions.Max(v => v.VersionNumber) : 0;
+
+            var newVersion = new TaskVersion
+            {
+                TaskId = taskId,
+                VersionNumber = maxVersionNum + 1,
+                SubmittedFileUrl = dto.SubmittedFileUrl,
+                Status = "Submitted",
+                SubmittedAt = DateTime.UtcNow
+            };
+            await _taskVersionRepository.AddAsync(newVersion);
+
+            task.Status = "Submitted";
+            _tasksRepository.Update(task);
+
+            // Gửi thông báo đến Mangaka
+            var notif = new Notification
+            {
+                UserId = task.MangakaId,
+                Content = $"Trợ lý đã nộp bản vẽ mới (Phiên bản {newVersion.VersionNumber}) cho nhiệm vụ '{task.Description}'. Vui lòng phê duyệt hoặc từ chối.",
+                Type = "Task_Submitted",
+                IsRead = false
+            };
+            await _notificationRepository.AddAsync(notif);
+            await _unitOfWork.SaveChangesAsync(); // Để sinh Id cho notif
+
+            var notifPayload = new NotificationPayload
+            {
+                Id = notif.Id,
+                Title = "Trợ lý nộp bản vẽ",
+                Message = notif.Content,
+                Link = $"/tasks/{task.Id}",
+                Type = notif.Type,
+                CreateAt = notif.CreateAt
+            };
+            await _notificationPublisher.PublishNotificationPayloadAsync(task.MangakaId, notifPayload);
+
+            var taskStatusChanged = new TaskStatusChangedPayload
+            {
+                TaskId = task.Id,
+                Status = task.Status,
+                Message = $"Trợ lý đã nộp bản vẽ phiên bản {newVersion.VersionNumber}."
+            };
+            await _notificationPublisher.PublishTaskStatusChangedAsync(task.MangakaId, taskStatusChanged);
+            await _notificationPublisher.PublishTaskStatusChangedAsync(assistantId, taskStatusChanged);
+
+            // Cập nhật các chỉ số của Assistant
+            await UpdateAssistantProfileMetricsAsync(assistantId);
+
+            await _unitOfWork.SaveChangesAsync();
+        }
+
+        public async System.Threading.Tasks.Task RequestExtensionAsync(int taskId, int assistantId, RequestExtensionDto dto)
+        {
+            var task = await _tasksRepository.GetByIdAsync(taskId);
+            if (task == null)
+            {
+                throw new NotFoundException("Nhiệm vụ không tồn tại.");
+            }
+
+            if (task.AssistantId != assistantId)
+            {
+                throw new ForbiddenException("Bạn không có quyền xin gia hạn cho nhiệm vụ này.");
+            }
+
+            if (task.Status != "In_Progress" && task.Status != "Revision")
+            {
+                throw new ConflictException("Chỉ có thể xin gia hạn khi nhiệm vụ đang thực hiện hoặc đang yêu cầu sửa đổi.");
+            }
+
+            if (task.ExtensionStatus != "None")
+            {
+                throw new ConflictException("Nhiệm vụ này đã từng yêu cầu gia hạn trước đó. Chỉ được xin gia hạn tối đa 1 lần.");
+            }
+
+            task.ExtensionRequestDays = dto.Days;
+            task.ExtensionReason = dto.Reason;
+            task.ExtensionStatus = "Pending";
+            _tasksRepository.Update(task);
+
+            // Gửi thông báo đến Mangaka
+            var notif = new Notification
+            {
+                UserId = task.MangakaId,
+                Content = $"Trợ lý đã gửi yêu cầu gia hạn thêm {dto.Days} ngày cho nhiệm vụ '{task.Description}'. Lý do: '{dto.Reason}'.",
+                Type = "Extension_Requested",
+                IsRead = false
+            };
+            await _notificationRepository.AddAsync(notif);
+            await _unitOfWork.SaveChangesAsync(); // Để sinh Id cho notif
+
+            var notifPayload = new NotificationPayload
+            {
+                Id = notif.Id,
+                Title = "Trợ lý xin gia hạn nhiệm vụ vẽ",
+                Message = notif.Content,
+                Link = $"/tasks/{task.Id}",
+                Type = notif.Type,
+                CreateAt = notif.CreateAt
+            };
+            await _notificationPublisher.PublishNotificationPayloadAsync(task.MangakaId, notifPayload);
+
+            var taskStatusChanged = new TaskStatusChangedPayload
+            {
+                TaskId = task.Id,
+                Status = task.Status,
+                Message = $"Trợ lý yêu cầu gia hạn thêm {dto.Days} ngày."
+            };
+            await _notificationPublisher.PublishTaskStatusChangedAsync(task.MangakaId, taskStatusChanged);
+            await _notificationPublisher.PublishTaskStatusChangedAsync(assistantId, taskStatusChanged);
+        }
     }
-}
+}

@@ -6,7 +6,7 @@ namespace MangaPublishingSystem.Application.DTOs.Wallet
     public class VnpayPaymentResultDto
     {
         /// <summary>Giao dịch thành công hay không.</summary>
-        public bool IsSuccess { get; set; }
+        public bool Success { get; set; }
 
         /// <summary>Mã tham chiếu giao dịch nội bộ (vnp_TxnRef).</summary>
         public string ReferenceCode { get; set; } = string.Empty;

@@ -147,7 +147,7 @@ namespace MangaPublishingSystem.Presentation.Controllers.Wallet
             {
                 var invalidResult = new VnpayPaymentResultDto
                 {
-                    IsSuccess         = false,
+                    Success           = false,
                     ReferenceCode     = txnRef.ToString(),
                     Amount            = amount,
                     BankCode          = bankCode,
@@ -177,7 +177,7 @@ namespace MangaPublishingSystem.Presentation.Controllers.Wallet
             // Bước 4: Trả về kết quả đầy đủ cho FE hiển thị (Mã GD, ngân hàng, số tiền...)
             var result = new VnpayPaymentResultDto
             {
-                IsSuccess          = isTransactionSuccess,
+                Success            = isTransactionSuccess,
                 ReferenceCode      = txnRef.ToString(),       // Mã giao dịch thanh toán
                 VnpayTransactionNo = transactionNo,           // Mã giao dịch tại VNPAY
                 Amount             = amount,                  // Số tiền thanh toán (VND)
