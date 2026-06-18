@@ -6,7 +6,16 @@ namespace MangaPublishingSystem.Application.IRepositories
 {
     public interface IContractRepository : IGenericRepository<Contract>
     {
+        Task<List<Series>> GetApprovedSeriesForContractsAsync();
+
+        Task<Contract?> GetBySeriesIdAsync(int seriesId);
+
+        Task<Contract?> GetWithSeriesAsync(int contractId);
+
+        System.Threading.Tasks.Task AddAddendumAsync(ContractAddendum addendum);
+
         Task<Contract?> GetContractWithDetailsAsync(int id);
+
         Task<List<Contract>> GetContractsWithDetailsAsync();
     }
 }

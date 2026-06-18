@@ -11,6 +11,13 @@
 *.suo
 *.sln.docstates
 *.userprefs
+*.code-workspace
+
+# Local scripts (chạy máy cá nhân, không đưa lên repo)
+*.bat
+
+# Tài liệu cá nhân / checklist (giữ Google Docs, không commit)
+docs/
 
 # JetBrains Rider
 .idea/

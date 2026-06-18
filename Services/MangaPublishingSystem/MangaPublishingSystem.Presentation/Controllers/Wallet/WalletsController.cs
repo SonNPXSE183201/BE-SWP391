@@ -206,13 +206,7 @@ namespace MangaPublishingSystem.Presentation.Controllers.Wallet
             };
 
             var apiMessage = isTransactionSuccess ? "Nạp tiền thành công." : "Giao dịch nạp tiền thất bại hoặc bị hủy.";
-            var redirectUrl = BuildFrontendRedirectUrl(result);
-            if (!string.IsNullOrWhiteSpace(redirectUrl))
-            {
-                return Redirect(redirectUrl);
-            }
-
-            return Ok(ApiResponse<VnpayPaymentResultDto>.Success(result, apiMessage));
+            return Content("<html><body><script>window.close();</script>Thanh toán hoàn tất, đang tự động đóng trang...</body></html>", "text/html");
         }
 
         /// <summary>

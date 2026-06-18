@@ -53,6 +53,10 @@ namespace MangaPublishingSystem.Infrastructure.Data.Configurations
             builder.Property(e => e.Skills)
                 .HasMaxLength(500);
 
+            builder.Property(e => e.IsOnLeave)
+                .HasDefaultValue(false)
+                .IsRequired();
+
             builder.HasOne(e => e.Role)
                 .WithMany(r => r.Users)
                 .HasForeignKey(e => e.RoleId)

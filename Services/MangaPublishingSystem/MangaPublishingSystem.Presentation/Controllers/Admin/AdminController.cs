@@ -27,6 +27,18 @@ namespace MangaPublishingSystem.Presentation.Controllers.Admin
             return Ok(ApiResponse<UserResponseDto>.Success(result, result.Message ?? "Tạo tài khoản thành công."));
         }
 
+        [HttpGet]
+        public async Task<ActionResult<ApiResponse<PagedResult<UserListItemDto>>>> GetUsers(
+            [FromQuery] string? role,
+            [FromQuery] string? status,
+            [FromQuery] string? search,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 10)
+        {
+            var result = await _userService.GetUsersAsync(role, status, search, page, pageSize);
+            return Ok(ApiResponse<PagedResult<UserListItemDto>>.Success(result, "Lấy danh sách người dùng thành công."));
+        }
+
         [HttpGet("pending")]
         public async Task<ActionResult<ApiResponse<List<AssistantResponseDto>>>> GetPendingAssistants()
         {
@@ -39,6 +51,18 @@ namespace MangaPublishingSystem.Presentation.Controllers.Admin
         {
             var result = await _userService.ApproveUserAsync(id);
             return Ok(ApiResponse<UserResponseDto>.Success(result, result.Message ?? "Phê duyệt tài khoản thành công."));
+        }
+
+        [HttpPut("{id}/approve")]
+        public async Task<ActionResult<ApiResponse<AssistantProfileResponseDto>>> ApprovePut(
+            int id,
+            [FromBody] ApproveAssistantRequestDto dto)
+        {
+            var result = await _userService.ApproveAssistantAsync(id, dto);
+            var message = dto.Approved
+                ? "Phê duyệt tài khoản trợ lý thành công."
+                : "Từ chối phê duyệt tài khoản trợ lý thành công.";
+            return Ok(ApiResponse<AssistantProfileResponseDto>.Success(result, message));
         }
 
         [HttpPost("{id}/reject")]
@@ -55,16 +79,11 @@ namespace MangaPublishingSystem.Presentation.Controllers.Admin
             return Ok(ApiResponse<UserResponseDto>.Success(result, result.Message ?? "Khóa tài khoản thành công."));
         }
 
-        [HttpGet]
-        public async Task<ActionResult<ApiResponse<PagedResult<UserResponseDto>>>> GetUsers(
-            [FromQuery] string? role,
-            [FromQuery] string? status,
-            [FromQuery] string? search,
-            [FromQuery] int page = 1,
-            [FromQuery] int pageSize = 10)
+        [HttpPost("{id}/unlock")]
+        public async Task<ActionResult<ApiResponse<UserResponseDto>>> Unlock(int id)
         {
-            var result = await _userService.GetUsersPagedAsync(role, status, search, page, pageSize);
-            return Ok(ApiResponse<PagedResult<UserResponseDto>>.Success(result, "Lấy danh sách người dùng thành công."));
+            var result = await _userService.UnlockUserAsync(id);
+            return Ok(ApiResponse<UserResponseDto>.Success(result, result.Message ?? "Mở khóa tài khoản thành công."));
         }
     }
 }
