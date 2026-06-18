@@ -25,6 +25,8 @@ GO
 
 USE MangaPublishing;
 GO
+SET QUOTED_IDENTIFIER ON;
+GO
 
 -- Drop existing tables in reverse dependency order to avoid constraints conflicts
 IF OBJECT_ID('dbo.Report', 'U') IS NOT NULL DROP TABLE dbo.Report;
@@ -76,6 +78,7 @@ CREATE TABLE dbo.[User] (
     PenName NVARCHAR(100) NULL,
     PortfolioUrl NVARCHAR(500) NULL,
     Skills NVARCHAR(500) NULL,
+    IsOnLeave BIT NOT NULL CONSTRAINT DF_User_IsOnLeave DEFAULT 0,
     CreateAt DATETIME2 NOT NULL CONSTRAINT DF_User_CreateAt DEFAULT GETUTCDATE(),
     UpdateAt DATETIME2 NULL,
     CONSTRAINT PK_User PRIMARY KEY CLUSTERED (UserId),

@@ -1,3 +1,5 @@
+using System.Threading.Tasks;
+using BuildingBlocks.Web.Responses;
 using MangaPublishingSystem.Application.DTOs.User;
 
 namespace MangaPublishingSystem.Application.IServices
@@ -13,5 +15,7 @@ namespace MangaPublishingSystem.Application.IServices
         Task<UserResponseDto> RejectUserAsync(int id);
 
         Task<UserResponseDto> LockUserAsync(int id);
+
+        Task<PagedResult<UserResponseDto>> GetUsersPagedAsync(string? role, string? status, string? search, int pageNumber, int pageSize);
     }
 }
