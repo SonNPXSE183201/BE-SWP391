@@ -73,6 +73,18 @@ namespace MangaPublishingSystem.Infrastructure
             services.AddScoped<IVnPayService, VnPayService>();
             services.AddHttpContextAccessor();
 
+            // Storage configuration & DI registration
+            services.Configure<MinioSettings>(config.GetSection("StorageSettings:Minio"));
+            var storageProvider = config["StorageSettings:Provider"] ?? "Local";
+            if (storageProvider.Equals("Minio", StringComparison.OrdinalIgnoreCase))
+            {
+                services.AddScoped<IStorageService, MinioStorageService>();
+            }
+            else
+            {
+                services.AddScoped<IStorageService, LocalStorageService>();
+            }
+
             return services;
         }
     }
