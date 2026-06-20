@@ -73,6 +73,18 @@ namespace MangaPublishingSystem.Infrastructure
             services.AddScoped<IVnPayService, VnPayService>();
             services.AddHttpContextAccessor();
 
+            // Storage configuration & DI registration
+            services.Configure<FirebaseSettings>(config.GetSection("StorageSettings:Firebase"));
+            var storageProvider = config["StorageSettings:Provider"] ?? "Local";
+            if (storageProvider.Equals("Firebase", StringComparison.OrdinalIgnoreCase))
+            {
+                services.AddScoped<IStorageService, FirebaseStorageService>();
+            }
+            else
+            {
+                services.AddScoped<IStorageService, LocalStorageService>();
+            }
+
             return services;
         }
     }
