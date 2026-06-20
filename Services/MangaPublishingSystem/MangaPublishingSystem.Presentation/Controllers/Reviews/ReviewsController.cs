@@ -16,12 +16,14 @@ namespace MangaPublishingSystem.Presentation.Controllers.Reviews
     public class ReviewsController : ControllerBase
     {
         private readonly IChapterService _chapterService;
+        private readonly ISeriesService _seriesService;
 
         private int CurrentUserId => int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
 
-        public ReviewsController(IChapterService chapterService)
+        public ReviewsController(IChapterService chapterService, ISeriesService seriesService)
         {
             _chapterService = chapterService;
+            _seriesService = seriesService;
         }
 
         [HttpGet("chapters")]
@@ -62,5 +64,21 @@ namespace MangaPublishingSystem.Presentation.Controllers.Reviews
             await _chapterService.RejectChapterAsync(chapterId, CurrentUserId, dto);
             return Ok(ApiResponse<object>.Success(null, "Từ chối chapter thành công."));
         }
+
+        [HttpGet("series/{id}")]
+        public async Task<ActionResult<ApiResponse<SeriesReviewDto>>> GetSeriesReview(int id)
+        {
+            var review = await _seriesService.GetSeriesReviewAsync(id);
+            return Ok(ApiResponse<SeriesReviewDto>.Success(review, "Lấy thông tin duyệt bộ truyện thành công."));
+        }
+
+        [Authorize(Roles = "Tantou Editor")]
+        [HttpPost("series/{id}/submit-to-board")]
+        public async Task<ActionResult<ApiResponse<object>>> SubmitToBoard(int id, [FromBody] SubmitToBoardDto dto)
+        {
+            await _seriesService.SubmitSeriesToBoardAsync(id, CurrentUserId, dto);
+            return Ok(ApiResponse<object>.Success(null, "Gửi bộ truyện lên hội đồng thẩm định thành công."));
+        }
     }
 }
+
