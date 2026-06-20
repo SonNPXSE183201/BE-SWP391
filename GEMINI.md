@@ -97,6 +97,12 @@ dotnet build MangaPublishingSystem.sln
 
 ## 5. NGUYÊN TẮC VIẾT MÃ NGUỒN (CODING RULES)
 
+* **Phân tách tệp DTO độc lập (DTO Separation)**:
+  * **CẤM TUYỆT ĐỐI** gộp chung nhiều lớp DTO khác nhau vào trong cùng một tệp tin (ví dụ: gộp lớp summary con vào tệp DTO cha).
+  * Mỗi lớp DTO bắt buộc phải được khai báo trong một tệp tin C# riêng biệt đặt tên theo đúng tên lớp để đảm bảo cấu trúc sạch sẽ và dễ tích hợp.
+* **Cơ chế Đồng thuận Đa số Động (Dynamic Majority Consensus)**:
+  * Khi xử lý logic bỏ phiếu của hội đồng, không được phép hardcode số lượng thành viên hội đồng.
+  * Phải truy vấn động số lượng người dùng hoạt động (`Active`) có vai trò hội đồng (`RoleId == 3`), tính toán các ngưỡng đồng ý ($\lfloor N / 2 \rfloor + 1$) và từ chối ($N - \text{Ngưỡng Duyệt} + 1$) tương ứng để đưa ra quyết định trạng thái cuối cùng (`Fund_Pending` hoặc `Rejected`).
 * **Phân chia thư mục theo tính năng (Feature Folders)**:
   * Khi triển khai hoặc viết mã cho bất kỳ chức năng/nghiệp vụ mới nào, AI **bắt buộc phải tạo một thư mục riêng biệt đặt tên theo tính năng đó** (ví dụ: thư mục `Chapter`, `Task`, `User`, `Wallet`...) bên trong các thư mục thành phần lớn như `DTOs`, `Validations`, `Services`, `Controllers`.
   * **CẤM TUYỆT ĐỐI** tạo các tệp tin chức năng nằm lộn xộn trực tiếp dưới thư mục gốc (như `DTOs/`, `Validations/`, `Services/`, `Controllers/`) mà không phân cụm theo thư mục tính năng, nhằm đảm bảo nguồn mã được phân bổ khoa học, dễ quản lý và kiểm soát.

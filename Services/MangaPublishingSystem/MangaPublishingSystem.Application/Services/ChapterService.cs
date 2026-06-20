@@ -13,6 +13,7 @@ namespace MangaPublishingSystem.Application.Services
 {
     public class ChapterService : GenericService<Chapter>, IChapterService
     {
+        private readonly IChapterRepository _chapterRepository;
         private readonly ISeriesRepository _seriesRepository;
         private readonly IContractRepository _contractRepository;
         private readonly IWalletRepository _walletRepository;
@@ -31,6 +32,7 @@ namespace MangaPublishingSystem.Application.Services
             INotificationPublisher notificationPublisher) 
             : base(repository, unitOfWork)
         {
+            _chapterRepository = repository;
             _seriesRepository = seriesRepository;
             _contractRepository = contractRepository;
             _walletRepository = walletRepository;
@@ -177,7 +179,7 @@ namespace MangaPublishingSystem.Application.Services
 
         public async Task<IEnumerable<Chapter>> GetPendingReviewChaptersAsync()
         {
-            return await _repository.FindAsync(c => c.Status == "Pending_Review");
+            return await _chapterRepository.GetPendingReviewChaptersWithDetailsAsync();
         }
 
         public async System.Threading.Tasks.Task UpdateDeadlineAsync(int chapterId, DateTime deadline)

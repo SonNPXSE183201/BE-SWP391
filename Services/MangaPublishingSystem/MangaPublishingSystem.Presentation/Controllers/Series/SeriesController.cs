@@ -116,6 +116,27 @@ namespace MangaPublishingSystem.Presentation.Controllers.Series
             return Ok(ApiResponse<object>.Success(null, "Bỏ phiếu thẩm định bộ truyện thành công."));
         }
 
+        [Authorize(Roles = "Mangaka")]
+        [HttpPost("{id}/chapters")]
+        public async Task<ActionResult<ApiResponse<ChapterDto>>> SubmitChapter([FromRoute] int id, [FromForm] Application.DTOs.Chapters.SubmitChapterDto dto)
+        {
+            int mangakaId = CurrentUserId;
+            var chapter = await _seriesService.SubmitChapterAsync(id, mangakaId, dto);
+            var result = new ChapterDto
+            {
+                Id = chapter.Id,
+                SeriesId = chapter.SeriesId,
+                ChapterNumber = chapter.ChapterNumber,
+                Title = chapter.Title,
+                ValidPageCount = chapter.ValidPageCount,
+                AppliedGenkouryoPrice = chapter.AppliedGenkouryoPrice,
+                Status = chapter.Status,
+                CreateAt = chapter.CreateAt,
+                UpdateAt = chapter.UpdateAt
+            };
+            return Ok(ApiResponse<ChapterDto>.Success(result, "Tạo chapter và tải lên trang truyện thành công."));
+        }
+
         private static SeriesDto MapToSeriesDto(MangaPublishingSystem.Domain.Entities.Series series)
         {
             return new SeriesDto
@@ -140,3 +161,4 @@ namespace MangaPublishingSystem.Presentation.Controllers.Series
         }
     }
 }
+

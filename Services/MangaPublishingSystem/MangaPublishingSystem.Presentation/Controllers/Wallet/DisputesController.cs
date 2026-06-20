@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Security.Claims;
 using System.Threading.Tasks;
 using BuildingBlocks.Web.Responses;
@@ -20,6 +21,20 @@ namespace MangaPublishingSystem.Presentation.Controllers.Wallet
         public DisputesController(IWalletService walletService)
         {
             _walletService = walletService;
+        }
+
+        [HttpGet]
+        public async Task<ActionResult<ApiResponse<IEnumerable<DisputeListItemDto>>>> GetDisputes([FromQuery] string? status)
+        {
+            var disputes = await _walletService.GetDisputesAsync(status);
+            return Ok(ApiResponse<IEnumerable<DisputeListItemDto>>.Success(disputes, "Lấy danh sách tranh chấp thành công."));
+        }
+
+        [HttpGet("{taskId}")]
+        public async Task<ActionResult<ApiResponse<DisputeDetailDto>>> GetDisputeDetail(int taskId)
+        {
+            var detail = await _walletService.GetDisputeDetailAsync(taskId);
+            return Ok(ApiResponse<DisputeDetailDto>.Success(detail, "Lấy chi tiết tranh chấp thành công."));
         }
 
         [HttpPost("{taskId}/resolve")]

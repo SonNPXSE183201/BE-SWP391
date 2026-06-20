@@ -1,14 +1,18 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using BuildingBlocks.Exceptions;
 using MangaPublishingSystem.Domain.Entities;
 using MangaPublishingSystem.Domain.Enums;
 using MangaPublishingSystem.Application.DTOs.Series;
+using MangaPublishingSystem.Application.DTOs.Chapters;
+using MangaPublishingSystem.Application.DTOs.Reviews;
 using MangaPublishingSystem.Application.DTOs.Notifications;
 using MangaPublishingSystem.Application.IRepositories;
 using MangaPublishingSystem.Application.IServices;
+using Microsoft.AspNetCore.Hosting;
 
 namespace MangaPublishingSystem.Application.Services
 {
@@ -20,6 +24,9 @@ namespace MangaPublishingSystem.Application.Services
         private readonly INotificationPublisher _notificationPublisher;
         private readonly IBoardVoteRepository _boardVoteRepository;
         private readonly IWalletRepository _walletRepository;
+        private readonly IChapterRepository _chapterRepository;
+        private readonly IPageRepository _pageRepository;
+        private readonly IWebHostEnvironment _env;
 
         public SeriesService(
             ISeriesRepository repository, 
@@ -28,7 +35,10 @@ namespace MangaPublishingSystem.Application.Services
             INotificationRepository notificationRepository,
             INotificationPublisher notificationPublisher,
             IBoardVoteRepository boardVoteRepository,
-            IWalletRepository walletRepository) 
+            IWalletRepository walletRepository,
+            IChapterRepository chapterRepository,
+            IPageRepository pageRepository,
+            IWebHostEnvironment env) 
             : base(repository, unitOfWork)
         {
             _seriesRepository = repository;
@@ -37,6 +47,9 @@ namespace MangaPublishingSystem.Application.Services
             _notificationPublisher = notificationPublisher;
             _boardVoteRepository = boardVoteRepository;
             _walletRepository = walletRepository;
+            _chapterRepository = chapterRepository;
+            _pageRepository = pageRepository;
+            _env = env;
         }
 
         public async Task<Series> CreateSeriesAsync(int mangakaId, CreateSeriesDto createDto)
@@ -241,9 +254,9 @@ namespace MangaPublishingSystem.Application.Services
                 throw new NotFoundException("Bộ truyện không tồn tại.");
             }
 
-            if (series.Status != "Pending_Approval")
+            if (series.Status != "Pending_Approval" && series.Status != "Pending_Board_Vote" && series.Status != "Fund_Pending" && series.Status != "Rejected")
             {
-                throw new ConflictException("Chỉ có thể thẩm định bộ truyện đang ở trạng thái Pending_Approval.");
+                throw new ConflictException("Chỉ có thể thẩm định bộ truyện đang ở trạng thái Pending_Approval, Pending_Board_Vote, Fund_Pending hoặc Rejected.");
             }
 
             // Kiểm tra xem đã vote chưa
@@ -266,59 +279,253 @@ namespace MangaPublishingSystem.Application.Services
             await _boardVoteRepository.AddAsync(vote);
             await _unitOfWork.SaveChangesAsync();
 
-            if (approved)
+            // Lấy danh sách thành viên hội đồng hoạt động
+            var activeBoardMembers = await _userRepository.FindAsync(u => u.RoleId == 3 && u.Status == UserStatus.Active);
+            int N = activeBoardMembers.Count();
+            if (N == 0) N = 1; // Tránh lỗi chia cho 0
+
+            int approveThreshold = (N / 2) + 1;
+            int rejectThreshold = N - approveThreshold + 1;
+
+            var allVotes = await _boardVoteRepository.FindAsync(v => v.SeriesId == seriesId);
+            int approveCount = allVotes.Count(v => v.VoteType == "Approve");
+            int rejectCount = allVotes.Count(v => v.VoteType == "Reject");
+
+            if (approveCount >= approveThreshold)
             {
+                bool wasAlreadyApproved = (series.Status == "Fund_Pending");
+                
+                var approveVotes = allVotes.Where(v => v.VoteType == "Approve").ToList();
+                decimal averageBudget = approveVotes.Any() ? approveVotes.Average(v => v.RecommendedBudget) : recommendedBudget;
+
                 series.Status = "Fund_Pending";
-                series.ApprovedProductionBudget = recommendedBudget;
+                series.ApprovedProductionBudget = averageBudget;
                 _seriesRepository.Update(series);
 
-                var notifMangaka = new Notification
+                if (!wasAlreadyApproved)
                 {
-                    UserId = series.MangakaId,
-                    Content = $"Bộ truyện '{series.Title}' của bạn đã được phê duyệt cấp vốn với ngân sách {recommendedBudget:N0} VND. Vui lòng xác nhận nhận gói vốn để bắt đầu hoạt động.",
-                    Type = "Series_Approved",
-                    IsRead = false
-                };
-                await _notificationRepository.AddAsync(notifMangaka);
-                await _unitOfWork.SaveChangesAsync();
+                    var notifMangaka = new Notification
+                    {
+                        UserId = series.MangakaId,
+                        Content = $"Bộ truyện '{series.Title}' của bạn đã được phê duyệt cấp vốn với ngân sách {averageBudget:N0} VND. Vui lòng xác nhận nhận gói vốn để bắt đầu hoạt động.",
+                        Type = "Series_Approved",
+                        IsRead = false
+                    };
+                    await _notificationRepository.AddAsync(notifMangaka);
+                    await _unitOfWork.SaveChangesAsync();
 
-                await _notificationPublisher.PublishNotificationPayloadAsync(series.MangakaId, new NotificationPayload
-                {
-                    Id = notifMangaka.Id,
-                    Title = "Gói vốn của bạn đã được duyệt",
-                    Message = notifMangaka.Content,
-                    Link = $"/series/{series.Id}",
-                    Type = notifMangaka.Type,
-                    CreateAt = notifMangaka.CreateAt
-                });
+                    await _notificationPublisher.PublishNotificationPayloadAsync(series.MangakaId, new NotificationPayload
+                    {
+                        Id = notifMangaka.Id,
+                        Title = "Gói vốn của bạn đã được duyệt",
+                        Message = notifMangaka.Content,
+                        Link = $"/series/{series.Id}",
+                        Type = notifMangaka.Type,
+                        CreateAt = notifMangaka.CreateAt
+                    });
+                }
             }
-            else
+            else if (rejectCount >= rejectThreshold)
             {
+                bool wasAlreadyRejected = (series.Status == "Rejected");
                 series.Status = "Rejected";
                 _seriesRepository.Update(series);
 
-                var notifMangaka = new Notification
+                if (!wasAlreadyRejected)
                 {
-                    UserId = series.MangakaId,
-                    Content = $"Bộ truyện '{series.Title}' của bạn bị từ chối phê duyệt cấp vốn. Lý do: {comment}",
-                    Type = "Series_Rejected",
-                    IsRead = false
-                };
-                await _notificationRepository.AddAsync(notifMangaka);
-                await _unitOfWork.SaveChangesAsync();
+                    var notifMangaka = new Notification
+                    {
+                        UserId = series.MangakaId,
+                        Content = $"Bộ truyện '{series.Title}' của bạn bị từ chối phê duyệt cấp vốn. Lý do: {comment}",
+                        Type = "Series_Rejected",
+                        IsRead = false
+                    };
+                    await _notificationRepository.AddAsync(notifMangaka);
+                    await _unitOfWork.SaveChangesAsync();
 
-                await _notificationPublisher.PublishNotificationPayloadAsync(series.MangakaId, new NotificationPayload
-                {
-                    Id = notifMangaka.Id,
-                    Title = "Bộ truyện bị từ chối phê duyệt",
-                    Message = notifMangaka.Content,
-                    Link = $"/series/{series.Id}",
-                    Type = notifMangaka.Type,
-                    CreateAt = notifMangaka.CreateAt
-                });
+                    await _notificationPublisher.PublishNotificationPayloadAsync(series.MangakaId, new NotificationPayload
+                    {
+                        Id = notifMangaka.Id,
+                        Title = "Bộ truyện bị từ chối phê duyệt",
+                        Message = notifMangaka.Content,
+                        Link = $"/series/{series.Id}",
+                        Type = notifMangaka.Type,
+                        CreateAt = notifMangaka.CreateAt
+                    });
+                }
+            }
+            else
+            {
+                series.Status = "Pending_Board_Vote";
+                _seriesRepository.Update(series);
             }
 
             await _unitOfWork.SaveChangesAsync();
+        }
+
+        public async Task<Chapter> SubmitChapterAsync(int seriesId, int mangakaId, SubmitChapterDto dto)
+        {
+            var series = await _seriesRepository.GetByIdAsync(seriesId);
+            if (series == null)
+            {
+                throw new NotFoundException("Bộ truyện không tồn tại.");
+            }
+
+            if (series.MangakaId != mangakaId)
+            {
+                throw new ForbiddenException("Bạn không phải tác giả của bộ truyện này.");
+            }
+
+            if (series.Status != "Active" && series.Status != "Fund_Pending")
+            {
+                throw new ConflictException("Bộ truyện chưa được kích hoạt, không thể tạo chapter mới.");
+            }
+
+            var chapter = new Chapter
+            {
+                SeriesId = seriesId,
+                ChapterNumber = dto.ChapterNumber,
+                Title = dto.Title,
+                ValidPageCount = dto.Pages?.Count ?? 0,
+                AppliedGenkouryoPrice = 0,
+                Status = "Pending_Review"
+            };
+
+            await _chapterRepository.AddAsync(chapter);
+            await _unitOfWork.SaveChangesAsync();
+
+            // Lưu từng trang ảnh vào wwwroot/uploads
+            if (dto.Pages != null && dto.Pages.Count > 0)
+            {
+                var uploadsDir = Path.Combine(_env.WebRootPath ?? "wwwroot", "uploads");
+                if (!Directory.Exists(uploadsDir))
+                {
+                    Directory.CreateDirectory(uploadsDir);
+                }
+
+                int pageNumber = 1;
+                foreach (var file in dto.Pages)
+                {
+                    var ext = Path.GetExtension(file.FileName);
+                    var fileName = $"{Guid.NewGuid()}{ext}";
+                    var filePath = Path.Combine(uploadsDir, fileName);
+
+                    using (var stream = new FileStream(filePath, FileMode.Create))
+                    {
+                        await file.CopyToAsync(stream);
+                    }
+
+                    var imageUrl = $"/uploads/{fileName}";
+                    var page = new Page
+                    {
+                        ChapterId = chapter.Id,
+                        PageNumber = pageNumber,
+                        RawImageUrl = imageUrl,
+                        BaseLayerUrl = imageUrl,
+                        Status = "Pending",
+                        IsApproved = false
+                    };
+
+                    await _pageRepository.AddAsync(page);
+                    pageNumber++;
+                }
+
+                await _unitOfWork.SaveChangesAsync();
+            }
+
+            // Gửi thông báo cho Editor nếu có
+            if (series.EditorId.HasValue)
+            {
+                var notif = new Notification
+                {
+                    UserId = series.EditorId.Value,
+                    Content = $"Tác giả đã nộp chapter mới '{chapter.Title}' (Chapter {chapter.ChapterNumber}) cho bộ truyện '{series.Title}'.",
+                    Type = "Chapter_Submitted",
+                    IsRead = false
+                };
+                await _notificationRepository.AddAsync(notif);
+                await _unitOfWork.SaveChangesAsync();
+                await _notificationPublisher.PublishNotificationAsync(series.EditorId.Value, notif.Content, notif.Type);
+            }
+
+            return chapter;
+        }
+
+        public async Task<SeriesReviewDto> GetSeriesReviewAsync(int seriesId)
+        {
+            var series = await _seriesRepository.GetByIdAsync(seriesId);
+            if (series == null)
+            {
+                throw new NotFoundException("Bộ truyện không tồn tại.");
+            }
+
+            var chapters = await _chapterRepository.FindAsync(c => c.SeriesId == seriesId);
+            var chapterList = chapters.ToList();
+
+            var mangaka = await _userRepository.GetByIdAsync(series.MangakaId);
+            var editor = series.EditorId.HasValue ? await _userRepository.GetByIdAsync(series.EditorId.Value) : null;
+
+            return new SeriesReviewDto
+            {
+                Id = series.Id,
+                Title = series.Title,
+                Genre = series.Genre,
+                Synopsis = series.Synopsis,
+                CoverArtworkUrl = series.CoverArtworkUrl,
+                EstimatedProductionBudget = series.EstimatedProductionBudget,
+                ApprovedProductionBudget = series.ApprovedProductionBudget,
+                Status = series.Status,
+                MangakaId = series.MangakaId,
+                MangakaName = mangaka?.FullName,
+                EditorId = series.EditorId,
+                EditorName = editor?.FullName,
+                ChapterCount = chapterList.Count,
+                Chapters = chapterList.Select(c => new ChapterSummaryDto
+                {
+                    Id = c.Id,
+                    ChapterNumber = c.ChapterNumber,
+                    Title = c.Title,
+                    Status = c.Status,
+                    PageCount = c.ValidPageCount
+                }).ToList(),
+                CreateAt = series.CreateAt,
+                UpdateAt = series.UpdateAt
+            };
+        }
+
+        public async System.Threading.Tasks.Task SubmitSeriesToBoardAsync(int seriesId, int editorId, SubmitToBoardDto dto)
+        {
+            var series = await _seriesRepository.GetByIdAsync(seriesId);
+            if (series == null)
+            {
+                throw new NotFoundException("Bộ truyện không tồn tại.");
+            }
+
+            if (series.Status != "Pending_Approval")
+            {
+                throw new ConflictException("Chỉ có thể gửi duyệt hội đồng khi bộ truyện ở trạng thái Pending_Approval.");
+            }
+
+            series.Status = "Pending_Board_Vote";
+            _seriesRepository.Update(series);
+
+            // Gửi thông báo cho Mangaka
+            var notifMangaka = new Notification
+            {
+                UserId = series.MangakaId,
+                Content = $"Bộ truyện '{series.Title}' đã được biên tập viên chuyển lên hội đồng thẩm định. {(string.IsNullOrEmpty(dto.Notes) ? "" : $"Ghi chú: {dto.Notes}")}",
+                Type = "Series_Submitted_To_Board",
+                IsRead = false
+            };
+            await _notificationRepository.AddAsync(notifMangaka);
+            await _notificationPublisher.PublishNotificationAsync(series.MangakaId, notifMangaka.Content, notifMangaka.Type);
+
+            await _unitOfWork.SaveChangesAsync();
+        }
+
+        public async Task<IEnumerable<Series>> GetPendingBoardVoteSeriesAsync()
+        {
+            return await _seriesRepository.FindAsync(s => s.Status == "Pending_Board_Vote" || s.Status == "Pending_Approval");
         }
     }
 }

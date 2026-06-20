@@ -9,11 +9,11 @@ taskkill /f /im VBCSCompiler.exe >nul 2>nul
 
 :: 2. Clean temporary build artifacts
 echo Cleaning solution...
-dotnet clean MangaPublishingSystem.slnx -c Debug >nul 2>nul
+dotnet clean MangaPublishingSystem.sln -c Debug >nul 2>nul
 
 :: 3. Build the solution sequentially to prevent parallel write conflicts on shared dependencies
 echo Building solution...
-dotnet build MangaPublishingSystem.slnx -c Debug
+dotnet build MangaPublishingSystem.sln -c Debug
 
 
 

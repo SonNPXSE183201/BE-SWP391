@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using MangaPublishingSystem.Domain.Entities;
+using MangaPublishingSystem.Application.DTOs.Wallet;
 
 namespace MangaPublishingSystem.Application.IServices
 {
@@ -18,5 +19,8 @@ namespace MangaPublishingSystem.Application.IServices
         System.Threading.Tasks.Task ResolveDisputeAsync(int taskId, decimal assistantRate, int editorId);
         Task<DTOs.Wallet.ReconciliationReportDto> ReconcileTransactionsAsync(List<DTOs.Wallet.ReconciliationRow> rows);
         Task<IEnumerable<Transaction>> GetTransactionHistoryAsync(int userId);
+        Task<IEnumerable<DisputeListItemDto>> GetDisputesAsync(string? status);
+        Task<DisputeDetailDto> GetDisputeDetailAsync(int taskId);
     }
-}
+}
+
