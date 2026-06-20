@@ -1,0 +1,65 @@
+using System;
+using System.IO;
+using System.Threading.Tasks;
+using MangaPublishingSystem.Application.IServices;
+using Microsoft.AspNetCore.Http;
+
+namespace MangaPublishingSystem.Infrastructure.Services
+{
+    public class LocalStorageService : IStorageService
+    {
+        private readonly IHttpContextAccessor _httpContextAccessor;
+
+        public LocalStorageService(IHttpContextAccessor httpContextAccessor)
+        {
+            _httpContextAccessor = httpContextAccessor;
+        }
+
+        public async Task<string> UploadFileAsync(Stream fileStream, string fileName, string contentType)
+        {
+            var uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads");
+            if (!Directory.Exists(uploadsFolder))
+            {
+                Directory.CreateDirectory(uploadsFolder);
+            }
+
+            var uniqueFileName = Guid.NewGuid().ToString() + Path.GetExtension(fileName);
+            var filePath = Path.Combine(uploadsFolder, uniqueFileName);
+
+            using (var destinationStream = new FileStream(filePath, FileMode.Create))
+            {
+                await fileStream.CopyToAsync(destinationStream);
+            }
+
+            var request = _httpContextAccessor.HttpContext?.Request;
+            var host = request?.Host.Value ?? "localhost:5010";
+            var scheme = request?.Scheme ?? "http";
+
+            return $"{scheme}://{host}/uploads/{uniqueFileName}";
+        }
+
+        public Task<bool> DeleteFileAsync(string fileUrl)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(fileUrl)) return Task.FromResult(false);
+
+                var uri = new Uri(fileUrl);
+                var fileName = Path.GetFileName(uri.LocalPath);
+                var filePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", fileName);
+
+                if (File.Exists(filePath))
+                {
+                    File.Delete(filePath);
+                    return Task.FromResult(true);
+                }
+            }
+            catch
+            {
+                // Bỏ qua lỗi
+            }
+
+            return Task.FromResult(false);
+        }
+    }
+}
