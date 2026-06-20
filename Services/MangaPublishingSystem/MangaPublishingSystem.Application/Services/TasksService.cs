@@ -80,52 +80,62 @@ namespace MangaPublishingSystem.Application.Services
                 ExtensionStatus = "None"
             };
 
-
-            await _tasksRepository.AddAsync(task);
-            await _unitOfWork.SaveChangesAsync(); // Lưu để sinh TaskId tự động
-
-            // Gọi khóa quỹ ví Escrow thù lao của Mangaka
-            await _walletService.LockFundsAsync(mangakaId, task.PaymentAmount, task.Id);
-
-            // Chuyển sang trạng thái Pending sau khi đã khóa quỹ an toàn
-            task.Status = "Pending";
-            _tasksRepository.Update(task);
-
-            // Gửi thông báo đến trợ lý nếu đã được chỉ định
-            if (task.AssistantId.HasValue)
+            await _unitOfWork.BeginTransactionAsync();
+            try
             {
-                var notif = new Notification
-                {
-                    UserId = task.AssistantId.Value,
-                    Content = $"Bạn có lời mời nhận nhiệm vụ vẽ từ tác giả thù lao {task.PaymentAmount:N0} VND. Hạn chót: {task.Deadline:yyyy-MM-dd HH:mm}.",
-                    Type = "Task_Assigned",
-                    IsRead = false
-                };
-                await _notificationRepository.AddAsync(notif);
-                await _unitOfWork.SaveChangesAsync(); // Để sinh Id cho notif
+                await _tasksRepository.AddAsync(task);
+                await _unitOfWork.SaveChangesAsync(); // Lưu để sinh TaskId tự động
 
-                var notifPayload = new NotificationPayload
-                {
-                    Id = notif.Id,
-                    Title = "Nhiệm vụ vẽ mới được giao",
-                    Message = notif.Content,
-                    Link = $"/tasks/{task.Id}",
-                    Type = notif.Type,
-                    CreateAt = notif.CreateAt
-                };
-                await _notificationPublisher.PublishNotificationPayloadAsync(task.AssistantId.Value, notifPayload);
+                // Gọi khóa quỹ ví Escrow thù lao của Mangaka
+                await _walletService.LockFundsAsync(mangakaId, task.PaymentAmount, task.Id);
 
-                var taskStatusChanged = new TaskStatusChangedPayload
+                // Chuyển sang trạng thái Pending sau khi đã khóa quỹ an toàn
+                task.Status = "Pending";
+                _tasksRepository.Update(task);
+
+                // Gửi thông báo đến trợ lý nếu đã được chỉ định
+                if (task.AssistantId.HasValue)
                 {
-                    TaskId = task.Id,
-                    Status = task.Status,
-                    Message = "Nhiệm vụ vẽ mới được tạo."
-                };
-                await _notificationPublisher.PublishTaskStatusChangedAsync(task.AssistantId.Value, taskStatusChanged);
-                await _notificationPublisher.PublishTaskStatusChangedAsync(mangakaId, taskStatusChanged);
+                    var notif = new Notification
+                    {
+                        UserId = task.AssistantId.Value,
+                        Content = $"Bạn có lời mời nhận nhiệm vụ vẽ từ tác giả thù lao {task.PaymentAmount:N0} VND. Hạn chót: {task.Deadline:yyyy-MM-dd HH:mm}.",
+                        Type = "Task_Assigned",
+                        IsRead = false
+                    };
+                    await _notificationRepository.AddAsync(notif);
+                    await _unitOfWork.SaveChangesAsync(); // Để sinh Id cho notif
+
+                    var notifPayload = new NotificationPayload
+                    {
+                        Id = notif.Id,
+                        Title = "Nhiệm vụ vẽ mới được giao",
+                        Message = notif.Content,
+                        Link = $"/tasks/{task.Id}",
+                        Type = notif.Type,
+                        CreateAt = notif.CreateAt
+                    };
+                    await _notificationPublisher.PublishNotificationPayloadAsync(task.AssistantId.Value, notifPayload);
+
+                    var taskStatusChanged = new TaskStatusChangedPayload
+                    {
+                        TaskId = task.Id,
+                        Status = task.Status,
+                        Message = "Nhiệm vụ vẽ mới được tạo."
+                    };
+                    await _notificationPublisher.PublishTaskStatusChangedAsync(task.AssistantId.Value, taskStatusChanged);
+                    await _notificationPublisher.PublishTaskStatusChangedAsync(mangakaId, taskStatusChanged);
+                }
+
+                await _unitOfWork.SaveChangesAsync();
+                await _unitOfWork.CommitTransactionAsync();
+            }
+            catch
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+                throw;
             }
 
-            await _unitOfWork.SaveChangesAsync();
             return task;
         }
 

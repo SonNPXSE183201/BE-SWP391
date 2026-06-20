@@ -2,6 +2,8 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using MangaPublishingSystem.Domain.Entities;
 using MangaPublishingSystem.Application.DTOs.Series;
+using MangaPublishingSystem.Application.DTOs.Chapters;
+using MangaPublishingSystem.Application.DTOs.Reviews;
 
 namespace MangaPublishingSystem.Application.IServices
 {
@@ -13,5 +15,9 @@ namespace MangaPublishingSystem.Application.IServices
         Task<IEnumerable<Series>> GetSeriesByMangakaIdAsync(int mangakaId);
         System.Threading.Tasks.Task AcceptFundAsync(int seriesId, int mangakaId);
         System.Threading.Tasks.Task VoteSeriesAsync(int seriesId, int boardUserId, bool approved, string comment, decimal recommendedBudget);
+        Task<Chapter> SubmitChapterAsync(int seriesId, int mangakaId, SubmitChapterDto dto);
+        Task<SeriesReviewDto> GetSeriesReviewAsync(int seriesId);
+        System.Threading.Tasks.Task SubmitSeriesToBoardAsync(int seriesId, int editorId, SubmitToBoardDto dto);
+        Task<IEnumerable<Series>> GetPendingBoardVoteSeriesAsync();
     }
 }

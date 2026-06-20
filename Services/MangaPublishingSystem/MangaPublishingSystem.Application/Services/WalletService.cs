@@ -7,6 +7,7 @@ using MangaPublishingSystem.Domain.Entities;
 using MangaPublishingSystem.Application.IRepositories;
 using MangaPublishingSystem.Application.IServices;
 using MangaPublishingSystem.Application.DTOs.Notifications;
+using MangaPublishingSystem.Application.DTOs.Wallet;
 
 namespace MangaPublishingSystem.Application.Services
 {
@@ -19,6 +20,9 @@ namespace MangaPublishingSystem.Application.Services
         private readonly IVnPayService _vnPayService;
         private readonly INotificationPublisher _notificationPublisher;
         private readonly IDisputeLogRepository _disputeLogRepository;
+        private readonly ITaskVersionRepository _taskVersionRepository;
+        private readonly IAnnotationRepository _annotationRepository;
+        private readonly IRegionRepository _regionRepository;
 
         public WalletService(
             IWalletRepository repository,
@@ -28,7 +32,10 @@ namespace MangaPublishingSystem.Application.Services
             IUserRepository userRepository,
             IVnPayService vnPayService,
             INotificationPublisher notificationPublisher,
-            IDisputeLogRepository disputeLogRepository)
+            IDisputeLogRepository disputeLogRepository,
+            ITaskVersionRepository taskVersionRepository,
+            IAnnotationRepository annotationRepository,
+            IRegionRepository regionRepository)
             : base(repository, unitOfWork)
         {
             _walletRepository = repository;
@@ -38,6 +45,9 @@ namespace MangaPublishingSystem.Application.Services
             _vnPayService = vnPayService;
             _notificationPublisher = notificationPublisher;
             _disputeLogRepository = disputeLogRepository;
+            _taskVersionRepository = taskVersionRepository;
+            _annotationRepository = annotationRepository;
+            _regionRepository = regionRepository;
         }
 
         public async Task<Wallet?> GetWalletByUserIdAsync(int userId)
@@ -533,9 +543,132 @@ namespace MangaPublishingSystem.Application.Services
             }
         }
 
-        public async Task<DTOs.Wallet.ReconciliationReportDto> ReconcileTransactionsAsync(List<DTOs.Wallet.ReconciliationRow> rows)
+        public async Task<IEnumerable<DisputeListItemDto>> GetDisputesAsync(string? status)
         {
-            var report = new DTOs.Wallet.ReconciliationReportDto
+            // Lấy tất cả tasks có trạng thái Disputed hoặc có DisputeLog
+            var disputedTasks = await _tasksRepository.FindAsync(t => t.Status == "Disputed");
+            var disputeLogs = await _disputeLogRepository.GetAllAsync();
+            var resolvedTaskIds = disputeLogs.Select(dl => dl.TaskId).Distinct().ToHashSet();
+
+            // Merge: cả task đang disputed và task đã có dispute log (đã resolved)
+            var allResolvedTasks = await _tasksRepository.FindAsync(t => resolvedTaskIds.Contains(t.Id));
+            var allDisputeTasks = disputedTasks.Concat(allResolvedTasks).DistinctBy(t => t.Id).ToList();
+
+            // Lọc theo status nếu có
+            if (!string.IsNullOrEmpty(status))
+            {
+                if (status.Equals("Open", StringComparison.OrdinalIgnoreCase))
+                {
+                    allDisputeTasks = allDisputeTasks.Where(t => t.Status == "Disputed").ToList();
+                }
+                else if (status.Equals("Resolved", StringComparison.OrdinalIgnoreCase))
+                {
+                    allDisputeTasks = allDisputeTasks.Where(t => resolvedTaskIds.Contains(t.Id)).ToList();
+                }
+            }
+
+            var result = new List<DisputeListItemDto>();
+            foreach (var task in allDisputeTasks)
+            {
+                var mangaka = await _userRepository.GetByIdAsync(task.MangakaId);
+                var assistant = task.AssistantId.HasValue ? await _userRepository.GetByIdAsync(task.AssistantId.Value) : null;
+                var taskDisputeLog = disputeLogs.Where(dl => dl.TaskId == task.Id).OrderByDescending(dl => dl.ResolvedAt).FirstOrDefault();
+
+                var disputeStatus = task.Status == "Disputed" ? "Open" : (taskDisputeLog != null ? "Resolved" : "Closed");
+
+                result.Add(new DisputeListItemDto
+                {
+                    Id = task.Id,
+                    TaskId = task.Id,
+                    TaskTitle = task.Description,
+                    MangakaName = mangaka?.FullName,
+                    AssistantName = assistant?.FullName,
+                    LockedAmount = task.PaymentAmount,
+                    Status = disputeStatus,
+                    CreatedAt = task.CreateAt,
+                    ResolvedAt = taskDisputeLog?.ResolvedAt,
+                    Resolution = taskDisputeLog?.EditorComment
+                });
+            }
+
+            return result;
+        }
+
+        public async Task<DisputeDetailDto> GetDisputeDetailAsync(int taskId)
+        {
+            var task = await _tasksRepository.GetByIdAsync(taskId);
+            if (task == null)
+            {
+                throw new NotFoundException("Nhiệm vụ không tồn tại.");
+            }
+
+            var mangaka = await _userRepository.GetByIdAsync(task.MangakaId);
+            var assistant = task.AssistantId.HasValue ? await _userRepository.GetByIdAsync(task.AssistantId.Value) : null;
+
+            var disputeLogs = await _disputeLogRepository.FindAsync(dl => dl.TaskId == taskId);
+            var latestLog = disputeLogs.OrderByDescending(dl => dl.ResolvedAt).FirstOrDefault();
+            var disputeStatus = task.Status == "Disputed" ? "Open" : (latestLog != null ? "Resolved" : "Closed");
+
+            // Lấy region info
+            var region = await _regionRepository.GetByIdAsync(task.RegionId);
+
+            // Lấy bằng chứng từ TaskVersions (ảnh nộp của Assistant)
+            var versions = await _taskVersionRepository.FindAsync(v => v.TaskId == taskId);
+            var evidence = new List<DisputeEvidenceDto>();
+
+            foreach (var ver in versions.OrderBy(v => v.VersionNumber))
+            {
+                evidence.Add(new DisputeEvidenceDto
+                {
+                    SubmittedBy = "Assistant",
+                    SubmitterName = assistant?.FullName,
+                    Type = "Image",
+                    Content = ver.SubmittedFileUrl,
+                    CreatedAt = ver.SubmittedAt
+                });
+
+                // Lấy annotations trên version này (từ Mangaka)
+                var annotations = await _annotationRepository.FindAsync(a => a.TaskVersionId == ver.Id);
+                foreach (var ann in annotations)
+                {
+                    evidence.Add(new DisputeEvidenceDto
+                    {
+                        SubmittedBy = "Mangaka",
+                        SubmitterName = mangaka?.FullName,
+                        Type = "Annotation",
+                        Content = ann.Comment,
+                        CreatedAt = ann.CreateAt
+                    });
+                }
+            }
+
+            // Lấy submitted time từ version mới nhất
+            var latestVersion = versions.OrderByDescending(v => v.VersionNumber).FirstOrDefault();
+
+            return new DisputeDetailDto
+            {
+                Id = task.Id,
+                TaskId = task.Id,
+                TaskTitle = task.Description,
+                MangakaName = mangaka?.FullName,
+                AssistantName = assistant?.FullName,
+                LockedAmount = task.PaymentAmount,
+                Status = disputeStatus,
+                CreatedAt = task.CreateAt,
+                ResolvedAt = latestLog?.ResolvedAt,
+                Resolution = latestLog?.EditorComment,
+                TaskDeadline = task.Deadline,
+                TaskSubmittedAt = latestVersion?.SubmittedAt,
+                RegionInfo = region != null ? $"Page {region.PageId} - Region {region.Id}" : null,
+                MangakaReason = task.FeedbackComment,
+                AssistantReason = latestVersion != null ? $"Đã nộp phiên bản {latestVersion.VersionNumber}" : null,
+                Evidence = evidence
+            };
+        }
+
+        public async Task<ReconciliationReportDto> ReconcileTransactionsAsync(List<ReconciliationRow> rows)
+        {
+            var report = new ReconciliationReportDto
             {
                 TotalRows = rows.Count
             };
@@ -613,4 +746,4 @@ namespace MangaPublishingSystem.Application.Services
             return report;
         }
     }
-}
+}
