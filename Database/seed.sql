@@ -93,7 +93,12 @@ INSERT INTO dbo.[User] (UserId, RoleId, UserName, PasswordHash, Email, FullName,
 (3, 3, 'board1', N'$2a$11$MYGlbol73VYbWKwQNlBWeue7YregoBRkXJg2Kji/OOsDL3xrnKeK6', 'board.le@mangapublishing.com', N'Lê Văn Hội Đồng', N'Active', GETUTCDATE(), NULL, NULL, NULL),
 (4, 4, 'mangaka1', N'$2a$11$MYGlbol73VYbWKwQNlBWeue7YregoBRkXJg2Kji/OOsDL3xrnKeK6', 'mangaka.nam@gmail.com', N'Phan Hoàng Nam', N'Active', GETUTCDATE(), N'NamArt', NULL, NULL),
 (5, 5, 'assistant1', N'$2a$11$MYGlbol73VYbWKwQNlBWeue7YregoBRkXJg2Kji/OOsDL3xrnKeK6', 'assistant.son@gmail.com', N'Nguyễn Sơn', N'Active', GETUTCDATE(), NULL, N'https://portfolio.nguyenson.com', N'Vẽ nền, Đi nét, Tô màu'),
-(6, 5, 'assistant_pending', N'$2a$11$MYGlbol73VYbWKwQNlBWeue7YregoBRkXJg2Kji/OOsDL3xrnKeK6', 'assistant.pending@gmail.com', N'Nguyễn Văn Chờ Duyệt', N'Pending', GETUTCDATE(), NULL, N'https://portfolio.com/pending', N'Coloring, Lineart');
+(6, 5, 'assistant_pending', N'$2a$11$MYGlbol73VYbWKwQNlBWeue7YregoBRkXJg2Kji/OOsDL3xrnKeK6', 'assistant.pending@gmail.com', N'Nguyễn Văn Chờ Duyệt', N'Pending', GETUTCDATE(), NULL, N'https://portfolio.com/pending', N'Coloring, Lineart'),
+(7, 3, 'board2', N'$2a$11$MYGlbol73VYbWKwQNlBWeue7YregoBRkXJg2Kji/OOsDL3xrnKeK6', 'board2@mangapublishing.com', N'Nguyễn Văn Hội Đồng 2', N'Active', GETUTCDATE(), NULL, NULL, NULL),
+(8, 3, 'board3', N'$2a$11$MYGlbol73VYbWKwQNlBWeue7YregoBRkXJg2Kji/OOsDL3xrnKeK6', 'board3@mangapublishing.com', N'Trần Thị Hội Đồng 3', N'Active', GETUTCDATE(), NULL, NULL, NULL),
+(9, 3, 'board4', N'$2a$11$MYGlbol73VYbWKwQNlBWeue7YregoBRkXJg2Kji/OOsDL3xrnKeK6', 'board4@mangapublishing.com', N'Lê Thị Hội Đồng 4', N'Active', GETUTCDATE(), NULL, NULL, NULL),
+(10, 3, 'board5', N'$2a$11$MYGlbol73VYbWKwQNlBWeue7YregoBRkXJg2Kji/OOsDL3xrnKeK6', 'board5@mangapublishing.com', N'Phạm Văn Hội Đồng 5', N'Active', GETUTCDATE(), NULL, NULL, NULL),
+(11, 3, 'board6', N'$2a$11$MYGlbol73VYbWKwQNlBWeue7YregoBRkXJg2Kji/OOsDL3xrnKeK6', 'board6@mangapublishing.com', N'Vũ Văn Hội Đồng 6', N'Active', GETUTCDATE(), NULL, NULL, NULL);
 SET IDENTITY_INSERT dbo.[User] OFF;
 GO
 
@@ -105,7 +110,12 @@ INSERT INTO dbo.Wallet (WalletId, UserId, SetupFundBalance, WithdrawableBalance,
 (3, 3, 0.00, 0.00, 0.00, 0.00),
 (4, 4, 8800000.00, 5000000.00, 1200000.00, 0.00), -- Mangaka setup fund (10M total, 1.2M locked in escrow)
 (5, 5, 0.00, 1500000.00, 0.00, 0.00),      -- Assistant withdrawable balance
-(6, 6, 0.00, 0.00, 0.00, 0.00);            -- Pending Assistant wallet
+(6, 6, 0.00, 0.00, 0.00, 0.00),            -- Pending Assistant wallet
+(7, 7, 0.00, 0.00, 0.00, 0.00),
+(8, 8, 0.00, 0.00, 0.00, 0.00),
+(9, 9, 0.00, 0.00, 0.00, 0.00),
+(10, 10, 0.00, 0.00, 0.00, 0.00),
+(11, 11, 0.00, 0.00, 0.00, 0.00);
 SET IDENTITY_INSERT dbo.Wallet OFF;
 GO
 

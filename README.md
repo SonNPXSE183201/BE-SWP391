@@ -93,7 +93,7 @@ Khi bạn (hoặc AI) cần tạo một API chức năng mới (Ví dụ: Tạo 
 * Tạo các Enum cần thiết trong `Domain/Enums/`.
 
 ### Bước 2: Tạo DTOs và Validator ở tầng Application
-* Tạo tệp `CreateTaskDto.cs` và `TaskDto.cs` trong `MangaPublishingSystem.Application/DTOs/Task/`.
+* Tạo tệp `CreateTaskDto.cs` và `TaskDto.cs` trong `MangaPublishingSystem.Application/DTOs/Task/`. **Quy tắc quan trọng:** Tuyệt đối không khai báo nhiều lớp DTO chung trong một tệp tin. Mỗi lớp DTO phải có một tệp riêng biệt đặt tên theo đúng tên lớp.
 * Tạo trình xác thực dữ liệu đầu vào `CreateTaskDtoValidator.cs` kế thừa `AbstractValidator<CreateTaskDto>` trong `MangaPublishingSystem.Application/Validations/Task/`. Định nghĩa các ràng buộc nghiệp vụ (không trống, độ dài tối đa,...).
 
 ### Bước 3: Định nghĩa Repository và Service Interface ở tầng Application
@@ -209,3 +209,12 @@ Khi bạn (hoặc AI) cần tạo một API chức năng mới (Ví dụ: Tạo 
 ### 5.5. Định dạng phản hồi API thống nhất (JSON camelCase)
 * **Quy chuẩn định dạng**: Mọi dữ liệu trả về client đều sử dụng lớp `ApiResponse<T>` với thuộc tính `Success` (kiểu `bool`). Khi serialize sang JSON camelCase, thuộc tính này sẽ được chuyển thành `success` để đồng bộ hoàn toàn với Frontend, tránh lỗi `success is undefined` (do sử dụng `IsSuccess` cũ bị serialize thành `isSuccess`).
 
+---
+
+## 6. LỊCH SỬ CẬP NHẬT GẦN NHẤT (IMPLEMENTATION CHANGELOG)
+
+**Giai đoạn P2 & Tối ưu hệ thống:**
+* **Chức năng Duyệt Truyện & Hội đồng Thẩm định**: Đã hoàn thiện luồng nộp duyệt (`POST /api/series/{id}/chapters`), đánh giá của Editor (`POST /api/reviews/series/{id}/submit-to-board`) và danh sách chờ duyệt của Board (`GET /api/votes/pending`).
+* **Quản lý Tranh chấp (Disputes)**: Bổ sung các DTO và API hiển thị danh sách (`GET /api/disputes`) cùng chi tiết bằng chứng tranh chấp (`GET /api/disputes/{taskId}`), giúp Editor xử lý khiếu nại dễ dàng.
+* **Tối ưu hóa (Performance)**: Áp dụng cơ chế **Eager Loading** (`Include`, `ThenInclude`) tại `ChapterRepository` (phương thức `GetPendingReviewChaptersWithDetailsAsync` và `GetChapterWithDetailsByIdAsync`) để giảm thiểu truy vấn N+1 khi hiển thị dữ liệu có tính liên kết phức tạp.
+* **An toàn dữ liệu (ACID Transaction)**: Chức năng Khởi tạo Task (`CreateTaskAsync`) được bọc trong giao dịch cơ sở dữ liệu (`BeginTransactionAsync`), đảm bảo thao tác trừ tiền ký quỹ (Escrow) và gửi thông báo luôn đồng bộ, tự động Rollback nếu có lỗi xảy ra.
