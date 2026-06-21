@@ -8,5 +8,6 @@ namespace MangaPublishingSystem.Application.IRepositories
     {
         Task<PagedResult<Tasks>> GetAvailableTasksAsync(string? skill, int pageNumber, int pageSize);
         Task<PagedResult<Tasks>> GetAssistantTasksAsync(int assistantId, string? status, int pageNumber, int pageSize);
+        Task<Tasks?> GetTaskByIdWithDetailsAsync(int id);
     }
 }

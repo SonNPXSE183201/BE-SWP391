@@ -1,0 +1,1822 @@
+{
+	"info": {
+		"_postman_id": "5a2d61be-747d-4185-9e1e-2cb4866f8e77",
+		"name": "Manga Publishing System API Collection",
+		"description": "Collection test TOÀN BỘ các API Happy Cases của hệ thống Manga Publishing (MCWPMS) qua Ocelot API Gateway ở cổng 5000.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "01. Authentication",
+			"item": [
+				{
+					"name": "Login Mangaka",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"if (jsonData.success || jsonData.Success) {",
+									"    var data = jsonData.data || jsonData.Data;",
+									"    pm.environment.set(\"mangakaToken\", data.Token);",
+									"    pm.environment.set(\"bearerToken\", data.Token);",
+									"    pm.test(\"Đăng nhập Mangaka thành công\", function () {",
+									"        pm.expect(jsonData.success || jsonData.Success).to.be.true;",
+									"    });",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"identifier\": \"mangaka1\",\n  \"password\": \"12345\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/auth/login",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"auth",
+								"login"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Login Assistant",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"if (jsonData.success || jsonData.Success) {",
+									"    var data = jsonData.data || jsonData.Data;",
+									"    pm.environment.set(\"assistantToken\", data.Token);",
+									"    pm.environment.set(\"bearerToken\", data.Token);",
+									"    pm.test(\"Đăng nhập Assistant thành công\", function () {",
+									"        pm.expect(jsonData.success || jsonData.Success).to.be.true;",
+									"    });",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"identifier\": \"assistant1\",\n  \"password\": \"12345\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/auth/login",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"auth",
+								"login"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Login Tantou Editor",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"if (jsonData.success || jsonData.Success) {",
+									"    var data = jsonData.data || jsonData.Data;",
+									"    pm.environment.set(\"editorToken\", data.Token);",
+									"    pm.environment.set(\"bearerToken\", data.Token);",
+									"    pm.test(\"Đăng nhập Editor thành công\", function () {",
+									"        pm.expect(jsonData.success || jsonData.Success).to.be.true;",
+									"    });",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"identifier\": \"editor1\",\n  \"password\": \"12345\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/auth/login",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"auth",
+								"login"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Login System Admin",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"if (jsonData.success || jsonData.Success) {",
+									"    var data = jsonData.data || jsonData.Data;",
+									"    pm.environment.set(\"adminToken\", data.Token);",
+									"    pm.environment.set(\"bearerToken\", data.Token);",
+									"    pm.test(\"Đăng nhập Admin thành công\", function () {",
+									"        pm.expect(jsonData.success || jsonData.Success).to.be.true;",
+									"    });",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"identifier\": \"admin\",\n  \"password\": \"12345\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/auth/login",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"auth",
+								"login"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Login Editorial Board",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"if (jsonData.success || jsonData.Success) {",
+									"    var data = jsonData.data || jsonData.Data;",
+									"    pm.environment.set(\"boardToken\", data.Token);",
+									"    pm.environment.set(\"bearerToken\", data.Token);",
+									"    pm.test(\"Đăng nhập Board thành công\", function () {",
+									"        pm.expect(jsonData.success || jsonData.Success).to.be.true;",
+									"    });",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"identifier\": \"board1\",\n  \"password\": \"12345\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/auth/login",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"auth",
+								"login"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Register Assistant Account",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"pm.test(\"Đăng ký trợ lý mới thành công\", function () {",
+									"    pm.expect(jsonData.success || jsonData.Success).to.be.true;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"userName\": \"assistant_temp\",\n  \"password\": \"Password@123\",\n  \"email\": \"assistant.temp@gmail.com\",\n  \"fullName\": \"Trợ Lý Tạm Thời\",\n  \"portfolioUrl\": \"https://portfolio.com/temp\",\n  \"skills\": \"Coloring\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/auth/register",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"auth",
+								"register"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Change Password",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"pm.request.headers.add({key: 'Authorization', value: 'Bearer ' + pm.environment.get('bearerToken')});"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"pm.test(\"Đổi mật khẩu thành công\", function () {",
+									"    pm.expect(jsonData.success || jsonData.Success).to.be.true;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"currentPassword\": \"12345\",\n  \"newPassword\": \"NewPassword@123\",\n  \"confirmNewPassword\": \"NewPassword@123\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/auth/change-password",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"auth",
+								"change-password"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Forgot Password - Request OTP",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"pm.test(\"Yêu cầu OTP thành công\", function () {",
+									"    pm.expect(jsonData.success || jsonData.Success).to.be.true;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"mangaka.nam@gmail.com\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/auth/forgot-password/request",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"auth",
+								"forgot-password",
+								"request"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Forgot Password - Reset Password",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"pm.test(\"Đặt lại mật khẩu thành công\", function () {",
+									"    pm.expect(jsonData.success || jsonData.Success).to.be.true;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"mangaka.nam@gmail.com\",\n  \"verificationCode\": \"123456\",\n  \"newPassword\": \"Password@123\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/auth/forgot-password/reset",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"auth",
+								"forgot-password",
+								"reset"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Refresh Token",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"if (jsonData.success || jsonData.Success) {",
+									"    var data = jsonData.data || jsonData.Data;",
+									"    pm.environment.set(\"bearerToken\", data.Token);",
+									"    pm.test(\"Làm mới token thành công\", function () {",
+									"        pm.expect(jsonData.success || jsonData.Success).to.be.true;",
+									"    });",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"accessToken\": \"{{bearerToken}}\",\n  \"refreshToken\": \"fvtbJDaZ0GEHBphB6Kzj0CDUO1EfK0AXh308lYXD6KklWy0rN0NkkmfQTcmBb6G4amYUPTk1H48FAByv6mwarA==\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/auth/refresh-token",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"auth",
+								"refresh-token"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Logout",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"pm.test(\"Đăng xuất thành công\", function () {",
+									"    pm.expect(jsonData.success || jsonData.Success).to.be.true;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"token\": \"{{bearerToken}}\",\n  \"refreshToken\": \"fvtbJDaZ0GEHBphB6Kzj0CDUO1EfK0AXh308lYXD6KklWy0rN0NkkmfQTcmBb6G4amYUPTk1H48FAByv6mwarA==\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/auth/logout",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"auth",
+								"logout"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "02. Series Profile",
+			"item": [
+				{
+					"name": "Create Series",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"pm.request.headers.add({key: 'Authorization', value: 'Bearer ' + pm.environment.get('mangakaToken')});"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"if (jsonData.success || jsonData.Success) {",
+									"    var data = jsonData.data || jsonData.Data;",
+									"    pm.environment.set(\"lastCreatedSeriesId\", data.Id);",
+									"    pm.test(\"Tạo bộ truyện mới thành công\", function () {",
+									"        pm.expect(jsonData.success || jsonData.Success).to.be.true;",
+									"    });",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"title\": \"Vua Hải Tặc Việt Nam\",\n  \"genre\": \"Adventure, Action\",\n  \"synopsis\": \"Kể về hành trình chinh phục đại dương của một cậu bé miền biển.\",\n  \"coverArtworkUrl\": \"https://storage.mangapublishing.com/covers/vht.jpg\",\n  \"estimatedProductionBudget\": 15000000\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/series",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"series"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Submit Series for Review",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"pm.request.headers.add({key: 'Authorization', value: 'Bearer ' + pm.environment.get('mangakaToken')});"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"pm.test(\"Gửi duyệt bộ truyện thành công\", function () {",
+									"    pm.expect(jsonData.success || jsonData.Success).to.be.true;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"comment\": \"Hồ sơ bộ truyện đã hoàn thiện, đề xuất Ban biên tập phê duyệt cấp quỹ.\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/series/{{lastCreatedSeriesId}}/submit-review",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"series",
+								"{{lastCreatedSeriesId}}",
+								"submit-review"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Set Mangaka Absence Status",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"pm.request.headers.add({key: 'Authorization', value: 'Bearer ' + pm.environment.get('mangakaToken')});"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"pm.test(\"Thay đổi trạng thái nghỉ phép thành công\", function () {",
+									"    pm.expect(jsonData.success || jsonData.Success).to.be.true;",
+									"});"
+								],
+								"type": "text"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/series/absence?onLeave=true",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"series",
+								"absence"
+							],
+							"query": [
+								{
+									"key": "onLeave",
+									"value": "true"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get My Series List",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"pm.request.headers.add({key: 'Authorization', value: 'Bearer ' + pm.environment.get('mangakaToken')});"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"pm.test(\"Lấy danh sách truyện thành công\", function () {",
+									"    pm.expect(jsonData.success || jsonData.Success).to.be.true;",
+									"    pm.expect(jsonData.data || jsonData.Data).to.be.an('array');",
+									"});"
+								],
+								"type": "text"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/series/my-list",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"series",
+								"my-list"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "03. Tasks Management",
+			"item": [
+				{
+					"name": "Create Task",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"pm.request.headers.add({key: 'Authorization', value: 'Bearer ' + pm.environment.get('mangakaToken')});"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"if (jsonData.success || jsonData.Success) {",
+									"    var data = jsonData.data || jsonData.Data;",
+									"    pm.environment.set(\"lastCreatedTaskId\", data.Id);",
+									"    pm.test(\"Mangaka tạo nhiệm vụ thành công\", function () {",
+									"        pm.expect(jsonData.success || jsonData.Success).to.be.true;",
+									"    });",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"regionId\": 4,\n  \"description\": \"Vẽ hiệu ứng tia chớp bao quanh nhân vật chính\",\n  \"paymentAmount\": 250000,\n  \"deadline\": \"2026-06-25T17:00:00Z\",\n  \"zIndex_Order\": 2\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/tasks",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"tasks"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Approve Assistant Work",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"pm.request.headers.add({key: 'Authorization', value: 'Bearer ' + pm.environment.get('mangakaToken')});"
+								],
+								"type": "text"
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"pm.test(\"Mangaka duyệt nghiệm thu thành công\", function () {",
+									"    pm.expect(jsonData.success || jsonData.Success).to.be.true;",
+									"});"
+								],
+								"type": "text"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"rating\": 5,\n  \"feedbackComment\": \"Nhiệm vụ vẽ hoàn thành xuất sắc, đúng hạn!\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/tasks/3/approve",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"tasks",
+								"3",
+								"approve"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Reject Assistant Work",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"pm.request.headers.add({key: 'Authorization', value: 'Bearer ' + pm.environment.get('mangakaToken')});"
+								],
+								"type": "text"
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"pm.test(\"Từ chối bài vẽ thành công\", function () {",
+									"    pm.expect(jsonData.success || jsonData.Success).to.be.true;",
+									"});"
+								],
+								"type": "text"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"feedbackComment\": \"Màu nền bị lệch tone so với Style Guide. Vui lòng sửa lại.\",\n  \"revisionExtensionHours\": 24,\n  \"coordinatesJson\": \"{\\\"x\\\": 100, \\\"y\\\": 150}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/tasks/5/reject",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"tasks",
+								"5",
+								"reject"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Handle Extension Request",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"pm.request.headers.add({key: 'Authorization', value: 'Bearer ' + pm.environment.get('mangakaToken')});"
+								],
+								"type": "text"
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"pm.test(\"Xử lý yêu cầu gia hạn thành công\", function () {",
+									"    pm.expect(jsonData.success || jsonData.Success).to.be.true;",
+									"});"
+								],
+								"type": "text"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/tasks/6/extension-approval?approve=true",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"tasks",
+								"6",
+								"extension-approval"
+							],
+							"query": [
+								{
+									"key": "approve",
+									"value": "true"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Emergency Cancel Task",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"pm.request.headers.add({key: 'Authorization', value: 'Bearer ' + pm.environment.get('mangakaToken')});"
+								],
+								"type": "text"
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"pm.test(\"Hủy nhiệm vụ khẩn cấp thành công\", function () {",
+									"    pm.expect(jsonData.success || jsonData.Success).to.be.true;",
+									"});"
+								],
+								"type": "text"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/tasks/4/emergency-cancel",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"tasks",
+								"4",
+								"emergency-cancel"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Mangaka Tasks List",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"pm.request.headers.add({key: 'Authorization', value: 'Bearer ' + pm.environment.get('mangakaToken')});"
+								],
+								"type": "text"
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"pm.test(\"Lấy danh sách nhiệm vụ thành công\", function () {",
+									"    pm.expect(jsonData.success || jsonData.Success).to.be.true;",
+									"    pm.expect(jsonData.data || jsonData.Data).to.be.an('array');",
+									"});"
+								],
+								"type": "text"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/tasks/mangaka-list",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"tasks",
+								"mangaka-list"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Task Versions History",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"pm.request.headers.add({key: 'Authorization', value: 'Bearer ' + pm.environment.get('bearerToken')});"
+								],
+								"type": "text"
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"pm.test(\"Lấy lịch sử phiên bản thành công\", function () {",
+									"    pm.expect(jsonData.success || jsonData.Success).to.be.true;",
+									"});"
+								],
+								"type": "text"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/tasks/3/versions",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"tasks",
+								"3",
+								"versions"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Available Tasks for Assistant",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"pm.request.headers.add({key: 'Authorization', value: 'Bearer ' + pm.environment.get('assistantToken')});"
+								],
+								"type": "text"
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"pm.test(\"Lấy nhiệm vụ khả dụng thành công\", function () {",
+									"    pm.expect(jsonData.success || jsonData.Success).to.be.true;",
+									"});"
+								],
+								"type": "text"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/tasks/available?PageNumber=1&PageSize=10",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"tasks",
+								"available"
+							],
+							"query": [
+								{
+									"key": "PageNumber",
+									"value": "1"
+								},
+								{
+									"key": "PageSize",
+									"value": "10"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Composite Page Image",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Tải ảnh ghép trang thành công\", function () {",
+									"    pm.expect(responseCode.code).to.equal(200);",
+									"});"
+								],
+								"type": "text"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/tasks/pages/1/composite",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"tasks",
+								"pages",
+								"1",
+								"composite"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "04. Wallet & Payments",
+			"item": [
+				{
+					"name": "Get My Wallet Details",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"pm.request.headers.add({key: 'Authorization', value: 'Bearer ' + pm.environment.get('bearerToken')});"
+								],
+								"type": "text"
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"pm.test(\"Lấy thông tin ví thành công\", function () {",
+									"    pm.expect(jsonData.success || jsonData.Success).to.be.true;",
+									"});"
+								],
+								"type": "text"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/wallets/me",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"wallets",
+								"me"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Deposit (Init VNPay)",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"pm.request.headers.add({key: 'Authorization', value: 'Bearer ' + pm.environment.get('mangakaToken')});"
+								],
+								"type": "text"
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"pm.test(\"Khởi tạo giao dịch nạp tiền thành công\", function () {",
+									"    pm.expect(jsonData.success || jsonData.Success).to.be.true;",
+									"    pm.expect(jsonData.data || jsonData.Data).to.contain('vnpayment.vn');",
+									"});"
+								],
+								"type": "text"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"amount\": 500000\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/wallets/deposit",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"wallets",
+								"deposit"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Withdraw Funds",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"pm.request.headers.add({key: 'Authorization', value: 'Bearer ' + pm.environment.get('bearerToken')});"
+								],
+								"type": "text"
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"if (jsonData.success || jsonData.Success) {",
+									"    var data = jsonData.data || jsonData.Data;",
+									"    pm.environment.set(\"lastWithdrawalId\", data.Id);",
+									"    pm.test(\"Yêu cầu rút tiền thành công\", function () {",
+									"        pm.expect(jsonData.success || jsonData.Success).to.be.true;",
+									"    });",
+									"}"
+								],
+								"type": "text"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"amount\": 100000,\n  \"bankName\": \"NCB\",\n  \"bankAccountNumber\": \"9704198526191432198\",\n  \"bankAccountName\": \"PHAN HOANG NAM\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/wallets/withdraw",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"wallets",
+								"withdraw"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Pending Withdrawals (Admin)",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"pm.request.headers.add({key: 'Authorization', value: 'Bearer ' + pm.environment.get('adminToken')});"
+								],
+								"type": "text"
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"pm.test(\"Lấy danh sách yêu cầu rút tiền thành công\", function () {",
+									"    pm.expect(jsonData.success || jsonData.Success).to.be.true;",
+									"});"
+								],
+								"type": "text"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/wallets/withdraw/pending",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"wallets",
+								"withdraw",
+								"pending"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Approve Withdrawal (Admin)",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"pm.request.headers.add({key: 'Authorization', value: 'Bearer ' + pm.environment.get('adminToken')});"
+								],
+								"type": "text"
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"pm.test(\"Phê duyệt rút tiền thành công\", function () {",
+									"    pm.expect(jsonData.success || jsonData.Success).to.be.true;",
+									"});"
+								],
+								"type": "text"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"isApproved\": true,\n  \"adminNote\": \"Yêu cầu rút tiền hợp lệ, phê duyệt giao dịch.\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/wallets/withdraw/{{lastWithdrawalId}}/approve",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"wallets",
+								"withdraw",
+								"{{lastWithdrawalId}}",
+								"approve"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "VNPay Return URL Callback",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"pm.test(\"Gọi URL Return thành công\", function () {",
+									"    pm.expect(responseCode.code).to.equal(400); // Bad request do chữ ký test sai, nhưng route hoạt động",
+									"});"
+								],
+								"type": "text"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/wallets/deposit/return?vnp_Amount=50000000&vnp_BankCode=NCB&vnp_ResponseCode=00&vnp_TxnRef=DEP-123456&vnp_SecureHash=invalid_hash",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"wallets",
+								"deposit",
+								"return"
+							],
+							"query": [
+								{
+									"key": "vnp_Amount",
+									"value": "50000000"
+								},
+								{
+									"key": "vnp_BankCode",
+									"value": "NCB"
+								},
+								{
+									"key": "vnp_ResponseCode",
+									"value": "00"
+								},
+								{
+									"key": "vnp_TxnRef",
+									"value": "DEP-123456"
+								},
+								{
+									"key": "vnp_SecureHash",
+									"value": "invalid_hash"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "VNPay IPN URL Webhook",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"pm.test(\"Gọi URL IPN Webhook thành công\", function () {",
+									"    pm.expect(jsonData.RspCode).to.exist;",
+									"});"
+								],
+								"type": "text"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/wallets/deposit/ipn?vnp_Amount=50000000&vnp_BankCode=NCB&vnp_ResponseCode=00&vnp_TxnRef=DEP-123456&vnp_SecureHash=invalid_hash",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"wallets",
+								"deposit",
+								"ipn"
+							],
+							"query": [
+								{
+									"key": "vnp_Amount",
+									"value": "50000000"
+								},
+								{
+									"key": "vnp_BankCode",
+									"value": "NCB"
+								},
+								{
+									"key": "vnp_ResponseCode",
+									"value": "00"
+								},
+								{
+									"key": "vnp_TxnRef",
+									"value": "DEP-123456"
+								},
+								{
+									"key": "vnp_SecureHash",
+									"value": "invalid_hash"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "05. Admin Users Management",
+			"item": [
+				{
+					"name": "Create User by Admin",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"pm.request.headers.add({key: 'Authorization', value: 'Bearer ' + pm.environment.get('adminToken')});"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"pm.test(\"Admin tạo tài khoản mới thành công\", function () {",
+									"    pm.expect(jsonData.success || jsonData.Success).to.be.true;",
+									"});"
+								],
+								"type": "text"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"userName\": \"mangaka_new_admin\",\n  \"email\": \"mangaka.new@gmail.com\",\n  \"fullName\": \"Tác Giả Do Admin Tạo\",\n  \"roleId\": 4,\n  \"penName\": \"NamManga\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/admin/users",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"admin",
+								"users"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Pending Assistants",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"pm.request.headers.add({key: 'Authorization', value: 'Bearer ' + pm.environment.get('adminToken')});"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"var list = jsonData.data || jsonData.Data;",
+									"if (list && list.length > 0) {",
+									"    var found = list.find(u => u.UserName === 'assistant_pending');",
+									"    if (found) {",
+									"        pm.environment.set(\"lastPendingAssistantId\", found.Id || found.UserId);",
+									"    } else {",
+									"        pm.environment.set(\"lastPendingAssistantId\", list[0].Id || list[0].UserId);",
+									"    }",
+									"}",
+									"pm.test(\"Admin lấy danh sách trợ lý chờ duyệt thành công\", function () {",
+									"    pm.expect(jsonData.success || jsonData.Success).to.be.true;",
+									"});"
+								],
+								"type": "text"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/admin/users/pending",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"admin",
+								"users",
+								"pending"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Approve Assistant Account",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"pm.request.headers.add({key: 'Authorization', value: 'Bearer ' + pm.environment.get('adminToken')});"
+								],
+								"type": "text"
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"pm.test(\"Admin duyệt trợ lý thành công\", function () {",
+									"    pm.expect(jsonData.success || jsonData.Success).to.be.true;",
+									"});"
+								],
+								"type": "text"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/admin/users/{{lastPendingAssistantId}}/approve",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"admin",
+								"users",
+								"{{lastPendingAssistantId}}",
+								"approve"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Reject Assistant Account",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"pm.request.headers.add({key: 'Authorization', value: 'Bearer ' + pm.environment.get('adminToken')});"
+								],
+								"type": "text"
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"pm.test(\"Admin từ chối trợ lý thành công\", function () {",
+									"    pm.expect(jsonData.success || jsonData.Success).to.be.true;",
+									"});"
+								],
+								"type": "text"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/admin/users/{{lastPendingAssistantId}}/reject",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"admin",
+								"users",
+								"{{lastPendingAssistantId}}",
+								"reject"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Lock User Account",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"pm.request.headers.add({key: 'Authorization', value: 'Bearer ' + pm.environment.get('adminToken')});"
+								],
+								"type": "text"
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"pm.test(\"Admin khóa tài khoản thành công\", function () {",
+									"    pm.expect(jsonData.success || jsonData.Success).to.be.true;",
+									"});"
+								],
+								"type": "text"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/admin/users/{{lastPendingAssistantId}}/lock",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"admin",
+								"users",
+								"{{lastPendingAssistantId}}",
+								"lock"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	]
+}

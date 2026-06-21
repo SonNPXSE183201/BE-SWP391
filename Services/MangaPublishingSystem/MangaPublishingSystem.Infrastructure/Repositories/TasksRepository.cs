@@ -57,5 +57,15 @@ namespace MangaPublishingSystem.Infrastructure.Repositories
 
             return await query.ToPagedListAsync(pageNumber, pageSize);
         }
+
+        public async Task<Tasks?> GetTaskByIdWithDetailsAsync(int id)
+        {
+            return await _dbSet.AsQueryable()
+                .Include(t => t.Mangaka)
+                .Include(t => t.Assistant)
+                .Include(t => t.Region)
+                    .ThenInclude(r => r.Page)
+                .FirstOrDefaultAsync(t => t.Id == id);
+        }
     }
 }
