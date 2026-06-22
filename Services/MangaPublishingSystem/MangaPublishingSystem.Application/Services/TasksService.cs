@@ -580,6 +580,60 @@ namespace MangaPublishingSystem.Application.Services
                 pagedTasks.TotalPages);
         }
 
+        public async Task<TasksDto> GetTaskDetailsByIdAsync(int taskId, int userId, bool isMangaka)
+        {
+            var task = await _tasksRepository.GetTaskByIdWithDetailsAsync(taskId);
+            if (task == null)
+            {
+                throw new NotFoundException("Nhiệm vụ không tồn tại.");
+            }
+
+            if (isMangaka)
+            {
+                if (task.MangakaId != userId)
+                {
+                    throw new ForbiddenException("Bạn không có quyền xem nhiệm vụ này.");
+                }
+            }
+            else
+            {
+                var isAssignedToMe = task.AssistantId == userId;
+                var isOpenInQueue = task.Status == "Pending" && !task.AssistantId.HasValue;
+                if (!isAssignedToMe && !isOpenInQueue)
+                {
+                    throw new ForbiddenException("Bạn không có quyền xem nhiệm vụ này.");
+                }
+            }
+
+            return MapTaskEntityToDto(task);
+        }
+
+        private static TasksDto MapTaskEntityToDto(Tasks t)
+        {
+            return new TasksDto
+            {
+                Id = t.Id,
+                MangakaId = t.MangakaId,
+                RegionId = t.RegionId,
+                AssistantId = t.AssistantId,
+                Description = t.Description,
+                PaymentAmount = t.PaymentAmount,
+                Deadline = t.Deadline,
+                ExtensionRequestDays = t.ExtensionRequestDays,
+                ExtensionReason = t.ExtensionReason,
+                ExtensionStatus = t.ExtensionStatus,
+                ZIndex_Order = t.ZIndex_Order,
+                Status = t.Status,
+                Rating = t.Rating,
+                FeedbackComment = t.FeedbackComment,
+                MangakaName = t.Mangaka?.FullName,
+                AssistantName = t.Assistant?.FullName,
+                PageNumber = t.Region?.PageId ?? 0,
+                PageImageUrl = t.Region?.Page?.RawImageUrl,
+                CreateAt = t.CreateAt,
+                UpdateAt = t.UpdateAt
+            };
+        }
 
         private async System.Threading.Tasks.Task UpdateAssistantProfileMetricsAsync(int assistantId)
         {
