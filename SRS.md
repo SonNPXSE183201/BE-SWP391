@@ -95,6 +95,7 @@ Hệ thống phân chia người dùng thành 2 nhóm với 5 vai trò phân quy
 | **F5.4** | Disburse Production Budget | Wallet | Hệ thống tự động chuyển khoản tiền ngân sách được duyệt vào ví của Mangaka (`SetupFundBalance`) ngay khi Mangaka bấm xác nhận hợp đồng. | Ghi nhận chi tiết lịch sử giao dịch loại `Funding` của hệ thống. |
 | **F5.5** | Update Contract Addendum | User Mgmt | Tạo phụ lục hợp đồng (`ContractAddendum`) để cập nhật đơn giá trang vẽ mới cho tác giả. | Đơn giá phụ lục chỉ áp dụng cho các chương tạo sau mốc thời gian ký phụ lục (không tính ngược lại). |
 | **F5.6** | VNPay Reconciliation | Wallet | Đối soát: Đối chiếu dữ liệu giao dịch nạp/rút tiền trên hệ thống với file CSV kết quả đối soát xuất từ VNPay. | Tự động quét và ghim cảnh báo các giao dịch lệch trạng thái (Ví dụ: hệ thống báo lỗi nhưng VNPay báo thành công). |
+| **F5.7** | View System Dashboard | Dashboard | Xem bảng điều khiển tổng quan hệ thống: Tổng số truyện, tổng người dùng theo role, và tổng doanh thu nạp ví. | Hiển thị chính xác các con số thống kê theo thời gian thực. |
 
 ---
 
