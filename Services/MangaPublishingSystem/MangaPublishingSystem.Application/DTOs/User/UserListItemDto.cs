@@ -21,5 +21,11 @@ namespace MangaPublishingSystem.Application.DTOs.User
 
         [JsonPropertyName("createdAt")]
         public string CreatedAt { get; set; } = null!;
+
+        [JsonPropertyName("assignedEditorId")]
+        public int? AssignedEditorId { get; set; }
+
+        [JsonPropertyName("assignedEditorName")]
+        public string? AssignedEditorName { get; set; }
     }
 }

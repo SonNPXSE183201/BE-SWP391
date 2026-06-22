@@ -10,6 +10,8 @@ namespace MangaPublishingSystem.Application.DTOs.User
         public string Status { get; set; } = null!;
         public string? PenName { get; set; }
         public bool IsOnLeave { get; set; }
+        public int? AssignedEditorId { get; set; }
+        public string? AssignedEditorName { get; set; }
         public string? Message { get; set; }
     }
 }
