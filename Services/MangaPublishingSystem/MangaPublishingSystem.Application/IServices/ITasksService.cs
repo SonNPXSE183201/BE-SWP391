@@ -22,7 +22,6 @@ namespace MangaPublishingSystem.Application.IServices
         System.Threading.Tasks.Task AcceptTaskAsync(int taskId, int assistantId);
         System.Threading.Tasks.Task SubmitTaskAsync(int taskId, int assistantId, SubmitTaskDto dto);
         System.Threading.Tasks.Task RequestExtensionAsync(int taskId, int assistantId, RequestExtensionDto dto);
-        Task<TasksDto> GetTaskDetailsByIdAsync(int id);
     }
 }
 

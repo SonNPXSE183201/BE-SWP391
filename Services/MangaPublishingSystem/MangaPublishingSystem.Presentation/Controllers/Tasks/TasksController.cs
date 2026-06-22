@@ -35,14 +35,6 @@ namespace MangaPublishingSystem.Presentation.Controllers.Tasks
             return Ok(ApiResponse<TasksDto>.Success(result, "Tạo nhiệm vụ vẽ và ký quỹ thù lao thành công."));
         }
 
-        [Authorize(Roles = "Mangaka,Assistant")]
-        [HttpGet("{id}")]
-        public async Task<ActionResult<ApiResponse<TasksDto>>> GetTaskById([FromRoute] int id)
-        {
-            var result = await _tasksService.GetTaskDetailsByIdAsync(id);
-            return Ok(ApiResponse<TasksDto>.Success(result, "Lấy thông tin chi tiết nhiệm vụ thành công."));
-        }
-
         [Authorize(Roles = "Mangaka")]
         [HttpPost("{id}/approve")]
         public async Task<ActionResult<ApiResponse<object>>> ApproveTask([FromRoute] int id, [FromBody] ApproveTaskDto approveDto)
