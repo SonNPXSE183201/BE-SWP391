@@ -31,7 +31,7 @@ namespace MangaPublishingSystem.Infrastructure.Repositories
             int pageNumber,
             int pageSize)
         {
-            var query = _context.Users.Include(u => u.Role).AsQueryable();
+            var query = _context.Users.Include(u => u.Role).Include(u => u.AssignedEditor).AsQueryable();
 
             if (!string.IsNullOrWhiteSpace(role))
             {
@@ -97,6 +97,7 @@ namespace MangaPublishingSystem.Infrastructure.Repositories
         {
             return await _context.Users
                 .Include(u => u.Role)
+                .Include(u => u.AssignedEditor)
                 .Include(u => u.AssistantProfile)
                 .FirstOrDefaultAsync(u => u.Id == id);
         }

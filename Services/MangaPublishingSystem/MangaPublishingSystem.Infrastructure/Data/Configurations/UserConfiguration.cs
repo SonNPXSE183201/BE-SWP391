@@ -57,6 +57,14 @@ namespace MangaPublishingSystem.Infrastructure.Data.Configurations
                 .HasDefaultValue(false)
                 .IsRequired();
 
+            builder.Property(e => e.AssignedEditorId)
+                .HasColumnName("AssignedEditorId");
+
+            builder.HasOne(e => e.AssignedEditor)
+                .WithMany()
+                .HasForeignKey(e => e.AssignedEditorId)
+                .OnDelete(DeleteBehavior.Restrict);
+
             builder.HasOne(e => e.Role)
                 .WithMany(r => r.Users)
                 .HasForeignKey(e => e.RoleId)

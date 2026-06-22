@@ -1,16 +1,7 @@
 namespace MangaPublishingSystem.Application.DTOs.User
 {
-    public class CreateUserByAdminDto
+    public class UpdateUserByAdminDto
     {
-        public int RoleId { get; set; }
-
-        private string _userName = null!;
-        public string UserName
-        {
-            get => _userName;
-            set => _userName = (value ?? string.Empty).Trim().Replace(" ", "_");
-        }
-
         private string _email = null!;
         public string Email
         {
@@ -31,6 +22,7 @@ namespace MangaPublishingSystem.Application.DTOs.User
             get => _penName;
             set => _penName = string.IsNullOrWhiteSpace(value) ? null : value.Trim();
         }
+
         public string? PortfolioUrl { get; set; }
         public string? Skills { get; set; }
         public int? AssignedEditorId { get; set; }
