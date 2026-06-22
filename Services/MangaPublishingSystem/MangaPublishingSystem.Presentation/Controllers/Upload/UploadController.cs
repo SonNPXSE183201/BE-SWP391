@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using BuildingBlocks.Web.Responses;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using MangaPublishingSystem.Application.IServices;
 
 namespace MangaPublishingSystem.Presentation.Controllers.Upload
 {
@@ -11,6 +12,13 @@ namespace MangaPublishingSystem.Presentation.Controllers.Upload
     [Route("api/upload")]
     public class UploadController : ControllerBase
     {
+        private readonly IStorageService _storageService;
+
+        public UploadController(IStorageService storageService)
+        {
+            _storageService = storageService;
+        }
+
         [HttpPost]
         public async Task<ActionResult<ApiResponse<string>>> UploadFile(IFormFile file)
         {
@@ -21,26 +29,11 @@ namespace MangaPublishingSystem.Presentation.Controllers.Upload
 
             try
             {
-                // Tạo thư mục wwwroot/uploads/ nếu chưa có
-                var uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads");
-                if (!Directory.Exists(uploadsFolder))
+                using (var stream = file.OpenReadStream())
                 {
-                    Directory.CreateDirectory(uploadsFolder);
+                    var fileUrl = await _storageService.UploadFileAsync(stream, file.FileName, file.ContentType);
+                    return Ok(ApiResponse<string>.Success(fileUrl, "Tải lên file thành công."));
                 }
-
-                // Tạo tên file duy nhất để tránh trùng lặp
-                var uniqueFileName = Guid.NewGuid().ToString() + Path.GetExtension(file.FileName);
-                var filePath = Path.Combine(uploadsFolder, uniqueFileName);
-
-                // Lưu file xuống đĩa
-                using (var fileStream = new FileStream(filePath, FileMode.Create))
-                {
-                    await file.CopyToAsync(fileStream);
-                }
-
-                // Trả về url tuyệt đối
-                var fileUrl = $"{Request.Scheme}://{Request.Host}/uploads/{uniqueFileName}";
-                return Ok(ApiResponse<string>.Success(fileUrl, "Tải lên file thành công."));
             }
             catch (Exception ex)
             {
