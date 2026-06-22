@@ -20,6 +20,7 @@ PRINT 'Resetting existing data in all tables...';
 EXEC sp_MSforeachtable "ALTER TABLE ? NOCHECK CONSTRAINT all";
 
 -- Clean all tables
+DELETE FROM dbo.PortfolioSample;
 DELETE FROM dbo.Report;
 DELETE FROM dbo.Annotation;
 DELETE FROM dbo.DisputeLog;
@@ -46,6 +47,7 @@ EXEC sp_MSforeachtable "ALTER TABLE ? WITH CHECK CHECK CONSTRAINT all";
 GO
 
 -- Reset identity column seeds
+DBCC CHECKIDENT ('dbo.PortfolioSample', RESEED, 0);
 DBCC CHECKIDENT ('dbo.Report', RESEED, 0);
 DBCC CHECKIDENT ('dbo.Annotation', RESEED, 0);
 DBCC CHECKIDENT ('dbo.DisputeLog', RESEED, 0);
@@ -225,6 +227,14 @@ INSERT INTO dbo.Notification (NotId, UserId, Content, Type, IsRead, CreateAt) VA
 (1, 4, N'Bộ truyện Học Viện Siêu Nhiên đã nhận được 1 phiếu biểu quyết từ Hội đồng biên tập.', N'SeriesVote', 0, GETUTCDATE()),
 (2, 5, N'Bạn được giao nhiệm vụ mới: Vẽ nền phòng học có bàn ghế và cửa sổ lớn.', N'TaskAssigned', 0, GETUTCDATE());
 SET IDENTITY_INSERT dbo.Notification OFF;
+GO
+
+-- 15. Insert Portfolio Samples
+SET IDENTITY_INSERT dbo.PortfolioSample ON;
+INSERT INTO dbo.PortfolioSample (SampleId, AssistantId, Title, ImageUrl, Category) VALUES
+(1, 5, N'Thiết kế nền thành phố cổ', N'https://storage.mangapublishing.com/portfolios/son-bg1.png', N'Background'),
+(2, 5, N'Đi nét nhân vật chính', N'https://storage.mangapublishing.com/portfolios/son-line1.png', N'Lineart');
+SET IDENTITY_INSERT dbo.PortfolioSample OFF;
 GO
 
 PRINT 'Mock data seeded successfully with password ''12345'' for all users.';

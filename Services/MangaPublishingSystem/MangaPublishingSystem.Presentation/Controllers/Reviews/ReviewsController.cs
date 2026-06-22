@@ -79,6 +79,14 @@ namespace MangaPublishingSystem.Presentation.Controllers.Reviews
             await _seriesService.SubmitSeriesToBoardAsync(id, CurrentUserId, dto);
             return Ok(ApiResponse<object>.Success(null, "Gửi bộ truyện lên hội đồng thẩm định thành công."));
         }
+
+        [Authorize(Roles = "Tantou Editor")]
+        [HttpPost("series/{id}/require-revision")]
+        public async Task<ActionResult<ApiResponse<object>>> RequireSeriesRevision(int id, [FromBody] RequireSeriesRevisionDto dto)
+        {
+            await _seriesService.RequireSeriesRevisionAsync(id, CurrentUserId, dto.Comment);
+            return Ok(ApiResponse<object>.Success(null, "Yêu cầu chỉnh sửa bộ truyện thành công."));
+        }
     }
 }
 
