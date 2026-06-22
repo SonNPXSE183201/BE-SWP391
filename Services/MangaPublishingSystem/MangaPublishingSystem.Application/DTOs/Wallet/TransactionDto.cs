@@ -19,6 +19,7 @@ namespace MangaPublishingSystem.Application.DTOs.Wallet
         public string? FromUserFullName { get; set; }
         public string? ToUserName { get; set; }
         public string? ToUserFullName { get; set; }
+        public string? RequesterRole { get; set; }
         public string? BankName { get; set; }
         public string? BankAccountNumber { get; set; }
         public string? BankAccountName { get; set; }

@@ -18,6 +18,8 @@ namespace MangaPublishingSystem.Application.Services
 {
     public class SeriesService : GenericService<Series>, ISeriesService
     {
+        private const string RoleNameTantouEditor = "Tantou Editor";
+
         private readonly ISeriesRepository _seriesRepository;
         private readonly IUserRepository _userRepository;
         private readonly INotificationRepository _notificationRepository;
@@ -90,59 +92,78 @@ namespace MangaPublishingSystem.Application.Services
                 throw new ConflictException("Bộ truyện đã được gửi thẩm định hoặc đã được duyệt.");
             }
 
+            var mangaka = await _userRepository.GetByIdAsync(mangakaId);
+            if (mangaka == null)
+            {
+                throw new NotFoundException("Không tìm thấy thông tin tác giả.");
+            }
+
+            if (!mangaka.AssignedEditorId.HasValue)
+            {
+                throw new BadRequestException(
+                    "Tác giả chưa được Admin gán Biên tập viên phụ trách. Vui lòng liên hệ quản trị viên.");
+            }
+
+            var assignedEditor = await _userRepository.GetByIdWithDetailsAsync(mangaka.AssignedEditorId.Value);
+            if (assignedEditor == null
+                || assignedEditor.Role?.RoleName != RoleNameTantouEditor
+                || assignedEditor.Status != UserStatus.Active)
+            {
+                throw new BadRequestException("Biên tập viên phụ trách không tồn tại hoặc không hoạt động.");
+            }
+
             series.Status = "Pending_Approval";
+            series.EditorId = mangaka.AssignedEditorId.Value;
             _seriesRepository.Update(series);
+            await _unitOfWork.SaveChangesAsync();
 
-            // Tự động phân công Biên tập viên (Editor) từ thông tin Mangaka
-            if (!series.EditorId.HasValue)
+            var editorNoteSuffix = string.IsNullOrWhiteSpace(submitDto.SubmissionNotes)
+                ? string.Empty
+                : $" Ghi chú: {submitDto.SubmissionNotes.Trim()}";
+
+            // Gửi thông báo realtime cho Editor phụ trách (Phương án 3 — A04)
+            var notifEditor = new Notification
             {
-                var mangaka = await _userRepository.GetByIdAsync(mangakaId);
-                if (mangaka != null && mangaka.AssignedEditorId.HasValue)
-                {
-                    series.EditorId = mangaka.AssignedEditorId.Value;
-                }
-                else
-                {
-                    var editors = await _userRepository.FindAsync(u => u.Role.RoleName == "Tantou Editor" && u.Status == UserStatus.Active);
-                    var editor = editors.FirstOrDefault();
-                    if (editor != null)
-                    {
-                        series.EditorId = editor.Id;
-                    }
-                }
+                UserId = series.EditorId.Value,
+                Content = $"Bộ truyện mới '{series.Title}' vừa được gửi yêu cầu phê duyệt bản thảo nháp.{editorNoteSuffix}",
+                Type = "Series_Pending_Review",
+                IsRead = false
+            };
+            await _notificationRepository.AddAsync(notifEditor);
+            await _unitOfWork.SaveChangesAsync();
 
-                if (series.EditorId.HasValue)
-                {
-                    _seriesRepository.Update(series);
-                }
-            }
-
-            // Gửi thông báo cho Editor
-            if (series.EditorId.HasValue)
+            var notifEditorPayload = new NotificationPayload
             {
-                var notifEditor = new Notification
-                {
-                    UserId = series.EditorId.Value,
-                    Content = $"Bộ truyện mới '{series.Title}' vừa được gửi yêu cầu phê duyệt bản thảo nháp.",
-                    Type = "Series_Pending_Review",
-                    IsRead = false
-                };
-                await _notificationRepository.AddAsync(notifEditor);
-                await _notificationPublisher.PublishNotificationAsync(series.EditorId.Value, notifEditor.Content, notifEditor.Type);
-            }
+                Id = notifEditor.Id,
+                Title = "Series mới chờ duyệt",
+                Message = notifEditor.Content,
+                Link = $"/editor/review/{series.Id}",
+                Type = "Series_Pending_Review",
+                CreateAt = notifEditor.CreateAt
+            };
+            await _notificationPublisher.PublishNotificationPayloadAsync(series.EditorId.Value, notifEditorPayload);
 
             // Gửi thông báo cho Mangaka
             var notifMangaka = new Notification
             {
                 UserId = mangakaId,
-                Content = $"Yêu cầu phê duyệt bộ truyện '{series.Title}' đã được gửi thành công.",
+                Content = $"Yêu cầu phê duyệt bộ truyện '{series.Title}' đã được gửi thành công tới biên tập viên {assignedEditor.FullName}.",
                 Type = "Series_Submitted",
                 IsRead = false
             };
             await _notificationRepository.AddAsync(notifMangaka);
-            await _notificationPublisher.PublishNotificationAsync(mangakaId, notifMangaka.Content, notifMangaka.Type);
-
             await _unitOfWork.SaveChangesAsync();
+
+            var notifMangakaPayload = new NotificationPayload
+            {
+                Id = notifMangaka.Id,
+                Title = "Đã gửi xét duyệt Series",
+                Message = notifMangaka.Content,
+                Link = $"/mangaka/series/{series.Id}",
+                Type = "Series_Submitted",
+                CreateAt = notifMangaka.CreateAt
+            };
+            await _notificationPublisher.PublishNotificationPayloadAsync(mangakaId, notifMangakaPayload);
         }
 
         public async System.Threading.Tasks.Task SetAbsenceStatusAsync(int mangakaId, bool onLeave)
@@ -535,9 +556,23 @@ namespace MangaPublishingSystem.Application.Services
             await _unitOfWork.SaveChangesAsync();
         }
 
+        public async Task<IEnumerable<SeriesReviewDto>> GetPendingReviewSeriesForEditorAsync(int editorId)
+        {
+            var pending = await _seriesRepository.FindAsync(s =>
+                s.EditorId == editorId && s.Status == "Pending_Approval");
+
+            var results = new List<SeriesReviewDto>();
+            foreach (var series in pending.OrderByDescending(s => s.CreateAt))
+            {
+                results.Add(await GetSeriesReviewAsync(series.Id));
+            }
+
+            return results;
+        }
+
         public async Task<IEnumerable<Series>> GetPendingBoardVoteSeriesAsync()
         {
             return await _seriesRepository.FindAsync(s => s.Status == "Pending_Board_Vote" || s.Status == "Pending_Approval");
         }
     }
-}
+}

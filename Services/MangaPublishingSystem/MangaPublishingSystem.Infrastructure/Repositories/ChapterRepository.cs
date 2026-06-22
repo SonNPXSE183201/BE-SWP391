@@ -17,10 +17,10 @@ namespace MangaPublishingSystem.Infrastructure.Repositories
             _dbContext = context;
         }
 
-        public async Task<IEnumerable<Chapter>> GetPendingReviewChaptersWithDetailsAsync()
+        public async Task<IEnumerable<Chapter>> GetPendingReviewChaptersWithDetailsAsync(int editorId)
         {
             return await _dbContext.Chapters
-                .Where(c => c.Status == "Pending_Review")
+                .Where(c => c.Status == "Pending_Review" && c.Series != null && c.Series.EditorId == editorId)
                 .Include(c => c.Series)
                     .ThenInclude(s => s.Mangaka)
                 .Include(c => c.Pages)

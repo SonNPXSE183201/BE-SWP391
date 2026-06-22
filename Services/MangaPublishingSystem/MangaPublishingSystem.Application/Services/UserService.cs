@@ -122,6 +122,8 @@ namespace MangaPublishingSystem.Application.Services
 
             try
             {
+                // Hỗ trợ dev/E2E khi SMTP chưa cấu hình — tương tự log OTP
+                Console.WriteLine($"\n>>> [DEBUG ACCOUNT] Tài khoản mới: {dto.UserName} / {dto.Email} — mật khẩu: {randomPassword}\n");
                 await _emailService.SendAccountInfoAsync(dto.Email, dto.UserName, randomPassword);
             }
             catch (Exception)

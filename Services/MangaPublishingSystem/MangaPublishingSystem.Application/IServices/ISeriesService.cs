@@ -17,6 +17,7 @@ namespace MangaPublishingSystem.Application.IServices
         System.Threading.Tasks.Task VoteSeriesAsync(int seriesId, int boardUserId, bool approved, string comment, decimal recommendedBudget);
         Task<Chapter> SubmitChapterAsync(int seriesId, int mangakaId, SubmitChapterDto dto);
         Task<SeriesReviewDto> GetSeriesReviewAsync(int seriesId);
+        Task<IEnumerable<SeriesReviewDto>> GetPendingReviewSeriesForEditorAsync(int editorId);
         System.Threading.Tasks.Task SubmitSeriesToBoardAsync(int seriesId, int editorId, SubmitToBoardDto dto);
         Task<IEnumerable<Series>> GetPendingBoardVoteSeriesAsync();
     }

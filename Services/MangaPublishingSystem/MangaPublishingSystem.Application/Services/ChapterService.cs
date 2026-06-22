@@ -177,9 +177,9 @@ namespace MangaPublishingSystem.Application.Services
             await _notificationPublisher.PublishNotificationPayloadAsync(series.MangakaId, notifPayload);
         }
 
-        public async Task<IEnumerable<Chapter>> GetPendingReviewChaptersAsync()
+        public async Task<IEnumerable<Chapter>> GetPendingReviewChaptersForEditorAsync(int editorId)
         {
-            return await _chapterRepository.GetPendingReviewChaptersWithDetailsAsync();
+            return await _chapterRepository.GetPendingReviewChaptersWithDetailsAsync(editorId);
         }
 
         public async System.Threading.Tasks.Task UpdateDeadlineAsync(int chapterId, DateTime deadline)

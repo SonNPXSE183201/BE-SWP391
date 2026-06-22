@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using BuildingBlocks.Exceptions;
 using MangaPublishingSystem.Domain.Entities;
+using MangaPublishingSystem.Domain.Enums;
 using MangaPublishingSystem.Application.IRepositories;
 using MangaPublishingSystem.Application.IServices;
 using MangaPublishingSystem.Application.DTOs.Notifications;
@@ -13,11 +14,15 @@ namespace MangaPublishingSystem.Application.Services
 {
     public class WalletService : GenericService<Wallet>, IWalletService
     {
+        private const int RoleIdSystemAdmin = 1;
+        private const int RoleIdAssistant = 5;
+
         private readonly IWalletRepository _walletRepository;
         private readonly ITransactionRepository _transactionRepository;
         private readonly ITasksRepository _tasksRepository;
         private readonly IUserRepository _userRepository;
         private readonly IVnPayService _vnPayService;
+        private readonly INotificationRepository _notificationRepository;
         private readonly INotificationPublisher _notificationPublisher;
         private readonly IDisputeLogRepository _disputeLogRepository;
         private readonly ITaskVersionRepository _taskVersionRepository;
@@ -31,6 +36,7 @@ namespace MangaPublishingSystem.Application.Services
             ITasksRepository tasksRepository,
             IUserRepository userRepository,
             IVnPayService vnPayService,
+            INotificationRepository notificationRepository,
             INotificationPublisher notificationPublisher,
             IDisputeLogRepository disputeLogRepository,
             ITaskVersionRepository taskVersionRepository,
@@ -43,6 +49,7 @@ namespace MangaPublishingSystem.Application.Services
             _tasksRepository = tasksRepository;
             _userRepository = userRepository;
             _vnPayService = vnPayService;
+            _notificationRepository = notificationRepository;
             _notificationPublisher = notificationPublisher;
             _disputeLogRepository = disputeLogRepository;
             _taskVersionRepository = taskVersionRepository;
@@ -131,16 +138,91 @@ namespace MangaPublishingSystem.Application.Services
                 var wallet = await _walletRepository.GetByIdAsync(transaction.WalletId);
                 if (wallet != null)
                 {
-                    await _notificationPublisher.PublishWalletUpdatedAsync(wallet.UserId, new WalletUpdatedPayload
-                    {
-                        WalletId = wallet.Id,
-                        SetupFundBalance = wallet.SetupFundBalance,
-                        WithdrawableBalance = wallet.WithdrawableBalance
-                    });
+                    await PublishWalletNotificationAsync(
+                        wallet.UserId,
+                        "Wallet_Deposit_Success",
+                        "Nạp tiền thành công",
+                        $"Bạn đã nạp thành công {transaction.Amount:N0} VND vào quỹ khả dụng. Mã GD: {referenceCode}.");
                 }
             }
 
             return transaction.Status == "Success";
+        }
+
+        private async System.Threading.Tasks.Task PublishWalletNotificationAsync(
+            int userId,
+            string type,
+            string title,
+            string content,
+            string? link = null)
+        {
+            var resolvedLink = link ?? await ResolveWalletLinkForUserAsync(userId);
+            var notif = new Notification
+            {
+                UserId = userId,
+                Content = content,
+                Type = type,
+                IsRead = false
+            };
+            await _notificationRepository.AddAsync(notif);
+            await _unitOfWork.SaveChangesAsync();
+
+            await _notificationPublisher.PublishNotificationPayloadAsync(userId, new NotificationPayload
+            {
+                Id = notif.Id,
+                Title = title,
+                Message = content,
+                Link = resolvedLink,
+                Type = type,
+                CreateAt = notif.CreateAt
+            });
+        }
+
+        private async Task<string> ResolveWalletLinkForUserAsync(int userId)
+        {
+            var user = await _userRepository.GetByIdAsync(userId);
+            return user?.RoleId == RoleIdAssistant ? "/assistant/wallet" : "/mangaka/wallet";
+        }
+
+        private async System.Threading.Tasks.Task NotifyAdminsOfPendingWithdrawalAsync(Transaction transaction)
+        {
+            var admins = await _userRepository.FindAsync(u =>
+                u.RoleId == RoleIdSystemAdmin && u.Status == UserStatus.Active);
+
+            if (!admins.Any())
+            {
+                return;
+            }
+
+            var requester = transaction.ToUserId.HasValue
+                ? await _userRepository.GetByIdAsync(transaction.ToUserId.Value)
+                : null;
+            var requesterName = requester?.FullName ?? requester?.UserName ?? "Người dùng";
+            var content =
+                $"{requesterName} vừa gửi yêu cầu rút {transaction.Amount:N0} VND. Vui lòng duyệt tại trang Duyệt rút tiền.";
+
+            foreach (var admin in admins)
+            {
+                var notif = new Notification
+                {
+                    UserId = admin.Id,
+                    Content = content,
+                    Type = "Wallet_Withdrawal_Admin_Pending",
+                    IsRead = false
+                };
+                await _notificationRepository.AddAsync(notif);
+                await _unitOfWork.SaveChangesAsync();
+
+                await _notificationPublisher.PublishNotificationPayloadAsync(admin.Id, new NotificationPayload
+                {
+                    Id = notif.Id,
+                    Title = "Yêu cầu rút tiền mới",
+                    Message = content,
+                    Link = "/admin/withdraw-approval",
+                    Type = "Wallet_Withdrawal_Admin_Pending",
+                    CreateAt = notif.CreateAt
+                });
+            }
         }
 
         /// <summary>
@@ -195,6 +277,14 @@ namespace MangaPublishingSystem.Application.Services
 
             await _transactionRepository.AddAsync(transaction);
             await _unitOfWork.SaveChangesAsync();
+
+            await PublishWalletNotificationAsync(
+                userId,
+                "Wallet_Withdrawal_Pending",
+                "Yêu cầu rút tiền đã gửi",
+                $"Yêu cầu rút {amount:N0} VND đã được gửi. Mã GD: {referenceCode}. Đang chờ Admin duyệt.");
+
+            await NotifyAdminsOfPendingWithdrawalAsync(transaction);
 
             await _notificationPublisher.PublishWalletUpdatedAsync(userId, new WalletUpdatedPayload
             {
@@ -252,6 +342,24 @@ namespace MangaPublishingSystem.Application.Services
             _walletRepository.Update(wallet);
             _transactionRepository.Update(transaction);
             await _unitOfWork.SaveChangesAsync();
+
+            if (isApproved)
+            {
+                await PublishWalletNotificationAsync(
+                    wallet.UserId,
+                    "Wallet_Withdrawal_Approve",
+                    "Yêu cầu rút tiền được duyệt",
+                    $"Yêu cầu rút {transaction.Amount:N0} VND (mã {transaction.ReferenceCode}) đã được Admin phê duyệt.");
+            }
+            else
+            {
+                var rejectNote = string.IsNullOrWhiteSpace(adminNote) ? string.Empty : $" Lý do: {adminNote}";
+                await PublishWalletNotificationAsync(
+                    wallet.UserId,
+                    "Wallet_Withdrawal_Reject",
+                    "Yêu cầu rút tiền bị từ chối",
+                    $"Yêu cầu rút {transaction.Amount:N0} VND (mã {transaction.ReferenceCode}) bị từ chối.{rejectNote} Số dư đã được hoàn lại.");
+            }
 
             await _notificationPublisher.PublishWalletUpdatedAsync(wallet.UserId, new WalletUpdatedPayload
             {

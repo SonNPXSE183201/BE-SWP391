@@ -162,6 +162,12 @@ namespace MangaPublishingSystem.Presentation.Controllers.Wallet
                     Message           = "Có lỗi xảy ra trong quá trình xử lý. Chữ ký không hợp lệ."
                 };
 
+                var invalidRedirect = BuildFrontendRedirectUrl(invalidResult);
+                if (!string.IsNullOrWhiteSpace(invalidRedirect))
+                {
+                    return Redirect(invalidRedirect);
+                }
+
                 return BadRequest(ApiResponse<VnpayPaymentResultDto>.Failure(400, "Chữ ký xác thực không hợp lệ."));
             }
 
@@ -205,6 +211,13 @@ namespace MangaPublishingSystem.Presentation.Controllers.Wallet
             {
                 finalResult.IsSuccess = false;
             }
+
+            var frontendRedirect = BuildFrontendRedirectUrl(result);
+            if (!string.IsNullOrWhiteSpace(frontendRedirect))
+            {
+                return Redirect(frontendRedirect);
+            }
+
             return Ok(finalResult);
         }
 
@@ -318,11 +331,28 @@ namespace MangaPublishingSystem.Presentation.Controllers.Wallet
                 FromUserFullName = t.FromUser?.FullName,
                 ToUserName = t.ToUser?.UserName,
                 ToUserFullName = t.ToUser?.FullName,
+                RequesterRole = MapRequesterRole(t),
                 BankName = t.BankName,
                 BankAccountNumber = t.BankAccountNumber,
                 BankAccountName = t.BankAccountName,
                 CreateAt = t.CreateAt,
                 UpdateAt = t.UpdateAt
+            };
+        }
+
+        private static string? MapRequesterRole(MangaPublishingSystem.Domain.Entities.Transaction t)
+        {
+            var roleName = t.ToUser?.Role?.RoleName
+                ?? t.FromUser?.Role?.RoleName
+                ?? t.Wallet?.User?.Role?.RoleName;
+
+            return roleName switch
+            {
+                "Tantou Editor" => "Editor",
+                "Editorial Board" => "Board",
+                "System Admin" => "Admin",
+                null or "" => null,
+                _ => roleName
             };
         }
 
