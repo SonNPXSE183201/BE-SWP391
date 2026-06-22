@@ -30,7 +30,6 @@ namespace MangaPublishingSystem.Infrastructure.Services
             {
                 await fileStream.CopyToAsync(destinationStream);
             }
-
             var request = _httpContextAccessor.HttpContext?.Request;
             var baseUrl = request != null ? $"{request.Scheme}://{request.Host}" : "http://localhost:5010";
             return $"{baseUrl}/uploads/{uniqueFileName}";
@@ -56,6 +55,7 @@ namespace MangaPublishingSystem.Infrastructure.Services
             {
                 // Bỏ qua lỗi
             }
+
             return Task.FromResult(false);
         }
     }

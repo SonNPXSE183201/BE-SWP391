@@ -222,4 +222,14 @@ Khi bạn (hoặc AI) cần tạo một API chức năng mới (Ví dụ: Tạo 
   * Bổ sung cột tự tham chiếu `AssignedEditorId` trong bảng `User` để liên kết Mangaka với Editor phụ trách.
   * Triển khai API `PUT /api/admin/users/{id}` hỗ trợ cập nhật thông tin người dùng và phân công Editor.
   * Tự động thiết lập `Series.EditorId` bằng `Mangaka.AssignedEditorId` khi tác giả thực hiện gửi duyệt truyện mới (`SubmitForReviewAsync`).
-
+* **Hệ thống Dashboard & Thống kê (`DashboardController`)**:
+  - API `GET /api/dashboard/admin` cung cấp báo cáo tổng quan dành riêng cho System Admin (Tổng truyện, User, Doanh thu).
+  - API `GET /api/dashboard/stats` lấy các chỉ số cá nhân (công việc, số dư ví) tùy theo Role (Mangaka, Assistant, Editor...).
+* **Hồ sơ & Mẫu vẽ Trợ lý (`Assistant Profile` & `Portfolio Samples`)**:
+  - Tích hợp tính năng quản lý hồ sơ kỹ năng trợ lý và CRUD các tác phẩm mẫu làm bằng chứng năng lực.
+* **Tương tác trên bản vẽ (Canvas Regions & Annotations)**:
+  - Cho phép Mangaka tùy chỉnh tọa độ khung tranh (`RegionsController`).
+  - Hỗ trợ mọi đối tượng thả ghim nhận xét, bắt lỗi trên bản vẽ với công cụ `AnnotationsController`.
+* **Cơ chế Đồng thuận Biểu quyết Hủy Truyện (Ranking Consensus)**:
+  - Áp dụng logic biểu quyết động (Majority Consensus) tại `POST /ranking/votes`.
+  - Tự động thanh lý hợp đồng (Cancelled), hoàn cọc (Escrow Refund) và cấp 24 giờ ân hạn (Emergency Grace Period) cho các trợ lý bị ảnh hưởng khi truyện bị đình bản.
