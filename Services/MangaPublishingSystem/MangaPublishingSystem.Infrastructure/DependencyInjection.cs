@@ -75,10 +75,16 @@ namespace MangaPublishingSystem.Infrastructure
 
             // Storage configuration & DI registration
             services.Configure<MinioSettings>(config.GetSection("StorageSettings:Minio"));
+            services.Configure<FirebaseSettings>(config.GetSection("StorageSettings:Firebase"));
+
             var storageProvider = config["StorageSettings:Provider"] ?? "Local";
             if (storageProvider.Equals("Minio", StringComparison.OrdinalIgnoreCase))
             {
                 services.AddScoped<IStorageService, MinioStorageService>();
+            }
+            else if (storageProvider.Equals("Firebase", StringComparison.OrdinalIgnoreCase))
+            {
+                services.AddScoped<IStorageService, FirebaseStorageService>();
             }
             else
             {

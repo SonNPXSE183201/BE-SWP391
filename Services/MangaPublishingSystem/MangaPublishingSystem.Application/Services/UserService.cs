@@ -60,6 +60,20 @@ namespace MangaPublishingSystem.Application.Services
                 }
             }
 
+            if (dto.AssignedEditorId.HasValue)
+            {
+                if (dto.RoleId != RoleIdMangaka)
+                {
+                    throw new BadRequestException("Chỉ được phép gán Biên tập viên phụ trách cho tài khoản Tác giả (Mangaka).");
+                }
+
+                var editor = await _userRepository.GetByIdWithDetailsAsync(dto.AssignedEditorId.Value);
+                if (editor == null || editor.Role?.RoleName != "Tantou Editor" || editor.Status != UserStatus.Active)
+                {
+                    throw new BadRequestException("Biên tập viên được gán không tồn tại hoặc không hoạt động.");
+                }
+            }
+
             var randomPassword = GenerateRandomPassword();
             var passwordHash = _passwordHasher.HashPassword(randomPassword);
 
@@ -73,7 +87,8 @@ namespace MangaPublishingSystem.Application.Services
                 PenName = dto.PenName,
                 PortfolioUrl = dto.PortfolioUrl,
                 Skills = dto.Skills,
-                Status = UserStatus.Active
+                Status = UserStatus.Active,
+                AssignedEditorId = dto.AssignedEditorId
             };
 
             await _unitOfWork.BeginTransactionAsync();
@@ -269,6 +284,8 @@ namespace MangaPublishingSystem.Application.Services
                 Status = user.Status.ToString(),
                 PenName = user.PenName,
                 IsOnLeave = user.IsOnLeave,
+                AssignedEditorId = user.AssignedEditorId,
+                AssignedEditorName = user.AssignedEditor?.FullName,
                 Message = message
             };
         }
@@ -296,7 +313,9 @@ namespace MangaPublishingSystem.Application.Services
                 FullName = user.FullName,
                 Role = MapRoleForFe(user.Role?.RoleName ?? string.Empty),
                 Status = user.Status.ToString(),
-                CreatedAt = user.CreateAt.ToUniversalTime().ToString("o")
+                CreatedAt = user.CreateAt.ToUniversalTime().ToString("o"),
+                AssignedEditorId = user.AssignedEditorId,
+                AssignedEditorName = user.AssignedEditor?.FullName
             };
         }
 
@@ -330,6 +349,64 @@ namespace MangaPublishingSystem.Application.Services
             }
 
             return tags.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
+        }
+
+        public async Task<UserResponseDto> UpdateUserByAdminAsync(int id, UpdateUserByAdminDto dto)
+        {
+            var user = await _userRepository.GetByIdWithDetailsAsync(id);
+            if (user == null)
+            {
+                throw new NotFoundException("Không tìm thấy người dùng trên hệ thống.");
+            }
+
+            if (!string.Equals(user.Email, dto.Email, StringComparison.OrdinalIgnoreCase))
+            {
+                if (await _userRepository.ExistsByEmailAsync(dto.Email))
+                {
+                    throw new ConflictException("Email đã tồn tại trên hệ thống.");
+                }
+            }
+
+            if (user.RoleId == RoleIdMangaka && !string.IsNullOrWhiteSpace(dto.PenName))
+            {
+                if (!string.Equals(user.PenName, dto.PenName, StringComparison.OrdinalIgnoreCase))
+                {
+                    if (await _userRepository.ExistsByPenNameAsync(dto.PenName))
+                    {
+                        throw new ConflictException("Bút danh đã tồn tại trên hệ thống.");
+                    }
+                }
+            }
+
+            if (dto.AssignedEditorId.HasValue)
+            {
+                if (user.RoleId != RoleIdMangaka)
+                {
+                    throw new BadRequestException("Chỉ được phép gán Biên tập viên phụ trách cho tài khoản Tác giả (Mangaka).");
+                }
+
+                var editor = await _userRepository.GetByIdWithDetailsAsync(dto.AssignedEditorId.Value);
+                if (editor == null || editor.Role?.RoleName != "Tantou Editor" || editor.Status != UserStatus.Active)
+                {
+                    throw new BadRequestException("Biên tập viên được gán không tồn tại hoặc không hoạt động.");
+                }
+            }
+
+            user.Email = dto.Email;
+            user.FullName = dto.FullName;
+            if (user.RoleId == RoleIdMangaka)
+            {
+                user.PenName = dto.PenName;
+                user.AssignedEditorId = dto.AssignedEditorId;
+            }
+            user.PortfolioUrl = dto.PortfolioUrl;
+            user.Skills = dto.Skills;
+
+            _userRepository.Update(user);
+            await _unitOfWork.SaveChangesAsync();
+
+            var updatedUser = await _userRepository.GetByIdWithDetailsAsync(user.Id);
+            return MapUserResponse(updatedUser!, "Cập nhật thông tin tài khoản thành công.");
         }
 
         private string GenerateRandomPassword()

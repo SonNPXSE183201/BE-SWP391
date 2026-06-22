@@ -64,11 +64,11 @@ namespace MangaPublishingSystem.Infrastructure.Services
                         margin-top:20px'>
 
                 <p>
-                    <strong>Tên đăng nhập:</strong> {userName}
+                    <strong>Tên đăng nhập:</strong> {System.Net.WebUtility.HtmlEncode(userName)}
                 </p>
 
                 <p>
-                    <strong>Mật khẩu:</strong> {password}
+                    <strong>Mật khẩu:</strong> {System.Net.WebUtility.HtmlEncode(password)}
                 </p>
 
             </div>

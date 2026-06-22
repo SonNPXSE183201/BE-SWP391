@@ -34,5 +34,30 @@ namespace MangaPublishingSystem.Presentation.Controllers.Regions
             };
             return Ok(ApiResponse<RegionDto>.Success(result, "Tạo phân vùng Canvas thành công."));
         }
+
+        [Authorize(Roles = "Mangaka")]
+        [HttpPut("{id}")]
+        public async Task<ActionResult<ApiResponse<RegionDto>>> UpdateRegion(int id, [FromBody] UpdateRegionDto updateDto)
+        {
+            var region = await _regionService.UpdateRegionAsync(id, updateDto);
+            var result = new RegionDto
+            {
+                Id = region.Id,
+                PageId = region.PageId,
+                Name = region.Name,
+                CoordinatesJson = region.CoordinatesJson,
+                CreateAt = region.CreateAt,
+                UpdateAt = region.UpdateAt
+            };
+            return Ok(ApiResponse<RegionDto>.Success(result, "Cập nhật phân vùng Canvas thành công."));
+        }
+
+        [Authorize(Roles = "Mangaka")]
+        [HttpDelete("{id}")]
+        public async Task<ActionResult<ApiResponse<object>>> DeleteRegion(int id)
+        {
+            await _regionService.DeleteRegionAsync(id);
+            return Ok(ApiResponse<object>.Success(null, "Xóa phân vùng Canvas thành công."));
+        }
     }
 }

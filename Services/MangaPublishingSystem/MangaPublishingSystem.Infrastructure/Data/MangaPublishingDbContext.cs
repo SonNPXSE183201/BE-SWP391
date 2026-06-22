@@ -36,6 +36,7 @@ namespace MangaPublishingSystem.Infrastructure.Data
         public virtual DbSet<DisputeLog> DisputeLogs { get; set; } = null!;
         public virtual DbSet<Annotation> Annotations { get; set; } = null!;
         public virtual DbSet<Report> Reports { get; set; } = null!;
+        public virtual DbSet<PortfolioSample> PortfolioSamples { get; set; } = null!;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

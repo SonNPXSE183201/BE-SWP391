@@ -30,12 +30,9 @@ namespace MangaPublishingSystem.Infrastructure.Services
             {
                 await fileStream.CopyToAsync(destinationStream);
             }
-
             var request = _httpContextAccessor.HttpContext?.Request;
-            var host = request?.Host.Value ?? "localhost:5010";
-            var scheme = request?.Scheme ?? "http";
-
-            return $"{scheme}://{host}/uploads/{uniqueFileName}";
+            var baseUrl = request != null ? $"{request.Scheme}://{request.Host}" : "http://localhost:5010";
+            return $"{baseUrl}/uploads/{uniqueFileName}";
         }
 
         public Task<bool> DeleteFileAsync(string fileUrl)

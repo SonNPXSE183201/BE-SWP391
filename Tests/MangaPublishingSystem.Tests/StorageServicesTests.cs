@@ -121,5 +121,15 @@ namespace MangaPublishingSystem.Tests
             Assert.Equal("manga-publishing", settings.BucketName);
             Assert.False(settings.Secure);
         }
+
+        [Fact]
+        public void FirebaseSettings_CanBeConfigured()
+        {
+            // Arrange & Act
+            var settings = new FirebaseSettings { Bucket = "my-bucket.appspot.com" };
+
+            // Assert
+            Assert.Equal("my-bucket.appspot.com", settings.Bucket);
+        }
     }
 }

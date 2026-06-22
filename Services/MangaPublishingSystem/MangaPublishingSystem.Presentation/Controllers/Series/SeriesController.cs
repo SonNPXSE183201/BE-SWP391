@@ -72,6 +72,16 @@ namespace MangaPublishingSystem.Presentation.Controllers.Series
         }
 
         [Authorize(Roles = "Mangaka")]
+        [HttpPut("{id}")]
+        public async Task<ActionResult<ApiResponse<SeriesDto>>> Update([FromRoute] int id, [FromBody] CreateSeriesDto updateDto)
+        {
+            await _seriesService.UpdateSeriesAsync(id, CurrentUserId, updateDto);
+            var series = await _seriesService.GetByIdAsync(id);
+            var result = MapToSeriesDto(series!);
+            return Ok(ApiResponse<SeriesDto>.Success(result, "Cập nhật hồ sơ bộ truyện thành công."));
+        }
+
+        [Authorize(Roles = "Mangaka")]
         [HttpPost("{id}/submit-review")]
         public async Task<ActionResult<ApiResponse<object>>> SubmitForReview([FromRoute] int id, [FromBody] SubmitSeriesReviewDto submitDto)
         {

@@ -85,5 +85,12 @@ namespace MangaPublishingSystem.Presentation.Controllers.Admin
             var result = await _userService.UnlockUserAsync(id);
             return Ok(ApiResponse<UserResponseDto>.Success(result, result.Message ?? "Mở khóa tài khoản thành công."));
         }
+
+        [HttpPut("{id}")]
+        public async Task<ActionResult<ApiResponse<UserResponseDto>>> Update(int id, [FromBody] UpdateUserByAdminDto dto)
+        {
+            var result = await _userService.UpdateUserByAdminAsync(id, dto);
+            return Ok(ApiResponse<UserResponseDto>.Success(result, result.Message ?? "Cập nhật tài khoản thành công."));
+        }
     }
 }

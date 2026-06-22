@@ -29,6 +29,7 @@ SET QUOTED_IDENTIFIER ON;
 GO
 
 -- Drop existing tables in reverse dependency order to avoid constraints conflicts
+IF OBJECT_ID('dbo.PortfolioSample', 'U') IS NOT NULL DROP TABLE dbo.PortfolioSample;
 IF OBJECT_ID('dbo.Report', 'U') IS NOT NULL DROP TABLE dbo.Report;
 IF OBJECT_ID('dbo.Annotation', 'U') IS NOT NULL DROP TABLE dbo.Annotation;
 IF OBJECT_ID('dbo.DisputeLog', 'U') IS NOT NULL DROP TABLE dbo.DisputeLog;
@@ -79,10 +80,12 @@ CREATE TABLE dbo.[User] (
     PortfolioUrl NVARCHAR(500) NULL,
     Skills NVARCHAR(500) NULL,
     IsOnLeave BIT NOT NULL CONSTRAINT DF_User_IsOnLeave DEFAULT 0,
+    AssignedEditorId INT NULL,
     CreateAt DATETIME2 NOT NULL CONSTRAINT DF_User_CreateAt DEFAULT GETUTCDATE(),
     UpdateAt DATETIME2 NULL,
     CONSTRAINT PK_User PRIMARY KEY CLUSTERED (UserId),
     CONSTRAINT FK_User_Role FOREIGN KEY (RoleId) REFERENCES dbo.Role (RoleId),
+    CONSTRAINT FK_User_AssignedEditor FOREIGN KEY (AssignedEditorId) REFERENCES dbo.[User] (UserId) ON DELETE NO ACTION,
     CONSTRAINT UQ_User_UserName UNIQUE (UserName),
     CONSTRAINT UQ_User_Email UNIQUE (Email),
     CONSTRAINT CK_User_Status CHECK (Status IN (N'Pending', N'Active', N'Rejected', N'Locked'))
@@ -438,9 +441,26 @@ CREATE TABLE dbo.Report (
 GO
 
 -- =========================================================================
+-- 19b. TABLE: PortfolioSample
+-- =========================================================================
+CREATE TABLE dbo.PortfolioSample (
+    SampleId INT IDENTITY(1,1) NOT NULL,
+    AssistantId INT NOT NULL,
+    Title NVARCHAR(200) NOT NULL,
+    ImageUrl NVARCHAR(500) NOT NULL,
+    Category NVARCHAR(100) NOT NULL,
+    CreateAt DATETIME2 NOT NULL CONSTRAINT DF_PortfolioSample_CreateAt DEFAULT GETUTCDATE(),
+    UpdateAt DATETIME2 NULL,
+    CONSTRAINT PK_PortfolioSample PRIMARY KEY CLUSTERED (SampleId),
+    CONSTRAINT FK_PortfolioSample_Assistant FOREIGN KEY (AssistantId) REFERENCES dbo.[User] (UserId) ON DELETE CASCADE
+);
+GO
+
+-- =========================================================================
 -- INDEX DEFINITIONS FOR PERFORMANCE OPTIMIZATION
 -- =========================================================================
 CREATE INDEX IX_User_RoleId ON dbo.[User] (RoleId);
+CREATE INDEX IX_User_AssignedEditorId ON dbo.[User] (AssignedEditorId);
 CREATE INDEX IX_Wallet_UserId ON dbo.Wallet (UserId);
 CREATE INDEX IX_Transaction_WalletId ON dbo.[Transaction] (WalletId);
 CREATE INDEX IX_Transaction_FromUserId ON dbo.[Transaction] (FromUserId);
@@ -471,6 +491,7 @@ CREATE INDEX IX_Report_ReporterId ON dbo.Report (ReporterId);
 CREATE INDEX IX_Report_ReportedUserId ON dbo.Report (ReportedUserId);
 CREATE INDEX IX_RefreshToken_UserId ON dbo.RefreshToken (UserId);
 CREATE INDEX IX_RefreshToken_Token ON dbo.RefreshToken (Token);
+CREATE INDEX IX_PortfolioSample_AssistantId ON dbo.PortfolioSample (AssistantId);
 GO
 
 PRINT 'Database MangaPublishing schema initialized successfully with unified audit columns (CreateAt/UpdateAt).';

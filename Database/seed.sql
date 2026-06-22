@@ -20,6 +20,7 @@ PRINT 'Resetting existing data in all tables...';
 EXEC sp_MSforeachtable "ALTER TABLE ? NOCHECK CONSTRAINT all";
 
 -- Clean all tables
+DELETE FROM dbo.PortfolioSample;
 DELETE FROM dbo.Report;
 DELETE FROM dbo.Annotation;
 DELETE FROM dbo.DisputeLog;
@@ -46,6 +47,7 @@ EXEC sp_MSforeachtable "ALTER TABLE ? WITH CHECK CHECK CONSTRAINT all";
 GO
 
 -- Reset identity column seeds
+DBCC CHECKIDENT ('dbo.PortfolioSample', RESEED, 0);
 DBCC CHECKIDENT ('dbo.Report', RESEED, 0);
 DBCC CHECKIDENT ('dbo.Annotation', RESEED, 0);
 DBCC CHECKIDENT ('dbo.DisputeLog', RESEED, 0);
@@ -87,18 +89,18 @@ GO
 
 -- 2. Insert Vietnamese Users (BCrypt Password Hash of '12345')
 SET IDENTITY_INSERT dbo.[User] ON;
-INSERT INTO dbo.[User] (UserId, RoleId, UserName, PasswordHash, Email, FullName, Status, CreateAt, PenName, PortfolioUrl, Skills) VALUES
-(1, 1, 'admin', N'$2a$11$MYGlbol73VYbWKwQNlBWeue7YregoBRkXJg2Kji/OOsDL3xrnKeK6', 'admin@mangapublishing.com', N'Nguyễn Văn Admin', N'Active', GETUTCDATE(), NULL, NULL, NULL),
-(2, 2, 'editor1', N'$2a$11$MYGlbol73VYbWKwQNlBWeue7YregoBRkXJg2Kji/OOsDL3xrnKeK6', 'editor.tran@mangapublishing.com', N'Trần Thị Biên Tập', N'Active', GETUTCDATE(), NULL, NULL, NULL),
-(3, 3, 'board1', N'$2a$11$MYGlbol73VYbWKwQNlBWeue7YregoBRkXJg2Kji/OOsDL3xrnKeK6', 'board.le@mangapublishing.com', N'Lê Văn Hội Đồng', N'Active', GETUTCDATE(), NULL, NULL, NULL),
-(4, 4, 'mangaka1', N'$2a$11$MYGlbol73VYbWKwQNlBWeue7YregoBRkXJg2Kji/OOsDL3xrnKeK6', 'mangaka.nam@gmail.com', N'Phan Hoàng Nam', N'Active', GETUTCDATE(), N'NamArt', NULL, NULL),
-(5, 5, 'assistant1', N'$2a$11$MYGlbol73VYbWKwQNlBWeue7YregoBRkXJg2Kji/OOsDL3xrnKeK6', 'assistant.son@gmail.com', N'Nguyễn Sơn', N'Active', GETUTCDATE(), NULL, N'https://portfolio.nguyenson.com', N'Vẽ nền, Đi nét, Tô màu'),
-(6, 5, 'assistant_pending', N'$2a$11$MYGlbol73VYbWKwQNlBWeue7YregoBRkXJg2Kji/OOsDL3xrnKeK6', 'assistant.pending@gmail.com', N'Nguyễn Văn Chờ Duyệt', N'Pending', GETUTCDATE(), NULL, N'https://portfolio.com/pending', N'Coloring, Lineart'),
-(7, 3, 'board2', N'$2a$11$MYGlbol73VYbWKwQNlBWeue7YregoBRkXJg2Kji/OOsDL3xrnKeK6', 'board2@mangapublishing.com', N'Nguyễn Văn Hội Đồng 2', N'Active', GETUTCDATE(), NULL, NULL, NULL),
-(8, 3, 'board3', N'$2a$11$MYGlbol73VYbWKwQNlBWeue7YregoBRkXJg2Kji/OOsDL3xrnKeK6', 'board3@mangapublishing.com', N'Trần Thị Hội Đồng 3', N'Active', GETUTCDATE(), NULL, NULL, NULL),
-(9, 3, 'board4', N'$2a$11$MYGlbol73VYbWKwQNlBWeue7YregoBRkXJg2Kji/OOsDL3xrnKeK6', 'board4@mangapublishing.com', N'Lê Thị Hội Đồng 4', N'Active', GETUTCDATE(), NULL, NULL, NULL),
-(10, 3, 'board5', N'$2a$11$MYGlbol73VYbWKwQNlBWeue7YregoBRkXJg2Kji/OOsDL3xrnKeK6', 'board5@mangapublishing.com', N'Phạm Văn Hội Đồng 5', N'Active', GETUTCDATE(), NULL, NULL, NULL),
-(11, 3, 'board6', N'$2a$11$MYGlbol73VYbWKwQNlBWeue7YregoBRkXJg2Kji/OOsDL3xrnKeK6', 'board6@mangapublishing.com', N'Vũ Văn Hội Đồng 6', N'Active', GETUTCDATE(), NULL, NULL, NULL);
+INSERT INTO dbo.[User] (UserId, RoleId, UserName, PasswordHash, Email, FullName, Status, CreateAt, PenName, PortfolioUrl, Skills, AssignedEditorId) VALUES
+(1, 1, 'admin', N'$2a$11$MYGlbol73VYbWKwQNlBWeue7YregoBRkXJg2Kji/OOsDL3xrnKeK6', 'admin@mangapublishing.com', N'Nguyễn Văn Admin', N'Active', GETUTCDATE(), NULL, NULL, NULL, NULL),
+(2, 2, 'editor1', N'$2a$11$MYGlbol73VYbWKwQNlBWeue7YregoBRkXJg2Kji/OOsDL3xrnKeK6', 'editor.tran@mangapublishing.com', N'Trần Thị Biên Tập', N'Active', GETUTCDATE(), NULL, NULL, NULL, NULL),
+(3, 3, 'board1', N'$2a$11$MYGlbol73VYbWKwQNlBWeue7YregoBRkXJg2Kji/OOsDL3xrnKeK6', 'board.le@mangapublishing.com', N'Lê Văn Hội Đồng', N'Active', GETUTCDATE(), NULL, NULL, NULL, NULL),
+(4, 4, 'mangaka1', N'$2a$11$MYGlbol73VYbWKwQNlBWeue7YregoBRkXJg2Kji/OOsDL3xrnKeK6', 'mangaka.nam@gmail.com', N'Phan Hoàng Nam', N'Active', GETUTCDATE(), N'NamArt', NULL, NULL, 2),
+(5, 5, 'assistant1', N'$2a$11$MYGlbol73VYbWKwQNlBWeue7YregoBRkXJg2Kji/OOsDL3xrnKeK6', 'assistant.son@gmail.com', N'Nguyễn Sơn', N'Active', GETUTCDATE(), NULL, N'https://portfolio.nguyenson.com', N'Vẽ nền, Đi nét, Tô màu', NULL),
+(6, 5, 'assistant_pending', N'$2a$11$MYGlbol73VYbWKwQNlBWeue7YregoBRkXJg2Kji/OOsDL3xrnKeK6', 'assistant.pending@gmail.com', N'Nguyễn Văn Chờ Duyệt', N'Pending', GETUTCDATE(), NULL, N'https://portfolio.com/pending', N'Coloring, Lineart', NULL),
+(7, 3, 'board2', N'$2a$11$MYGlbol73VYbWKwQNlBWeue7YregoBRkXJg2Kji/OOsDL3xrnKeK6', 'board2@mangapublishing.com', N'Nguyễn Văn Hội Đồng 2', N'Active', GETUTCDATE(), NULL, NULL, NULL, NULL),
+(8, 3, 'board3', N'$2a$11$MYGlbol73VYbWKwQNlBWeue7YregoBRkXJg2Kji/OOsDL3xrnKeK6', 'board3@mangapublishing.com', N'Trần Thị Hội Đồng 3', N'Active', GETUTCDATE(), NULL, NULL, NULL, NULL),
+(9, 3, 'board4', N'$2a$11$MYGlbol73VYbWKwQNlBWeue7YregoBRkXJg2Kji/OOsDL3xrnKeK6', 'board4@mangapublishing.com', N'Lê Thị Hội Đồng 4', N'Active', GETUTCDATE(), NULL, NULL, NULL, NULL),
+(10, 3, 'board5', N'$2a$11$MYGlbol73VYbWKwQNlBWeue7YregoBRkXJg2Kji/OOsDL3xrnKeK6', 'board5@mangapublishing.com', N'Phạm Văn Hội Đồng 5', N'Active', GETUTCDATE(), NULL, NULL, NULL, NULL),
+(11, 3, 'board6', N'$2a$11$MYGlbol73VYbWKwQNlBWeue7YregoBRkXJg2Kji/OOsDL3xrnKeK6', 'board6@mangapublishing.com', N'Vũ Văn Hội Đồng 6', N'Active', GETUTCDATE(), NULL, NULL, NULL, NULL);
 SET IDENTITY_INSERT dbo.[User] OFF;
 GO
 
@@ -225,6 +227,14 @@ INSERT INTO dbo.Notification (NotId, UserId, Content, Type, IsRead, CreateAt) VA
 (1, 4, N'Bộ truyện Học Viện Siêu Nhiên đã nhận được 1 phiếu biểu quyết từ Hội đồng biên tập.', N'SeriesVote', 0, GETUTCDATE()),
 (2, 5, N'Bạn được giao nhiệm vụ mới: Vẽ nền phòng học có bàn ghế và cửa sổ lớn.', N'TaskAssigned', 0, GETUTCDATE());
 SET IDENTITY_INSERT dbo.Notification OFF;
+GO
+
+-- 15. Insert Portfolio Samples
+SET IDENTITY_INSERT dbo.PortfolioSample ON;
+INSERT INTO dbo.PortfolioSample (SampleId, AssistantId, Title, ImageUrl, Category) VALUES
+(1, 5, N'Thiết kế nền thành phố cổ', N'https://storage.mangapublishing.com/portfolios/son-bg1.png', N'Background'),
+(2, 5, N'Đi nét nhân vật chính', N'https://storage.mangapublishing.com/portfolios/son-line1.png', N'Lineart');
+SET IDENTITY_INSERT dbo.PortfolioSample OFF;
 GO
 
 PRINT 'Mock data seeded successfully with password ''12345'' for all users.';

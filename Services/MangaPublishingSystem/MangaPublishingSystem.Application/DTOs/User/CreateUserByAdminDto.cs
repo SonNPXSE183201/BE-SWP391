@@ -33,5 +33,6 @@ namespace MangaPublishingSystem.Application.DTOs.User
         }
         public string? PortfolioUrl { get; set; }
         public string? Skills { get; set; }
+        public int? AssignedEditorId { get; set; }
     }
 }
