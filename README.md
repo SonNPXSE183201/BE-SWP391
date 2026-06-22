@@ -218,3 +218,8 @@ Khi bạn (hoặc AI) cần tạo một API chức năng mới (Ví dụ: Tạo 
 * **Quản lý Tranh chấp (Disputes)**: Bổ sung các DTO và API hiển thị danh sách (`GET /api/disputes`) cùng chi tiết bằng chứng tranh chấp (`GET /api/disputes/{taskId}`), giúp Editor xử lý khiếu nại dễ dàng.
 * **Tối ưu hóa (Performance)**: Áp dụng cơ chế **Eager Loading** (`Include`, `ThenInclude`) tại `ChapterRepository` (phương thức `GetPendingReviewChaptersWithDetailsAsync` và `GetChapterWithDetailsByIdAsync`) để giảm thiểu truy vấn N+1 khi hiển thị dữ liệu có tính liên kết phức tạp.
 * **An toàn dữ liệu (ACID Transaction)**: Chức năng Khởi tạo Task (`CreateTaskAsync`) được bọc trong giao dịch cơ sở dữ liệu (`BeginTransactionAsync`), đảm bảo thao tác trừ tiền ký quỹ (Escrow) và gửi thông báo luôn đồng bộ, tự động Rollback nếu có lỗi xảy ra.
+* **Tính năng phân công Editor cho Mangaka (Phương án 3)**:
+  * Bổ sung cột tự tham chiếu `AssignedEditorId` trong bảng `User` để liên kết Mangaka với Editor phụ trách.
+  * Triển khai API `PUT /api/admin/users/{id}` hỗ trợ cập nhật thông tin người dùng và phân công Editor.
+  * Tự động thiết lập `Series.EditorId` bằng `Mangaka.AssignedEditorId` khi tác giả thực hiện gửi duyệt truyện mới (`SubmitForReviewAsync`).
+
