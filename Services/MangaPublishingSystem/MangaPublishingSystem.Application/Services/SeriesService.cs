@@ -93,14 +93,26 @@ namespace MangaPublishingSystem.Application.Services
             series.Status = "Pending_Approval";
             _seriesRepository.Update(series);
 
-            // Tự động phân công Biên tập viên (Editor) đầu tiên nếu chưa có
+            // Tự động phân công Biên tập viên (Editor) từ thông tin Mangaka
             if (!series.EditorId.HasValue)
             {
-                var editors = await _userRepository.FindAsync(u => u.Role.RoleName == "Tantou Editor" && u.Status == UserStatus.Active);
-                var editor = editors.FirstOrDefault();
-                if (editor != null)
+                var mangaka = await _userRepository.GetByIdAsync(mangakaId);
+                if (mangaka != null && mangaka.AssignedEditorId.HasValue)
                 {
-                    series.EditorId = editor.Id;
+                    series.EditorId = mangaka.AssignedEditorId.Value;
+                }
+                else
+                {
+                    var editors = await _userRepository.FindAsync(u => u.Role.RoleName == "Tantou Editor" && u.Status == UserStatus.Active);
+                    var editor = editors.FirstOrDefault();
+                    if (editor != null)
+                    {
+                        series.EditorId = editor.Id;
+                    }
+                }
+
+                if (series.EditorId.HasValue)
+                {
                     _seriesRepository.Update(series);
                 }
             }
