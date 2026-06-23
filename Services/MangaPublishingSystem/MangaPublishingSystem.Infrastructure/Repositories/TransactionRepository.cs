@@ -28,10 +28,11 @@ namespace MangaPublishingSystem.Infrastructure.Repositories
         public async Task<List<Transaction>> GetPaymentTransactionsAsync(DateTime? from, DateTime? to, string? referenceCode)
         {
             var query = _context.Transactions
-                .Include(t => t.ToUser)
-                .Include(t => t.FromUser)
+                .Include(t => t.ToUser).ThenInclude(u => u!.Role)
+                .Include(t => t.FromUser).ThenInclude(u => u!.Role)
                 .Include(t => t.Wallet)
                     .ThenInclude(w => w!.User)
+                    .ThenInclude(u => u!.Role)
                 .Where(t => t.Type == "Deposit" || t.Type == "Withdrawal")
                 .AsQueryable();
 
@@ -59,9 +60,9 @@ namespace MangaPublishingSystem.Infrastructure.Repositories
         public async Task<IEnumerable<Transaction>> GetPendingWithdrawalsAsync()
         {
             return await _context.Transactions
-                .Include(t => t.Wallet)
-                .Include(t => t.FromUser)
-                .Include(t => t.ToUser)
+                .Include(t => t.Wallet).ThenInclude(w => w.User).ThenInclude(u => u.Role)
+                .Include(t => t.FromUser).ThenInclude(u => u!.Role)
+                .Include(t => t.ToUser).ThenInclude(u => u!.Role)
                 .Where(t => t.Type == "Withdrawal" && t.Status == "Pending")
                 .OrderByDescending(t => t.CreateAt)
                 .ToListAsync();

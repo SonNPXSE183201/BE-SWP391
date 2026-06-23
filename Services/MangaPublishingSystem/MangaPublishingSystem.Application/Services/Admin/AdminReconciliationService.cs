@@ -69,6 +69,7 @@ namespace MangaPublishingSystem.Application.Services.Admin
                 InternalStatus = internalStatus,
                 Status = reconciliationStatus,
                 UserName = userName,
+                UserRole = MapUserRole(tx),
                 Description = tx.Type == "Deposit" ? "Nạp tiền vào ví — Deposit" : "Rút tiền — Withdrawal",
                 DiscrepancyNote = reconciliationStatus switch
                 {
@@ -86,6 +87,22 @@ namespace MangaPublishingSystem.Application.Services.Admin
                 "Success" => "Completed",
                 "Failed" => "Failed",
                 _ => status
+            };
+        }
+
+        private static string? MapUserRole(Domain.Entities.Transaction tx)
+        {
+            var roleName = tx.ToUser?.Role?.RoleName
+                ?? tx.FromUser?.Role?.RoleName
+                ?? tx.Wallet?.User?.Role?.RoleName;
+
+            return roleName switch
+            {
+                "Tantou Editor" => "Editor",
+                "Editorial Board" => "Board",
+                "System Admin" => "Admin",
+                null or "" => null,
+                _ => roleName
             };
         }
 

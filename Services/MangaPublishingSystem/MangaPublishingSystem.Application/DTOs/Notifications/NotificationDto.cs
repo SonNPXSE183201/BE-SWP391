@@ -24,6 +24,9 @@ namespace MangaPublishingSystem.Application.DTOs.Notifications
             "Task_Cancelled" => "Nhiệm vụ đã bị hủy",
             "Wallet_Withdrawal_Approve" => "Yêu cầu rút tiền được duyệt",
             "Wallet_Withdrawal_Reject" => "Yêu cầu rút tiền bị từ chối",
+            "Wallet_Withdrawal_Pending" => "Yêu cầu rút tiền đã gửi",
+            "Wallet_Withdrawal_Admin_Pending" => "Yêu cầu rút tiền mới",
+            "Wallet_Deposit_Success" => "Nạp tiền thành công",
             "Series_Submitted" => "Hồ sơ truyện mới được nộp",
             "Series_Approved" => "Hồ sơ truyện được phê duyệt",
             "Series_Rejected" => "Hồ sơ truyện bị từ chối",
@@ -33,7 +36,8 @@ namespace MangaPublishingSystem.Application.DTOs.Notifications
         public string? Link => Type switch
         {
             var t when t.StartsWith("Task") => "/tasks",
-            var t when t.StartsWith("Wallet") => "/wallet",
+            "Wallet_Withdrawal_Admin_Pending" => "/admin/withdraw-approval",
+            var t when t.StartsWith("Wallet") => "/mangaka/wallet",
             var t when t.StartsWith("Series") => "/series",
             _ => null
         };

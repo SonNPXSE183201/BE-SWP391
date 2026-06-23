@@ -6,6 +6,7 @@ using BuildingBlocks.Exceptions;
 using MangaPublishingSystem.Application.Common.Security;
 using MangaPublishingSystem.Application.Common.Templates;
 using MangaPublishingSystem.Application.DTOs.Auth;
+using MangaPublishingSystem.Application.DTOs.Notifications;
 using MangaPublishingSystem.Application.IRepositories;
 using MangaPublishingSystem.Application.IServices;
 using MangaPublishingSystem.Application.IServices.Auth;
@@ -16,6 +17,8 @@ namespace MangaPublishingSystem.Application.Services.Auth
 {
     public class AuthService : IAuthService
     {
+        private const int RoleIdSystemAdmin = 1;
+
         private readonly IUserRepository _userRepository;
         private readonly IRoleRepository _roleRepository;
         private readonly IPasswordHasher _passwordHasher;
@@ -24,6 +27,8 @@ namespace MangaPublishingSystem.Application.Services.Auth
         private readonly IUnitOfWork _unitOfWork;
         private readonly IOtpService _otpService;
         private readonly IRefreshTokenRepository _refreshTokenRepository;
+        private readonly INotificationRepository _notificationRepository;
+        private readonly INotificationPublisher _notificationPublisher;
 
         public AuthService(
             IUserRepository userRepository,
@@ -33,7 +38,9 @@ namespace MangaPublishingSystem.Application.Services.Auth
             IEmailService emailService,
             IUnitOfWork unitOfWork,
             IOtpService otpService,
-            IRefreshTokenRepository refreshTokenRepository)
+            IRefreshTokenRepository refreshTokenRepository,
+            INotificationRepository notificationRepository,
+            INotificationPublisher notificationPublisher)
         {
             _userRepository = userRepository;
             _roleRepository = roleRepository;
@@ -43,6 +50,8 @@ namespace MangaPublishingSystem.Application.Services.Auth
             _unitOfWork = unitOfWork;
             _otpService = otpService;
             _refreshTokenRepository = refreshTokenRepository;
+            _notificationRepository = notificationRepository;
+            _notificationPublisher = notificationPublisher;
         }
 
         public async Task<AuthResponseDto> LoginAsync(LoginDto loginDto)
@@ -193,11 +202,50 @@ namespace MangaPublishingSystem.Application.Services.Auth
                 // Chỉ ghi nhận cảnh báo gửi mail lỗi, không hủy giao dịch lưu DB vì tài khoản đã tạo hợp lệ
             }
 
+            try
+            {
+                await NotifyAdminsOfPendingAssistantAsync(user);
+            }
+            catch (Exception)
+            {
+                // Không hủy đăng ký nếu gửi thông báo realtime thất bại
+            }
+
             return new RegisterResponseDto
             {
                 RequiresVerification = false,
                 Message = "Đăng ký tài khoản trợ lý thành công. Vui lòng chờ phê duyệt từ quản trị viên."
             };
+        }
+
+        private async Task NotifyAdminsOfPendingAssistantAsync(User user)
+        {
+            var admins = await _userRepository.FindAsync(u =>
+                u.RoleId == RoleIdSystemAdmin && u.Status == UserStatus.Active);
+
+            foreach (var admin in admins)
+            {
+                var notif = new Notification
+                {
+                    UserId = admin.Id,
+                    Content = $"Trợ lý mới '{user.FullName}' ({user.UserName}) vừa đăng ký và đang chờ phê duyệt.",
+                    Type = "SystemAlert",
+                    IsRead = false
+                };
+                await _notificationRepository.AddAsync(notif);
+                await _unitOfWork.SaveChangesAsync();
+
+                var notifPayload = new NotificationPayload
+                {
+                    Id = notif.Id,
+                    Title = "Đăng ký Trợ lý mới",
+                    Message = notif.Content,
+                    Link = "/admin/users",
+                    Type = "SystemAlert",
+                    CreateAt = notif.CreateAt
+                };
+                await _notificationPublisher.PublishNotificationPayloadAsync(admin.Id, notifPayload);
+            }
         }
 
         public async Task ChangePasswordAsync(int userId, ChangePasswordDto changePasswordDto)

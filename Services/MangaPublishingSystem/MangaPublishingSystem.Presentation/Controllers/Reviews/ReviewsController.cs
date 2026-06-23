@@ -26,10 +26,11 @@ namespace MangaPublishingSystem.Presentation.Controllers.Reviews
             _seriesService = seriesService;
         }
 
+        [Authorize(Roles = "Tantou Editor")]
         [HttpGet("chapters")]
         public async Task<ActionResult<ApiResponse<IEnumerable<Chapter>>>> GetPendingChapters([FromQuery] string? status)
         {
-            var chapters = await _chapterService.GetPendingReviewChaptersAsync();
+            var chapters = await _chapterService.GetPendingReviewChaptersForEditorAsync(CurrentUserId);
             return Ok(ApiResponse<IEnumerable<Chapter>>.Success(chapters, "Lấy danh sách chapter chờ duyệt thành công."));
         }
 
@@ -63,6 +64,14 @@ namespace MangaPublishingSystem.Presentation.Controllers.Reviews
         {
             await _chapterService.RejectChapterAsync(chapterId, CurrentUserId, dto);
             return Ok(ApiResponse<object>.Success(null, "Từ chối chapter thành công."));
+        }
+
+        [Authorize(Roles = "Tantou Editor")]
+        [HttpGet("series/pending")]
+        public async Task<ActionResult<ApiResponse<IEnumerable<SeriesReviewDto>>>> GetPendingSeriesForEditor()
+        {
+            var result = await _seriesService.GetPendingReviewSeriesForEditorAsync(CurrentUserId);
+            return Ok(ApiResponse<IEnumerable<SeriesReviewDto>>.Success(result, "Lấy danh sách series chờ duyệt thành công."));
         }
 
         [HttpGet("series/{id}")]

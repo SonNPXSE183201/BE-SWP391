@@ -40,6 +40,9 @@ namespace MangaPublishingSystem.Application.DTOs.Admin
         [JsonPropertyName("userName")]
         public string UserName { get; set; } = null!;
 
+        [JsonPropertyName("userRole")]
+        public string? UserRole { get; set; }
+
         [JsonPropertyName("description")]
         public string Description { get; set; } = null!;
 

@@ -6,7 +6,7 @@ namespace MangaPublishingSystem.Application.IRepositories
 {
     public interface IChapterRepository : IGenericRepository<Chapter>
     {
-        Task<IEnumerable<Chapter>> GetPendingReviewChaptersWithDetailsAsync();
+        Task<IEnumerable<Chapter>> GetPendingReviewChaptersWithDetailsAsync(int editorId);
         Task<Chapter?> GetChapterWithDetailsByIdAsync(int id);
     }
 }
