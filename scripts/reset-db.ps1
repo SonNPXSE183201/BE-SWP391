@@ -1,16 +1,19 @@
-$connString = "Server=.;Database=MangaPublishing;User Id=sa;Password=12345;TrustServerCertificate=True;Encrypt=False"
-$sqlFile = Join-Path (Get-Item -Path $PSScriptRoot).Parent.FullName "Database\seed.sql"
-$sqlText = Get-Content -Raw -Path $sqlFile
+$connStringMaster = "Server=.;User Id=sa;Password=12345;TrustServerCertificate=True;Encrypt=False"
+$connStringDb = "Server=.;Database=MangaPublishing;User Id=sa;Password=12345;TrustServerCertificate=True;Encrypt=False"
 
-# Phân tách script theo từ khóa GO (đứng độc lập trên một dòng)
-$batches = $sqlText -split "(?m)^\s*GO\s*$"
+$basePath = (Get-Item -Path $PSScriptRoot).Parent.FullName
+$schemaFile = Join-Path $basePath "Database\schema.sql"
+$seedFile = Join-Path $basePath "Database\seed.sql"
 
-$connection = New-Object System.Data.SqlClient.SqlConnection($connString)
+# 1. Run schema.sql (uses master to drop/recreate db)
+$schemaText = Get-Content -Raw -Path $schemaFile
+$schemaBatches = $schemaText -split "(?m)^\s*GO\s*$"
+
+$connection = New-Object System.Data.SqlClient.SqlConnection($connStringMaster)
 try {
     $connection.Open()
-    Write-Host "Đang kết nối tới database..."
-    
-    foreach ($batch in $batches) {
+    Write-Host "Đang tạo lại database schema..."
+    foreach ($batch in $schemaBatches) {
         $trimmedBatch = $batch.Trim()
         if (-not [string]::IsNullOrWhiteSpace($trimmedBatch)) {
             $command = $connection.CreateCommand()
@@ -18,10 +21,37 @@ try {
             $command.ExecuteNonQuery() > $null
         }
     }
-    Write-Host "Reset và seed dữ liệu database thành công!" -ForegroundColor Green
+    Write-Host "Tạo database schema thành công!" -ForegroundColor Green
 }
 catch {
-    Write-Error $_.Exception.Message
+    Write-Error "Lỗi khi tạo schema: $_"
+}
+finally {
+    if ($connection.State -eq [System.Data.ConnectionState]::Open) {
+        $connection.Close()
+    }
+}
+
+# 2. Run seed.sql
+$seedText = Get-Content -Raw -Path $seedFile
+$seedBatches = $seedText -split "(?m)^\s*GO\s*$"
+
+$connection = New-Object System.Data.SqlClient.SqlConnection($connStringDb)
+try {
+    $connection.Open()
+    Write-Host "Đang seed dữ liệu..."
+    foreach ($batch in $seedBatches) {
+        $trimmedBatch = $batch.Trim()
+        if (-not [string]::IsNullOrWhiteSpace($trimmedBatch)) {
+            $command = $connection.CreateCommand()
+            $command.CommandText = $trimmedBatch
+            $command.ExecuteNonQuery() > $null
+        }
+    }
+    Write-Host "Seed dữ liệu database thành công!" -ForegroundColor Green
+}
+catch {
+    Write-Error "Lỗi khi seed dữ liệu: $_"
 }
 finally {
     if ($connection.State -eq [System.Data.ConnectionState]::Open) {

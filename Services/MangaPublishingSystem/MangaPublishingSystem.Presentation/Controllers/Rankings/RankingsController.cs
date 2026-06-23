@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Security.Claims;
 using System.Threading.Tasks;
 using BuildingBlocks.Web.Responses;
 using MangaPublishingSystem.Application.DTOs.Rankings;
@@ -16,11 +17,15 @@ namespace MangaPublishingSystem.Presentation.Controllers.Rankings
     public class RankingsController : ControllerBase
     {
         private readonly IRankingRecordService _rankingRecordService;
+        private readonly ISeriesService _seriesService;
 
-        public RankingsController(IRankingRecordService rankingRecordService)
+        public RankingsController(IRankingRecordService rankingRecordService, ISeriesService seriesService)
         {
             _rankingRecordService = rankingRecordService;
+            _seriesService = seriesService;
         }
+
+        private int CurrentUserId => int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
 
         [HttpPost]
         public async Task<ActionResult<ApiResponse<object>>> CreateRankings([FromBody] CreateRankingsDto dto)
@@ -40,5 +45,14 @@ namespace MangaPublishingSystem.Presentation.Controllers.Rankings
             var rankings = await _rankingRecordService.GetRankingsByPeriodAsync(parsedDate);
             return Ok(ApiResponse<IEnumerable<RankingRecord>>.Success(rankings, $"Lấy bảng xếp hạng cho ngày {period} thành công."));
         }
+
+        [Authorize(Roles = "Editorial Board")]
+        [HttpPost("/api/ranking/votes")]
+        public async Task<ActionResult<ApiResponse<object>>> VoteRanking([FromBody] VoteRankingRequestDto dto)
+        {
+            await _seriesService.VoteRankingAsync(dto.SeriesId, CurrentUserId, dto.VoteType, dto.Comment);
+            return Ok(ApiResponse<object>.Success(null, "Bình chọn bảng xếp hạng thành công."));
+        }
     }
 }
+

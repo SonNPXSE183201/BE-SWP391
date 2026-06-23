@@ -20,5 +20,10 @@ namespace MangaPublishingSystem.Application.IServices
         Task<IEnumerable<SeriesReviewDto>> GetPendingReviewSeriesForEditorAsync(int editorId);
         System.Threading.Tasks.Task SubmitSeriesToBoardAsync(int seriesId, int editorId, SubmitToBoardDto dto);
         Task<IEnumerable<Series>> GetPendingBoardVoteSeriesAsync();
+        System.Threading.Tasks.Task VoteRankingAsync(int seriesId, int boardUserId, string voteType, string? comment);
+        System.Threading.Tasks.Task RequireSeriesRevisionAsync(int seriesId, int editorId, string comment);
+        System.Threading.Tasks.Task UpdateSeriesAsync(int seriesId, int mangakaId, CreateSeriesDto dto);
     }
-}
+}
+
+

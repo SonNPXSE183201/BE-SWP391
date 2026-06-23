@@ -44,5 +44,6 @@ namespace MangaPublishingSystem.Domain.Entities
         public virtual ICollection<Transaction> FromTransactions { get; set; } = new List<Transaction>();
         public virtual ICollection<Transaction> ToTransactions { get; set; } = new List<Transaction>();
         public virtual ICollection<RefreshToken> RefreshTokens { get; set; } = new List<RefreshToken>();
+        public virtual ICollection<PortfolioSample> PortfolioSamples { get; set; } = new List<PortfolioSample>();
     }
 }

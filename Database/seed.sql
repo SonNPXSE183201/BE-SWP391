@@ -1,4 +1,4 @@
--- =========================================================================
+﻿-- =========================================================================
 -- SEED DATA SETUP SCRIPT WITH RESET
 -- PROJECT: Manga Creation Workflow & Publishing Management System (MCWPMS)
 -- DATABASE NAME: MangaPublishing
@@ -20,6 +20,7 @@ PRINT 'Resetting existing data in all tables...';
 EXEC sp_MSforeachtable "ALTER TABLE ? NOCHECK CONSTRAINT all";
 
 -- Clean all tables
+DELETE FROM dbo.PortfolioSample;
 DELETE FROM dbo.Report;
 DELETE FROM dbo.Annotation;
 DELETE FROM dbo.DisputeLog;
@@ -46,6 +47,7 @@ EXEC sp_MSforeachtable "ALTER TABLE ? WITH CHECK CHECK CONSTRAINT all";
 GO
 
 -- Reset identity column seeds
+DBCC CHECKIDENT ('dbo.PortfolioSample', RESEED, 0);
 DBCC CHECKIDENT ('dbo.Report', RESEED, 0);
 DBCC CHECKIDENT ('dbo.Annotation', RESEED, 0);
 DBCC CHECKIDENT ('dbo.DisputeLog', RESEED, 0);
@@ -140,8 +142,8 @@ GO
 -- 5. Insert Series
 SET IDENTITY_INSERT dbo.Series ON;
 INSERT INTO dbo.Series (SeriesId, MangakaId, EditorId, Title, Genre, Synopsis, CoverArtworkUrl, EstimatedProductionBudget, ApprovedProductionBudget, PublicationSchedule, Status, ResourceFolderUrl, CreateAt) VALUES
-(1, 4, 2, N'Hành Trình Kỳ Thú', N'Shounen, Phiêu lưu', N'Câu chuyện phiêu lưu kỳ thú của một cậu bé đi tìm kho báu cổ xưa.', N'https://storage.mangapublishing.com/covers/hanh-trinh-ky-thu.jpg', 50000000.00, 45000000.00, N'Weekly', N'In Production', N'https://storage.mangapublishing.com/resources/series-1', GETUTCDATE()),
-(2, 4, 2, N'Học Viện Siêu Nhiên', N'Comedy, Fantasy', N'Cuộc sống học đường dở khóc dở cười tại một ngôi trường đặc biệt.', N'https://storage.mangapublishing.com/covers/hoc-vien-sieu-nhien.jpg', 30000000.00, 0.00, NULL, N'Pending_Approval', N'https://storage.mangapublishing.com/resources/series-2', GETUTCDATE());
+(1, 4, 2, N'Hành Trình Kỳ Thú', N'Shounen, Phiêu lưu', N'Câu chuyện phiêu lưu kỳ thú của một cậu bé đi tìm kho báu cổ xưa.', N'http://localhost:9000/manga-publishing/covers/hanh-trinh-ky-thu.jpg', 50000000.00, 45000000.00, N'Weekly', N'In Production', N'http://localhost:9000/manga-publishing/resources/series-1', GETUTCDATE()),
+(2, 4, 2, N'Học Viện Siêu Nhiên', N'Comedy, Fantasy', N'Cuộc sống học đường dở khóc dở cười tại một ngôi trường đặc biệt.', N'http://localhost:9000/manga-publishing/covers/hoc-vien-sieu-nhien.jpg', 30000000.00, 0.00, NULL, N'Pending_Approval', N'http://localhost:9000/manga-publishing/resources/series-2', GETUTCDATE());
 SET IDENTITY_INSERT dbo.Series OFF;
 GO
 
@@ -164,11 +166,11 @@ GO
 -- 8. Insert Pages
 SET IDENTITY_INSERT dbo.Page ON;
 INSERT INTO dbo.Page (PageId, ChapterId, PageNumber, RawImageUrl, CompositeImageUrl, BaseLayerUrl, Status, IsApproved, CreateAt) VALUES
-(1, 1, 1, N'https://storage.mangapublishing.com/series-1/chap-1/page-1-raw.jpg', N'https://storage.mangapublishing.com/series-1/chap-1/page-1-composite.jpg', N'https://storage.mangapublishing.com/series-1/chap-1/page-1-base.jpg', N'Composited', 1, GETUTCDATE()),
-(2, 1, 2, N'https://storage.mangapublishing.com/series-1/chap-1/page-2-raw.jpg', N'https://storage.mangapublishing.com/series-1/chap-1/page-2-composite.jpg', N'https://storage.mangapublishing.com/series-1/chap-1/page-2-base.jpg', N'Composited', 1, GETUTCDATE()),
-(3, 1, 3, N'https://storage.mangapublishing.com/series-1/chap-1/page-3-raw.jpg', N'https://storage.mangapublishing.com/series-1/chap-1/page-3-composite.jpg', N'https://storage.mangapublishing.com/series-1/chap-1/page-3-base.jpg', N'Composited', 1, GETUTCDATE()),
-(4, 2, 1, N'https://storage.mangapublishing.com/series-1/chap-2/page-1-raw.jpg', NULL, N'https://storage.mangapublishing.com/series-1/chap-2/page-1-base.jpg', N'Pending', 0, GETUTCDATE()),
-(5, 2, 2, N'https://storage.mangapublishing.com/series-1/chap-2/page-2-raw.jpg', NULL, N'https://storage.mangapublishing.com/series-1/chap-2/page-2-base.jpg', N'Pending', 0, GETUTCDATE());
+(1, 1, 1, N'http://localhost:9000/manga-publishing/series-1/chap-1/page-1-raw.jpg', N'http://localhost:9000/manga-publishing/series-1/chap-1/page-1-composite.jpg', N'http://localhost:9000/manga-publishing/series-1/chap-1/page-1-base.jpg', N'Composited', 1, GETUTCDATE()),
+(2, 1, 2, N'http://localhost:9000/manga-publishing/series-1/chap-1/page-2-raw.jpg', N'http://localhost:9000/manga-publishing/series-1/chap-1/page-2-composite.jpg', N'http://localhost:9000/manga-publishing/series-1/chap-1/page-2-base.jpg', N'Composited', 1, GETUTCDATE()),
+(3, 1, 3, N'http://localhost:9000/manga-publishing/series-1/chap-1/page-3-raw.jpg', N'http://localhost:9000/manga-publishing/series-1/chap-1/page-3-composite.jpg', N'http://localhost:9000/manga-publishing/series-1/chap-1/page-3-base.jpg', N'Composited', 1, GETUTCDATE()),
+(4, 2, 1, N'http://localhost:9000/manga-publishing/series-1/chap-2/page-1-raw.jpg', NULL, N'http://localhost:9000/manga-publishing/series-1/chap-2/page-1-base.jpg', N'Pending', 0, GETUTCDATE()),
+(5, 2, 2, N'http://localhost:9000/manga-publishing/series-1/chap-2/page-2-raw.jpg', NULL, N'http://localhost:9000/manga-publishing/series-1/chap-2/page-2-base.jpg', N'Pending', 0, GETUTCDATE());
 SET IDENTITY_INSERT dbo.Page OFF;
 GO
 
@@ -197,10 +199,10 @@ GO
 -- 11. Insert Task Versions
 SET IDENTITY_INSERT dbo.TaskVersion ON;
 INSERT INTO dbo.TaskVersion (VersionId, TaskId, VersionNumber, SubmittedFileUrl, Status, SubmittedAt, CreateAt) VALUES
-(1, 1, 1, N'https://storage.mangapublishing.com/tasks/task-1-v1.png', N'Approved', DATEADD(day, -3, GETUTCDATE()), GETUTCDATE()),
-(2, 2, 1, N'https://storage.mangapublishing.com/tasks/task-2-v1.png', N'Approved', DATEADD(day, -2, GETUTCDATE()), GETUTCDATE()),
-(3, 3, 1, N'https://storage.mangapublishing.com/tasks/task-3-v1.png', N'Submitted', DATEADD(minute, -30, GETUTCDATE()), GETUTCDATE()),
-(4, 5, 1, N'https://storage.mangapublishing.com/tasks/task-5-v1.png', N'Submitted', DATEADD(minute, -20, GETUTCDATE()), GETUTCDATE());
+(1, 1, 1, N'http://localhost:9000/manga-publishing/tasks/task-1-v1.png', N'Approved', DATEADD(day, -3, GETUTCDATE()), GETUTCDATE()),
+(2, 2, 1, N'http://localhost:9000/manga-publishing/tasks/task-2-v1.png', N'Approved', DATEADD(day, -2, GETUTCDATE()), GETUTCDATE()),
+(3, 3, 1, N'http://localhost:9000/manga-publishing/tasks/task-3-v1.png', N'Submitted', DATEADD(minute, -30, GETUTCDATE()), GETUTCDATE()),
+(4, 5, 1, N'http://localhost:9000/manga-publishing/tasks/task-5-v1.png', N'Submitted', DATEADD(minute, -20, GETUTCDATE()), GETUTCDATE());
 SET IDENTITY_INSERT dbo.TaskVersion OFF;
 GO
 
@@ -225,6 +227,14 @@ INSERT INTO dbo.Notification (NotId, UserId, Content, Type, IsRead, CreateAt) VA
 (1, 4, N'Bộ truyện Học Viện Siêu Nhiên đã nhận được 1 phiếu biểu quyết từ Hội đồng biên tập.', N'SeriesVote', 0, GETUTCDATE()),
 (2, 5, N'Bạn được giao nhiệm vụ mới: Vẽ nền phòng học có bàn ghế và cửa sổ lớn.', N'TaskAssigned', 0, GETUTCDATE());
 SET IDENTITY_INSERT dbo.Notification OFF;
+GO
+
+-- 15. Insert Portfolio Samples
+SET IDENTITY_INSERT dbo.PortfolioSample ON;
+INSERT INTO dbo.PortfolioSample (SampleId, AssistantId, Title, ImageUrl, Category) VALUES
+(1, 5, N'Thiết kế nền thành phố cổ', N'http://localhost:9000/manga-publishing/portfolios/son-bg1.png', N'Background'),
+(2, 5, N'Đi nét nhân vật chính', N'http://localhost:9000/manga-publishing/portfolios/son-line1.png', N'Lineart');
+SET IDENTITY_INSERT dbo.PortfolioSample OFF;
 GO
 
 PRINT 'Mock data seeded successfully with password ''12345'' for all users.';
