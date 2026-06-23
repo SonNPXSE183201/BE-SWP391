@@ -13,6 +13,7 @@ namespace MangaPublishingSystem.Infrastructure.Services
     {
         private readonly IMinioClient _minioClient;
         private readonly MinioSettings _settings;
+        private bool _bucketReady;
 
         public MinioStorageService(IOptions<MinioSettings> settings)
         {
@@ -34,14 +35,7 @@ namespace MangaPublishingSystem.Infrastructure.Services
         {
             var uniqueFileName = Guid.NewGuid().ToString() + Path.GetExtension(fileName);
 
-            // Đảm bảo bucket tồn tại
-            var bucketExistsArgs = new BucketExistsArgs().WithBucket(_settings.BucketName);
-            var exists = await _minioClient.BucketExistsAsync(bucketExistsArgs).ConfigureAwait(false);
-            if (!exists)
-            {
-                var makeBucketArgs = new MakeBucketArgs().WithBucket(_settings.BucketName);
-                await _minioClient.MakeBucketAsync(makeBucketArgs).ConfigureAwait(false);
-            }
+            await EnsureBucketReadyAsync().ConfigureAwait(false);
 
             // Upload file
             var putObjectArgs = new PutObjectArgs()
@@ -56,6 +50,40 @@ namespace MangaPublishingSystem.Infrastructure.Services
             // Trả về url truy cập tệp
             var scheme = _settings.Secure ? "https" : "http";
             return $"{scheme}://{_settings.Endpoint}/{_settings.BucketName}/{uniqueFileName}";
+        }
+
+        private async Task EnsureBucketReadyAsync()
+        {
+            if (_bucketReady) return;
+
+            var bucketExistsArgs = new BucketExistsArgs().WithBucket(_settings.BucketName);
+            var exists = await _minioClient.BucketExistsAsync(bucketExistsArgs).ConfigureAwait(false);
+            if (!exists)
+            {
+                var makeBucketArgs = new MakeBucketArgs().WithBucket(_settings.BucketName);
+                await _minioClient.MakeBucketAsync(makeBucketArgs).ConfigureAwait(false);
+            }
+
+            // Dev: cho phép browser đọc file qua URL trực tiếp (img src)
+            var policy = $$"""
+                {
+                  "Version": "2012-10-17",
+                  "Statement": [
+                    {
+                      "Effect": "Allow",
+                      "Principal": {"AWS": ["*"]},
+                      "Action": ["s3:GetObject"],
+                      "Resource": ["arn:aws:s3:::{{_settings.BucketName}}/*"]
+                    }
+                  ]
+                }
+                """;
+            var setPolicyArgs = new SetPolicyArgs()
+                .WithBucket(_settings.BucketName)
+                .WithPolicy(policy);
+            await _minioClient.SetPolicyAsync(setPolicyArgs).ConfigureAwait(false);
+
+            _bucketReady = true;
         }
 
         public async Task<bool> DeleteFileAsync(string fileUrl)

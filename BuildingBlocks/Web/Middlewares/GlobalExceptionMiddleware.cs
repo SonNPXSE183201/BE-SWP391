@@ -36,7 +36,9 @@ namespace BuildingBlocks.Web.Middlewares
             var descriptor = ErrorCatalog.FromException(exception);
             var errors = (exception as CustomException)?.Errors;
 
-            var response = ApiResponse<object>.Failure(descriptor.StatusCode, descriptor.Message, errors);
+            var innerMsg = exception.InnerException?.Message ?? "No inner exception";
+            var message = descriptor.StatusCode == 500 ? $"{descriptor.Message} | DEBUG: {exception.Message} | INNER: {innerMsg}" : descriptor.Message;
+            var response = ApiResponse<object>.Failure(descriptor.StatusCode, message, errors);
 
             var statusCode = descriptor.StatusCode;
 

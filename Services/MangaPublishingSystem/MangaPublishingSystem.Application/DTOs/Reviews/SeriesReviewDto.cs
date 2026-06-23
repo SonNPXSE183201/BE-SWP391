@@ -10,6 +10,7 @@ namespace MangaPublishingSystem.Application.DTOs.Reviews
         public string? Genre { get; set; }
         public string? Synopsis { get; set; }
         public string? CoverArtworkUrl { get; set; }
+        public string? ResourceFolderUrl { get; set; }
         public decimal EstimatedProductionBudget { get; set; }
         public decimal ApprovedProductionBudget { get; set; }
         public string Status { get; set; } = null!;

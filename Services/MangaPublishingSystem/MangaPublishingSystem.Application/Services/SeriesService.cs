@@ -12,7 +12,6 @@ using MangaPublishingSystem.Application.DTOs.Reviews;
 using MangaPublishingSystem.Application.DTOs.Notifications;
 using MangaPublishingSystem.Application.IRepositories;
 using MangaPublishingSystem.Application.IServices;
-using Microsoft.AspNetCore.Hosting;
 
 namespace MangaPublishingSystem.Application.Services
 {
@@ -31,7 +30,7 @@ namespace MangaPublishingSystem.Application.Services
         private readonly ITasksRepository _tasksRepository;
         private readonly IRegionRepository _regionRepository;
         private readonly IWalletService _walletService;
-        private readonly IWebHostEnvironment _env;
+        private readonly IStorageService _storageService;
 
         public SeriesService(
             ISeriesRepository repository, 
@@ -46,7 +45,7 @@ namespace MangaPublishingSystem.Application.Services
             ITasksRepository tasksRepository,
             IRegionRepository regionRepository,
             IWalletService walletService,
-            IWebHostEnvironment env) 
+            IStorageService storageService) 
             : base(repository, unitOfWork)
         {
             _seriesRepository = repository;
@@ -60,7 +59,7 @@ namespace MangaPublishingSystem.Application.Services
             _tasksRepository = tasksRepository;
             _regionRepository = regionRepository;
             _walletService = walletService;
-            _env = env;
+            _storageService = storageService;
         }
 
         public async Task<Series> CreateSeriesAsync(int mangakaId, CreateSeriesDto createDto)
@@ -72,6 +71,7 @@ namespace MangaPublishingSystem.Application.Services
                 Genre = createDto.Genre,
                 Synopsis = createDto.Synopsis,
                 CoverArtworkUrl = createDto.CoverArtworkUrl,
+                ResourceFolderUrl = createDto.ResourceFolderUrl,
                 EstimatedProductionBudget = createDto.EstimatedProductionBudget,
                 ApprovedProductionBudget = 0.00m,
                 Status = "Draft"
@@ -111,6 +111,12 @@ namespace MangaPublishingSystem.Application.Services
             {
                 throw new BadRequestException(
                     "Tác giả chưa được Admin gán Biên tập viên phụ trách. Vui lòng liên hệ quản trị viên.");
+            }
+
+            if (string.IsNullOrWhiteSpace(series.ResourceFolderUrl))
+            {
+                throw new BadRequestException(
+                    "Vui lòng upload bản phác thảo (Name) trước khi gửi xét duyệt.");
             }
 
             var assignedEditor = await _userRepository.GetByIdWithDetailsAsync(mangaka.AssignedEditorId.Value);
@@ -405,6 +411,9 @@ namespace MangaPublishingSystem.Application.Services
             await _unitOfWork.SaveChangesAsync();
         }
 
+        private static bool CanCreateChapter(string? status) =>
+            status is "Active" or "Fund_Pending" or "In Production" or "In_Production";
+
         public async Task<Chapter> SubmitChapterAsync(int seriesId, int mangakaId, SubmitChapterDto dto)
         {
             var series = await _seriesRepository.GetByIdAsync(seriesId);
@@ -418,7 +427,7 @@ namespace MangaPublishingSystem.Application.Services
                 throw new ForbiddenException("Bạn không phải tác giả của bộ truyện này.");
             }
 
-            if (series.Status != "Active" && series.Status != "Fund_Pending")
+            if (!CanCreateChapter(series.Status))
             {
                 throw new ConflictException("Bộ truyện chưa được kích hoạt, không thể tạo chapter mới.");
             }
@@ -436,28 +445,18 @@ namespace MangaPublishingSystem.Application.Services
             await _chapterRepository.AddAsync(chapter);
             await _unitOfWork.SaveChangesAsync();
 
-            // Lưu từng trang ảnh vào wwwroot/uploads
+            // Lưu từng trang ảnh qua IStorageService (MinIO / Firebase / Local theo cấu hình)
             if (dto.Pages != null && dto.Pages.Count > 0)
             {
-                var uploadsDir = Path.Combine(_env.WebRootPath ?? "wwwroot", "uploads");
-                if (!Directory.Exists(uploadsDir))
-                {
-                    Directory.CreateDirectory(uploadsDir);
-                }
-
                 int pageNumber = 1;
                 foreach (var file in dto.Pages)
                 {
-                    var ext = Path.GetExtension(file.FileName);
-                    var fileName = $"{Guid.NewGuid()}{ext}";
-                    var filePath = Path.Combine(uploadsDir, fileName);
+                    await using var stream = file.OpenReadStream();
+                    var contentType = string.IsNullOrWhiteSpace(file.ContentType)
+                        ? "application/octet-stream"
+                        : file.ContentType;
+                    var imageUrl = await _storageService.UploadFileAsync(stream, file.FileName, contentType);
 
-                    using (var stream = new FileStream(filePath, FileMode.Create))
-                    {
-                        await file.CopyToAsync(stream);
-                    }
-
-                    var imageUrl = $"/uploads/{fileName}";
                     var page = new Page
                     {
                         ChapterId = chapter.Id,
@@ -514,6 +513,7 @@ namespace MangaPublishingSystem.Application.Services
                 Genre = series.Genre,
                 Synopsis = series.Synopsis,
                 CoverArtworkUrl = series.CoverArtworkUrl,
+                ResourceFolderUrl = series.ResourceFolderUrl,
                 EstimatedProductionBudget = series.EstimatedProductionBudget,
                 ApprovedProductionBudget = series.ApprovedProductionBudget,
                 Status = series.Status,
@@ -759,6 +759,7 @@ namespace MangaPublishingSystem.Application.Services
             series.Genre = dto.Genre;
             series.Synopsis = dto.Synopsis;
             series.CoverArtworkUrl = dto.CoverArtworkUrl;
+            series.ResourceFolderUrl = dto.ResourceFolderUrl;
             series.EstimatedProductionBudget = dto.EstimatedProductionBudget;
 
             _seriesRepository.Update(series);
