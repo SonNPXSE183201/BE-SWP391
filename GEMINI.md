@@ -154,5 +154,5 @@ AI phải ghi nhớ và áp dụng nghiêm ngặt các quy tắc trên!
 
 ## 6. LỊCH SỬ THỰC THI (IMPLEMENTATION LOG)
 * **Giai đoạn P1 & P2**: Hoàn tất 100% mã nguồn Backend, bao gồm các Controller (Annotations, Dashboard, Disputes, Rankings, Regions...).
-* **Kiểm thử tích hợp (Integration Tests)**: Hoàn thiện kịch bản thử nghiệm tự động trên Node.js (`test-all-endpoints.js`) với hơn 50+ test cases, bao phủ cả luồng Happy Case và Unhappy Case (Xác thực phân quyền, Khóa quỹ Escrow, Đồng thuận đa số hủy truyện). Tỉ lệ Pass 100%.
+* **Kiểm thử tích hợp (Integration Tests)**: Hoàn thiện kịch bản thử nghiệm tự động trên Node.js ([`scripts/test/test-all-endpoints.js`](../../scripts/test/test-all-endpoints.js)) với hơn 50+ test cases, bao phủ cả luồng Happy Case và Unhappy Case (Xác thực phân quyền, Khóa quỹ Escrow, Đồng thuận đa số hủy truyện). Tỉ lệ Pass 100%.
 * **Đồng bộ hóa API (Postman & Báo cáo)**: Tất cả API được tích hợp vào `MangaPublishing.postman_collection.json` và chuẩn hóa trong các tệp Markdown (`BE_API_Report.md`, `BE_API_Business_Logic.md`, `FE_API_Testing_Guide.md`).

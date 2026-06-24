@@ -20,6 +20,9 @@ namespace MangaPublishingSystem.Application.Validations.Series
             RuleFor(x => x.CoverArtworkUrl)
                 .MaximumLength(500).WithMessage("Đường dẫn ảnh bìa không được vượt quá 500 ký tự.");
 
+            RuleFor(x => x.ResourceFolderUrl)
+                .MaximumLength(500).WithMessage("Đường dẫn bản phác thảo (Name) không được vượt quá 500 ký tự.");
+
             RuleFor(x => x.EstimatedProductionBudget)
                 .GreaterThanOrEqualTo(0).WithMessage("Ngân sách sản xuất đề xuất phải lớn hơn hoặc bằng 0 VND.");
         }

@@ -65,8 +65,21 @@ if (app.Environment.IsDevelopment() || app.Environment.EnvironmentName == "Docke
     app.UseSwaggerUI();
 }
 
-app.UseStaticFiles();
 app.UseCors("Default");
+
+app.UseStaticFiles(new StaticFileOptions
+{
+    OnPrepareResponse = ctx =>
+    {
+        // Fabric.js (canvas) tải ảnh cross-origin từ FE dev :5173
+        var origin = ctx.Context.Request.Headers.Origin.FirstOrDefault();
+        if (!string.IsNullOrEmpty(origin))
+        {
+            ctx.Context.Response.Headers.Append("Access-Control-Allow-Origin", origin);
+            ctx.Context.Response.Headers.Append("Access-Control-Allow-Credentials", "true");
+        }
+    }
+});
 app.UseGlobalExceptionHandler();
 app.UseWebSockets();
 app.UseAuthentication();
