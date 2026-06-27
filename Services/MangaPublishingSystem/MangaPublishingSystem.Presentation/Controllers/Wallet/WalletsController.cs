@@ -302,7 +302,7 @@ namespace MangaPublishingSystem.Presentation.Controllers.Wallet
             return new WalletDto
             {
                 Id = wallet.Id,
-                UserId = wallet.UserId,
+                UserId = wallet.UserId!.Value,
                 SetupFundBalance = wallet.SetupFundBalance,
                 WithdrawableBalance = wallet.WithdrawableBalance,
                 LockedFund = wallet.LockedFund,
@@ -358,7 +358,13 @@ namespace MangaPublishingSystem.Presentation.Controllers.Wallet
 
         private string? BuildFrontendRedirectUrl(VnpayPaymentResultDto paymentResult)
         {
-            if (string.IsNullOrWhiteSpace(_vnPaySettings.FrontendReturnUrl))
+            var reference = paymentResult.ReferenceCode ?? string.Empty;
+            var isPlatformTopUp = reference.StartsWith("PLT", StringComparison.OrdinalIgnoreCase);
+            var baseUrl = isPlatformTopUp
+                ? _vnPaySettings.AdminFrontendReturnUrl
+                : _vnPaySettings.FrontendReturnUrl;
+
+            if (string.IsNullOrWhiteSpace(baseUrl))
             {
                 return null;
             }
@@ -373,10 +379,11 @@ namespace MangaPublishingSystem.Presentation.Controllers.Wallet
                 ["bankCode"] = paymentResult.BankCode,
                 ["responseCode"] = paymentResult.ResponseCode,
                 ["transactionStatus"] = paymentResult.TransactionStatus,
-                ["message"] = paymentResult.Message
+                ["message"] = paymentResult.Message,
+                ["topUpType"] = isPlatformTopUp ? "platform" : "wallet",
             };
 
-            return QueryHelpers.AddQueryString(_vnPaySettings.FrontendReturnUrl, queryParams);
+            return QueryHelpers.AddQueryString(baseUrl, queryParams);
         }
     }
 }

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using BuildingBlocks.Exceptions;
@@ -7,6 +8,7 @@ using BuildingBlocks.Web.Responses;
 using MangaPublishingSystem.Domain.Entities;
 using MangaPublishingSystem.Application.DTOs.Tasks;
 using MangaPublishingSystem.Application.DTOs.Notifications;
+using MangaPublishingSystem.Application.Helpers;
 using MangaPublishingSystem.Application.IRepositories;
 using MangaPublishingSystem.Application.IServices;
 
@@ -24,6 +26,7 @@ namespace MangaPublishingSystem.Application.Services
         private readonly IAssistantProfileRepository _assistantProfileRepository;
         private readonly IUserRepository _userRepository;
         private readonly IImageCompositor _imageCompositor;
+        private readonly IStorageService _storageService;
         private readonly INotificationPublisher _notificationPublisher;
 
         public TasksService(
@@ -38,6 +41,7 @@ namespace MangaPublishingSystem.Application.Services
             IAssistantProfileRepository assistantProfileRepository,
             IUserRepository userRepository,
             IImageCompositor imageCompositor,
+            IStorageService storageService,
             INotificationPublisher notificationPublisher) 
             : base(repository, unitOfWork)
         {
@@ -51,6 +55,7 @@ namespace MangaPublishingSystem.Application.Services
             _assistantProfileRepository = assistantProfileRepository;
             _userRepository = userRepository;
             _imageCompositor = imageCompositor;
+            _storageService = storageService;
             _notificationPublisher = notificationPublisher;
         }
 
@@ -172,6 +177,13 @@ namespace MangaPublishingSystem.Application.Services
             {
                 latestVersion.Status = "Approved";
                 _taskVersionRepository.Update(latestVersion);
+            }
+
+            // Auto-composite: gộp lớp vẽ Assistant đã duyệt lên trang gốc
+            var region = await _regionRepository.GetByIdAsync(task.RegionId);
+            if (region != null)
+            {
+                await RefreshPageCompositeAsync(region.PageId);
             }
 
             // Gửi thông báo cho Assistant
@@ -460,7 +472,7 @@ namespace MangaPublishingSystem.Application.Services
 
         public async Task<IEnumerable<Tasks>> GetTasksByMangakaIdAsync(int mangakaId)
         {
-            return await _tasksRepository.FindAsync(t => t.MangakaId == mangakaId);
+            return await _tasksRepository.GetMangakaTasksAsync(mangakaId);
         }
 
         public async Task<IEnumerable<Tasks>> GetTasksByAssistantIdAsync(int assistantId)
@@ -482,26 +494,62 @@ namespace MangaPublishingSystem.Application.Services
             }
 
             var regions = await _regionRepository.FindAsync(r => r.PageId == pageId);
+            var regionMap = regions.ToDictionary(r => r.Id);
             var regionIds = regions.Select(r => r.Id).ToList();
 
             var tasks = await _tasksRepository.FindAsync(t => regionIds.Contains(t.RegionId) && t.Status == "Approved");
             var taskList = tasks.ToList();
 
-            var layers = new List<(string overlayUrl, int zIndex)>();
+            var layers = new List<CompositeLayerDto>();
             foreach (var task in taskList)
             {
                 var versions = await _taskVersionRepository.FindAsync(v => v.TaskId == task.Id && v.Status == "Approved");
                 var approvedVer = versions.FirstOrDefault();
-                if (approvedVer != null)
+                if (approvedVer == null) continue;
+                if (!regionMap.TryGetValue(task.RegionId, out var region)) continue;
+
+                var (x, y, w, h) = RegionCoordinatesHelper.Parse(region.CoordinatesJson);
+                // Bỏ qua Region legacy (toạ độ âm / thiếu kích thước) — tránh phủ full-page che lớp đúng
+                if (w <= 0 || h <= 0 || x < 0 || y < 0) continue;
+
+                layers.Add(new CompositeLayerDto
                 {
-                    layers.Add((approvedVer.SubmittedFileUrl, task.ZIndex_Order));
-                }
+                    OverlayUrl = approvedVer.SubmittedFileUrl,
+                    ZIndex = task.ZIndex_Order,
+                    X = x,
+                    Y = y,
+                    Width = w,
+                    Height = h,
+                });
             }
 
-            // Sắp xếp các lớp vẽ đè theo thứ tự Z-Index tăng dần
-            var sortedLayers = layers.OrderBy(l => l.zIndex).ToList();
+            return await _imageCompositor.CompositeLayersAsync(page.BaseLayerUrl ?? page.RawImageUrl, layers);
+        }
 
-            return await _imageCompositor.CompositeLayersAsync(page.BaseLayerUrl ?? page.RawImageUrl, sortedLayers);
+        /// <summary>
+        /// Tạo ảnh composite từ các Task đã Approved trên trang và lưu vào Page.CompositeImageUrl.
+        /// </summary>
+        public async Task<string> RefreshPageCompositeAsync(int pageId)
+        {
+            var compositeBytes = await GetCompositedPageAsync(pageId);
+            var fileName = $"pages/{pageId}/composite-{DateTime.UtcNow:yyyyMMddHHmmss}.png";
+            using var ms = new MemoryStream(compositeBytes);
+            var compositeUrl = await _storageService.UploadFileAsync(ms, fileName, "image/png");
+
+            var page = await _pageRepository.GetByIdAsync(pageId);
+            if (page == null)
+            {
+                throw new NotFoundException("Trang truyện không tồn tại.");
+            }
+
+            page.CompositeImageUrl = compositeUrl;
+            if (page.Status == "Pending")
+            {
+                page.Status = "InProgress";
+            }
+            _pageRepository.Update(page);
+            await _unitOfWork.SaveChangesAsync();
+            return compositeUrl;
         }
 
         public async Task<PagedResult<TasksDto>> GetAvailableTasksAsync(GetAvailableTasksRequest request)
@@ -528,7 +576,7 @@ namespace MangaPublishingSystem.Application.Services
                 FeedbackComment = t.FeedbackComment,
                 MangakaName = t.Mangaka?.FullName,
                 AssistantName = t.Assistant?.FullName,
-                PageNumber = t.Region?.PageId ?? 0,
+                PageNumber = t.Region?.Page?.PageNumber ?? 0,
                 PageImageUrl = t.Region?.Page?.RawImageUrl,
                 CreateAt = t.CreateAt,
                 UpdateAt = t.UpdateAt
@@ -566,7 +614,7 @@ namespace MangaPublishingSystem.Application.Services
                 FeedbackComment = t.FeedbackComment,
                 MangakaName = t.Mangaka?.FullName,
                 AssistantName = t.Assistant?.FullName,
-                PageNumber = t.Region?.PageId ?? 0,
+                PageNumber = t.Region?.Page?.PageNumber ?? 0,
                 PageImageUrl = t.Region?.Page?.RawImageUrl,
                 CreateAt = t.CreateAt,
                 UpdateAt = t.UpdateAt
@@ -628,7 +676,7 @@ namespace MangaPublishingSystem.Application.Services
                 FeedbackComment = t.FeedbackComment,
                 MangakaName = t.Mangaka?.FullName,
                 AssistantName = t.Assistant?.FullName,
-                PageNumber = t.Region?.PageId ?? 0,
+                PageNumber = t.Region?.Page?.PageNumber ?? 0,
                 PageImageUrl = t.Region?.Page?.RawImageUrl,
                 CreateAt = t.CreateAt,
                 UpdateAt = t.UpdateAt

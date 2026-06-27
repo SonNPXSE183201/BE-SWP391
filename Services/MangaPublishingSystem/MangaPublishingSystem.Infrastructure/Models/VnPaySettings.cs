@@ -17,8 +17,11 @@ namespace MangaPublishingSystem.Infrastructure.Models
         /// <summary>URL hệ thống nhận kết quả redirect từ browser sau khi thanh toán (vnp_ReturnUrl).</summary>
         public string ReturnUrl { get; set; } = string.Empty;
 
-        /// <summary>URL frontend để điều hướng người dùng sau khi backend xử lý ReturnUrl.</summary>
+        /// <summary>URL frontend Mangaka/Assistant sau khi nạp ví cá nhân.</summary>
         public string FrontendReturnUrl { get; set; } = "http://localhost:5173/mangaka/wallet";
+
+        /// <summary>URL frontend Admin sau khi nạp quỹ ví NXB qua VNPay.</summary>
+        public string AdminFrontendReturnUrl { get; set; } = "http://localhost:5173/admin/reconciliation";
 
         /// <summary>URL hệ thống nhận IPN server-to-server từ VNPay (phải HTTPS khi production).</summary>
         public string IpnUrl { get; set; } = string.Empty;

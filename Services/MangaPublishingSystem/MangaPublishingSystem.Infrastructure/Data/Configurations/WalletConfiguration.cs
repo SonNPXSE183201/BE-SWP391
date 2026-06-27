@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using MangaPublishingSystem.Domain.Constants;
 using MangaPublishingSystem.Domain.Entities;
 
 namespace MangaPublishingSystem.Infrastructure.Data.Configurations
@@ -34,13 +35,24 @@ namespace MangaPublishingSystem.Infrastructure.Data.Configurations
                 .HasDefaultValue(0.00m)
                 .IsRequired();
 
+            builder.Property(e => e.Kind)
+                .HasMaxLength(32)
+                .HasDefaultValue(WalletKinds.User)
+                .IsRequired();
+
             builder.HasOne(e => e.User)
                 .WithOne(u => u.Wallet)
                 .HasForeignKey<Wallet>(e => e.UserId)
+                .IsRequired(false)
                 .OnDelete(DeleteBehavior.Cascade);
 
             builder.HasIndex(e => e.UserId)
-                .IsUnique();
+                .IsUnique()
+                .HasFilter("[UserId] IS NOT NULL");
+
+            builder.HasIndex(e => e.Kind)
+                .IsUnique()
+                .HasFilter($"[Kind] = '{WalletKinds.PlatformTreasury}'");
         }
     }
 }

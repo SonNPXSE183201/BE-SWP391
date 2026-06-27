@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using BuildingBlocks.Web.Responses;
@@ -56,6 +57,19 @@ namespace MangaPublishingSystem.Infrastructure.Repositories
             query = query.OrderBy(t => t.Deadline);
 
             return await query.ToPagedListAsync(pageNumber, pageSize);
+        }
+
+        public async Task<IEnumerable<Tasks>> GetMangakaTasksAsync(int mangakaId)
+        {
+            return await _dbSet.AsQueryable()
+                .Include(t => t.Mangaka)
+                .Include(t => t.Assistant)
+                .Include(t => t.Region)
+                    .ThenInclude(r => r.Page)
+                .Where(t => t.MangakaId == mangakaId)
+                .OrderByDescending(t => t.CreateAt)
+                .AsNoTracking()
+                .ToListAsync();
         }
 
         public async Task<Tasks?> GetTaskByIdWithDetailsAsync(int id)

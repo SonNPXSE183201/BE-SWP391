@@ -18,6 +18,8 @@ namespace MangaPublishingSystem.Application.DTOs.Reviews
         public string? MangakaName { get; set; }
         public int? EditorId { get; set; }
         public string? EditorName { get; set; }
+        public string? EditorNote { get; set; }
+        public string? MangakaSubmissionNote { get; set; }
         public int ChapterCount { get; set; }
         public List<ChapterSummaryDto> Chapters { get; set; } = new List<ChapterSummaryDto>();
         public DateTime CreateAt { get; set; }

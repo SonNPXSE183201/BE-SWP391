@@ -7,6 +7,8 @@ namespace MangaPublishingSystem.Domain.Entities
     {
         public int MangakaId { get; set; }
         public int? EditorId { get; set; }
+        public string? EditorNote { get; set; }
+        public string? MangakaSubmissionNote { get; set; }
         public string Title { get; set; } = null!;
         public string? Genre { get; set; }
         public string? Synopsis { get; set; }

@@ -18,7 +18,11 @@ namespace MangaPublishingSystem.Application.DTOs.Series
         public string? ResourceFolderUrl { get; set; }
         public string? MangakaName { get; set; }
         public string? EditorName { get; set; }
+        public string? EditorNote { get; set; }
+        public string? MangakaSubmissionNote { get; set; }
         public DateTime CreateAt { get; set; }
         public DateTime? UpdateAt { get; set; }
+        public System.Collections.Generic.ICollection<BoardVoteDto>? BoardVotes { get; set; }
+        public bool HasContract { get; set; }
     }
 }

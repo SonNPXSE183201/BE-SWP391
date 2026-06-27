@@ -20,8 +20,8 @@ namespace MangaPublishingSystem.Presentation.Extensions
                 MangaPublishingSystem.Application.IServices.INotificationPublisher,
                 Services.NotificationPublisher>();
 
-            // Tạm tắt vì DB hiện chưa có bảng RefreshToken
-            // services.AddHostedService<Services.TaskAutomationBackgroundService>();
+            // Đã bật lại để hỗ trợ tính năng tự động chốt sổ
+            services.AddHostedService<Services.TaskAutomationBackgroundService>();
 
             return services;
         }

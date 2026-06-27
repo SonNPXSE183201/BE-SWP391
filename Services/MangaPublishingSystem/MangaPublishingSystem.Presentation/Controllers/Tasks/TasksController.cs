@@ -152,6 +152,14 @@ namespace MangaPublishingSystem.Presentation.Controllers.Tasks
             return File(imageBytes, "image/png");
         }
 
+        [Authorize(Roles = "Mangaka")]
+        [HttpPost("pages/{pageId}/refresh-composite")]
+        public async Task<ActionResult<ApiResponse<string>>> RefreshCompositePage([FromRoute] int pageId)
+        {
+            var compositeUrl = await _tasksService.RefreshPageCompositeAsync(pageId);
+            return Ok(ApiResponse<string>.Success(compositeUrl, "Đã làm mới ảnh gộp trang."));
+        }
+
         private static TasksDto MapToTasksDto(MangaPublishingSystem.Domain.Entities.Tasks t)
         {
             return new TasksDto
@@ -172,7 +180,7 @@ namespace MangaPublishingSystem.Presentation.Controllers.Tasks
                 FeedbackComment = t.FeedbackComment,
                 MangakaName = t.Mangaka?.FullName,
                 AssistantName = t.Assistant?.FullName,
-                PageNumber = t.Region?.PageId ?? 0,
+                PageNumber = t.Region?.Page?.PageNumber ?? 0,
                 PageImageUrl = t.Region?.Page?.RawImageUrl,
                 CreateAt = t.CreateAt,
                 UpdateAt = t.UpdateAt

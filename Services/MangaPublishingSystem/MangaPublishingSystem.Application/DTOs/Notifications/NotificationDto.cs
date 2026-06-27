@@ -28,18 +28,38 @@ namespace MangaPublishingSystem.Application.DTOs.Notifications
             "Wallet_Withdrawal_Admin_Pending" => "Yêu cầu rút tiền mới",
             "Wallet_Deposit_Success" => "Nạp tiền thành công",
             "Series_Submitted" => "Hồ sơ truyện mới được nộp",
+            "Series_Submitted_To_Board" => "Series chờ Hội đồng",
             "Series_Approved" => "Hồ sơ truyện được phê duyệt",
             "Series_Rejected" => "Hồ sơ truyện bị từ chối",
+            "Series_Revision_Required" => "Editor yêu cầu chỉnh sửa hồ sơ",
             _ => "Thông báo hệ thống"
         };
 
-        public string? Link => Type switch
+        public string? Link
         {
-            var t when t.StartsWith("Task") => "/tasks",
-            "Wallet_Withdrawal_Admin_Pending" => "/admin/withdraw-approval",
-            var t when t.StartsWith("Wallet") => "/mangaka/wallet",
-            var t when t.StartsWith("Series") => "/series",
-            _ => null
-        };
+            get
+            {
+                var seriesIdMatch = System.Text.RegularExpressions.Regex.Match(
+                    Content ?? string.Empty,
+                    @"^#(\d+)#\s*");
+                if (seriesIdMatch.Success)
+                {
+                    return $"/mangaka/series/{seriesIdMatch.Groups[1].Value}";
+                }
+
+                return Type switch
+                {
+                    var t when t.StartsWith("Task") => "/tasks",
+                    "Wallet_Withdrawal_Admin_Pending" => "/admin/withdraw-approval",
+                    var t when t.StartsWith("Wallet") => "/mangaka/wallet",
+                    "Series_Pending_Review" => "/editor/review",
+                    "Series_Submitted_To_Board" => seriesIdMatch.Success
+                        ? $"/mangaka/series/{seriesIdMatch.Groups[1].Value}"
+                        : "/mangaka/series",
+                    var t when t.StartsWith("Series") => "/mangaka/series",
+                    _ => null
+                };
+            }
+        }
     }
 }

@@ -136,13 +136,21 @@ namespace MangaPublishingSystem.Application.Services
             if (transaction.Status == "Success")
             {
                 var wallet = await _walletRepository.GetByIdAsync(transaction.WalletId);
-                if (wallet != null)
+                var notifyUserId = transaction.Type == "Platform_TopUp" && transaction.FromUserId.HasValue
+                    ? transaction.FromUserId.Value
+                    : wallet?.UserId;
+
+                if (notifyUserId.HasValue)
                 {
+                    var isPlatformTopUp = transaction.Type == "Platform_TopUp";
                     await PublishWalletNotificationAsync(
-                        wallet.UserId,
-                        "Wallet_Deposit_Success",
-                        "Nạp tiền thành công",
-                        $"Bạn đã nạp thành công {transaction.Amount:N0} VND vào quỹ khả dụng. Mã GD: {referenceCode}.");
+                        notifyUserId.Value,
+                        isPlatformTopUp ? "Wallet_Platform_TopUp_Success" : "Wallet_Deposit_Success",
+                        isPlatformTopUp ? "Nạp quỹ NXB thành công" : "Nạp tiền thành công",
+                        isPlatformTopUp
+                            ? $"Quỹ NXB đã nhận {transaction.Amount:N0} VND qua VNPay. Mã GD: {referenceCode}."
+                            : $"Bạn đã nạp thành công {transaction.Amount:N0} VND vào quỹ khả dụng. Mã GD: {referenceCode}.",
+                        isPlatformTopUp ? "/admin/reconciliation" : null);
                 }
             }
 
@@ -232,7 +240,8 @@ namespace MangaPublishingSystem.Application.Services
         public async Task<Transaction?> GetDepositByReferenceCodeAsync(string referenceCode)
         {
             var transactions = await _transactionRepository.FindAsync(
-                t => t.ReferenceCode == referenceCode && t.Type == "Deposit");
+                t => t.ReferenceCode == referenceCode
+                    && (t.Type == "Deposit" || t.Type == "Platform_TopUp"));
             return transactions.FirstOrDefault();
         }
 
@@ -346,7 +355,7 @@ namespace MangaPublishingSystem.Application.Services
             if (isApproved)
             {
                 await PublishWalletNotificationAsync(
-                    wallet.UserId,
+                    wallet.UserId!.Value,
                     "Wallet_Withdrawal_Approve",
                     "Yêu cầu rút tiền được duyệt",
                     $"Yêu cầu rút {transaction.Amount:N0} VND (mã {transaction.ReferenceCode}) đã được Admin phê duyệt.");
@@ -355,13 +364,13 @@ namespace MangaPublishingSystem.Application.Services
             {
                 var rejectNote = string.IsNullOrWhiteSpace(adminNote) ? string.Empty : $" Lý do: {adminNote}";
                 await PublishWalletNotificationAsync(
-                    wallet.UserId,
+                    wallet.UserId!.Value,
                     "Wallet_Withdrawal_Reject",
                     "Yêu cầu rút tiền bị từ chối",
                     $"Yêu cầu rút {transaction.Amount:N0} VND (mã {transaction.ReferenceCode}) bị từ chối.{rejectNote} Số dư đã được hoàn lại.");
             }
 
-            await _notificationPublisher.PublishWalletUpdatedAsync(wallet.UserId, new WalletUpdatedPayload
+            await _notificationPublisher.PublishWalletUpdatedAsync(wallet.UserId!.Value, new WalletUpdatedPayload
             {
                 WalletId = wallet.Id,
                 SetupFundBalance = wallet.SetupFundBalance,
@@ -824,9 +833,9 @@ namespace MangaPublishingSystem.Application.Services
 
                         await _unitOfWork.SaveChangesAsync();
 
-                        if (wallet != null)
+                        if (wallet != null && wallet.UserId.HasValue)
                         {
-                            await _notificationPublisher.PublishWalletUpdatedAsync(wallet.UserId, new WalletUpdatedPayload
+                            await _notificationPublisher.PublishWalletUpdatedAsync(wallet.UserId.Value, new WalletUpdatedPayload
                             {
                                 WalletId = wallet.Id,
                                 SetupFundBalance = wallet.SetupFundBalance,

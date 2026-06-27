@@ -63,7 +63,7 @@ namespace MangaPublishingSystem.Application.Services.Dashboard
             return new DashboardStatsResponseDto
             {
                 Role = MapRoleForFe(roleName),
-                PendingSeries = series.Count(s => IsPendingApproval(s.Status)),
+                PendingSeries = series.Count(s => IsPendingBoardVote(s.Status)),
                 ApprovedSeries = series.Count(s => IsBoardApproved(s.Status)),
                 InProductionSeries = series.Count(s => IsInProduction(s.Status)),
                 Series = series.Count
@@ -107,10 +107,16 @@ namespace MangaPublishingSystem.Application.Services.Dashboard
                 || status.Equals("Pending", StringComparison.OrdinalIgnoreCase);
         }
 
+        private static bool IsPendingBoardVote(string status)
+        {
+            return status.Equals("Pending_Board_Vote", StringComparison.OrdinalIgnoreCase);
+        }
+
         private static bool IsBoardApproved(string status)
         {
-            return status.Equals("Board_Approved", StringComparison.OrdinalIgnoreCase)
-                || status.Equals("Approved", StringComparison.OrdinalIgnoreCase);
+            return status.Equals("Fund_Pending", StringComparison.OrdinalIgnoreCase) 
+                || status.Equals("Approved", StringComparison.OrdinalIgnoreCase) 
+                || status.Equals("Active", StringComparison.OrdinalIgnoreCase);
         }
 
         private static bool IsInProduction(string status)
