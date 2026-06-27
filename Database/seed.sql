@@ -79,7 +79,8 @@ INSERT INTO dbo.[User] (UserId, RoleId, UserName, PasswordHash, Email, FullName,
 (8, 3, 'board3', N'$2a$11$MYGlbol73VYbWKwQNlBWeue7YregoBRkXJg2Kji/OOsDL3xrnKeK6', 'board3@mangapublishing.com', N'Trần Thị Hội Đồng 3', N'Active', GETUTCDATE(), NULL, NULL, NULL, NULL),
 (9, 3, 'board4', N'$2a$11$MYGlbol73VYbWKwQNlBWeue7YregoBRkXJg2Kji/OOsDL3xrnKeK6', 'board4@mangapublishing.com', N'Lê Thị Hội Đồng 4', N'Active', GETUTCDATE(), NULL, NULL, NULL, NULL),
 (10, 3, 'board5', N'$2a$11$MYGlbol73VYbWKwQNlBWeue7YregoBRkXJg2Kji/OOsDL3xrnKeK6', 'board5@mangapublishing.com', N'Phạm Văn Hội Đồng 5', N'Active', GETUTCDATE(), NULL, NULL, NULL, NULL),
-(11, 3, 'board6', N'$2a$11$MYGlbol73VYbWKwQNlBWeue7YregoBRkXJg2Kji/OOsDL3xrnKeK6', 'board6@mangapublishing.com', N'Vũ Văn Hội Đồng 6', N'Active', GETUTCDATE(), NULL, NULL, NULL, NULL);
+(11, 3, 'board6', N'$2a$11$MYGlbol73VYbWKwQNlBWeue7YregoBRkXJg2Kji/OOsDL3xrnKeK6', 'board6@mangapublishing.com', N'Vũ Văn Hội Đồng 6', N'Active', GETUTCDATE(), NULL, NULL, NULL, NULL),
+(12, 3, 'board7', N'$2a$11$MYGlbol73VYbWKwQNlBWeue7YregoBRkXJg2Kji/OOsDL3xrnKeK6', 'board7@mangapublishing.com', N'Hoàng Văn Hội Đồng 7', N'Active', GETUTCDATE(), NULL, NULL, NULL, NULL);
 SET IDENTITY_INSERT dbo.[User] OFF;
 GO
 
@@ -95,7 +96,8 @@ INSERT INTO dbo.Wallet (WalletId, UserId, SetupFundBalance, WithdrawableBalance,
 (8, 8, 0.00, 0.00, 0.00, 0.00),
 (9, 9, 0.00, 0.00, 0.00, 0.00),
 (10, 10, 0.00, 0.00, 0.00, 0.00),
-(11, 11, 0.00, 0.00, 0.00, 0.00);
+(11, 11, 0.00, 0.00, 0.00, 0.00),
+(12, 12, 0.00, 0.00, 0.00, 0.00);
 SET IDENTITY_INSERT dbo.Wallet OFF;
 GO
 

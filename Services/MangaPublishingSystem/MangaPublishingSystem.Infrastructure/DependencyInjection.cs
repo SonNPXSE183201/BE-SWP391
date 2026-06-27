@@ -4,6 +4,7 @@ using System.Linq;
 using MangaPublishingSystem.Application.Common.Security;
 using MangaPublishingSystem.Application.IRepositories;
 using MangaPublishingSystem.Application.IServices;
+using MangaPublishingSystem.Application.Options;
 using MangaPublishingSystem.Infrastructure.Data;
 using MangaPublishingSystem.Infrastructure.Models;
 using MangaPublishingSystem.Infrastructure.Services;
@@ -67,6 +68,8 @@ namespace MangaPublishingSystem.Infrastructure
             // Security services
             services.AddScoped<IPasswordHasher, BCryptPasswordHasher>();
             services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
+
+            services.Configure<BoardVoteSettings>(config.GetSection("BoardVote"));
 
             // VNPay Payment
             services.Configure<VnPaySettings>(config.GetSection("VnPay"));

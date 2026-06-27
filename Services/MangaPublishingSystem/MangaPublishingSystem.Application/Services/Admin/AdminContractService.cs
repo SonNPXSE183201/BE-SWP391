@@ -54,7 +54,7 @@ namespace MangaPublishingSystem.Application.Services.Admin
                 throw new NotFoundException("Không tìm thấy bộ truyện.");
             }
 
-            if (series.Status != "Board_Approved" && series.Status != "Approved")
+            if (!IsEligibleForAdminContract(series.Status))
             {
                 throw new BadRequestException("Bộ truyện chưa được Hội đồng phê duyệt.");
             }
@@ -115,6 +115,13 @@ namespace MangaPublishingSystem.Application.Services.Admin
             await _contractRepository.AddAddendumAsync(addendum);
             await _unitOfWork.SaveChangesAsync();
         }
+
+        /// <summary>
+        /// Fund_Pending: Hội đồng đã vote đủ phiếu (luồng POST /api/series/{id}/vote).
+        /// Board_Approved/Approved: trạng thái legacy hoặc seed.
+        /// </summary>
+        private static bool IsEligibleForAdminContract(string status) =>
+            status is "Fund_Pending" or "Board_Approved" or "Approved";
 
         private static List<string> ParseGenres(string? genre)
         {
