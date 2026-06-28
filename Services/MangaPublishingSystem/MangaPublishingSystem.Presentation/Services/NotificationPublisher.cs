@@ -44,5 +44,11 @@ namespace MangaPublishingSystem.Presentation.Services
             // Gửi event UnreadCountUpdated cho Frontend lắng nghe
             await _hubContext.Clients.User(userId.ToString()).SendAsync("UnreadCountUpdated", new { Count = count });
         }
+
+        public async Task PublishBoardDataChangedAsync()
+        {
+            // Gửi event BoardDataChanged cho tất cả các Client đang kết nối
+            await _hubContext.Clients.All.SendAsync("BoardDataChanged");
+        }
     }
 }

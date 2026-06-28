@@ -91,9 +91,14 @@ namespace MangaPublishingSystem.Presentation.Controllers.Reviews
 
         [Authorize(Roles = "Tantou Editor")]
         [HttpPost("series/{id}/require-revision")]
-        public async Task<ActionResult<ApiResponse<object>>> RequireSeriesRevision(int id, [FromBody] RequireSeriesRevisionDto dto)
+        public async Task<ActionResult<ApiResponse<object>>> RequireSeriesRevision(int id, [FromBody] RequireSeriesRevisionDto? dto)
         {
-            await _seriesService.RequireSeriesRevisionAsync(id, CurrentUserId, dto.Comment);
+            if (dto == null)
+            {
+                return BadRequest(ApiResponse<object>.Failure(400, "Dữ liệu yêu cầu không hợp lệ."));
+            }
+
+            await _seriesService.RequireSeriesRevisionAsync(id, CurrentUserId, dto);
             return Ok(ApiResponse<object>.Success(null, "Yêu cầu chỉnh sửa bộ truyện thành công."));
         }
     }

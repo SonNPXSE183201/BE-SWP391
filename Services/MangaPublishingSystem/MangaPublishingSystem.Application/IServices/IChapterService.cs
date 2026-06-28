@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http;
 using MangaPublishingSystem.Domain.Entities;
 
 namespace MangaPublishingSystem.Application.IServices
@@ -12,5 +13,11 @@ namespace MangaPublishingSystem.Application.IServices
         System.Threading.Tasks.Task UpdateDeadlineAsync(int chapterId, DateTime deadline);
         System.Threading.Tasks.Task PublishChapterAsync(int chapterId);
         Task<IEnumerable<Chapter>> GetChaptersBySeriesIdAsync(int seriesId);
+
+        /// <summary>
+        /// Nối thêm các trang ảnh vào một chapter đã tồn tại (Upload thêm trang).
+        /// Trả về danh sách các trang vừa được thêm.
+        /// </summary>
+        Task<IEnumerable<Page>> AddPagesAsync(int chapterId, int mangakaId, List<IFormFile> files);
     }
 }

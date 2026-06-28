@@ -54,7 +54,7 @@ namespace MangaPublishingSystem.Application.Services.Admin
                 throw new NotFoundException("Không tìm thấy bộ truyện.");
             }
 
-            if (series.Status != "Board_Approved" && series.Status != "Approved")
+            if (series.Status != "Fund_Pending" && series.Status != "Approved")
             {
                 throw new BadRequestException("Bộ truyện chưa được Hội đồng phê duyệt.");
             }

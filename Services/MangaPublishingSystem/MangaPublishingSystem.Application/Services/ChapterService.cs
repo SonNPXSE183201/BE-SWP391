@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using BuildingBlocks.Exceptions;
+using Microsoft.AspNetCore.Http;
 using MangaPublishingSystem.Domain.Entities;
 using MangaPublishingSystem.Application.IRepositories;
 using MangaPublishingSystem.Application.IServices;
@@ -20,6 +21,8 @@ namespace MangaPublishingSystem.Application.Services
         private readonly ITransactionRepository _transactionRepository;
         private readonly INotificationRepository _notificationRepository;
         private readonly INotificationPublisher _notificationPublisher;
+        private readonly IPageRepository _pageRepository;
+        private readonly IStorageService _storageService;
 
         public ChapterService(
             IChapterRepository repository, 
@@ -29,7 +32,9 @@ namespace MangaPublishingSystem.Application.Services
             IWalletRepository walletRepository,
             ITransactionRepository transactionRepository,
             INotificationRepository notificationRepository,
-            INotificationPublisher notificationPublisher) 
+            INotificationPublisher notificationPublisher,
+            IPageRepository pageRepository,
+            IStorageService storageService) 
             : base(repository, unitOfWork)
         {
             _chapterRepository = repository;
@@ -39,6 +44,8 @@ namespace MangaPublishingSystem.Application.Services
             _transactionRepository = transactionRepository;
             _notificationRepository = notificationRepository;
             _notificationPublisher = notificationPublisher;
+            _pageRepository = pageRepository;
+            _storageService = storageService;
         }
 
         public async Task<IEnumerable<Chapter>> GetChaptersBySeriesIdAsync(int seriesId)
@@ -208,6 +215,87 @@ namespace MangaPublishingSystem.Application.Services
             chapter.Status = "Published";
             _repository.Update(chapter);
             await _unitOfWork.SaveChangesAsync();
+        }
+
+        public async Task<IEnumerable<Page>> AddPagesAsync(int chapterId, int mangakaId, List<IFormFile> files)
+        {
+            if (files == null || files.Count == 0)
+            {
+                throw new BadRequestException("Vui lòng chọn ít nhất 1 trang để tải lên.");
+            }
+
+            var chapter = await _repository.GetByIdAsync(chapterId);
+            if (chapter == null)
+            {
+                throw new NotFoundException("Không tìm thấy chapter.");
+            }
+
+            var series = await _seriesRepository.GetByIdAsync(chapter.SeriesId);
+            if (series == null)
+            {
+                throw new NotFoundException("Không tìm thấy bộ truyện liên kết với chapter này.");
+            }
+
+            if (series.MangakaId != mangakaId)
+            {
+                throw new ForbiddenException("Bạn không phải tác giả của bộ truyện này.");
+            }
+
+            if (chapter.Status is "Approved" or "Published")
+            {
+                throw new ConflictException("Chapter đã được duyệt/xuất bản, không thể thêm trang mới.");
+            }
+
+            // Tính số thứ tự trang kế tiếp dựa trên các trang hiện có
+            var existingPages = await _pageRepository.FindAsync(p => p.ChapterId == chapterId);
+            int nextPageNumber = existingPages.Any() ? existingPages.Max(p => p.PageNumber) + 1 : 1;
+
+            var addedPages = new List<Page>();
+            foreach (var file in files)
+            {
+                await using var stream = file.OpenReadStream();
+                var contentType = string.IsNullOrWhiteSpace(file.ContentType)
+                    ? "application/octet-stream"
+                    : file.ContentType;
+                var imageUrl = await _storageService.UploadFileAsync(stream, file.FileName, contentType);
+
+                var page = new Page
+                {
+                    ChapterId = chapter.Id,
+                    PageNumber = nextPageNumber,
+                    RawImageUrl = imageUrl,
+                    BaseLayerUrl = imageUrl,
+                    Status = "Pending",
+                    IsApproved = false
+                };
+
+                await _pageRepository.AddAsync(page);
+                addedPages.Add(page);
+                nextPageNumber++;
+            }
+
+            // Đồng bộ số trang của chapter (giữ bằng tổng số trang cho tới khi Editor chốt số hợp lệ)
+            chapter.ValidPageCount = existingPages.Count() + addedPages.Count;
+            _repository.Update(chapter);
+
+            await _unitOfWork.SaveChangesAsync();
+
+            // Thông báo cho Editor phụ trách (nếu có)
+            if (series.EditorId.HasValue)
+            {
+                var notif = new Notification
+                {
+                    UserId = series.EditorId.Value,
+                    Content = $"Tác giả đã bổ sung {addedPages.Count} trang cho chapter '{chapter.Title}' (Chapter {chapter.ChapterNumber}) của bộ truyện '{series.Title}'.",
+                    Type = "Chapter_Pages_Added",
+                    IsRead = false
+                };
+                await _notificationRepository.AddAsync(notif);
+                await _unitOfWork.SaveChangesAsync();
+                await _notificationPublisher.PublishNotificationAsync(series.EditorId.Value, notif.Content, notif.Type);
+            }
+
+            return addedPages;
         }
     }
 }

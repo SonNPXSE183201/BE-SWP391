@@ -7,6 +7,7 @@ using MangaPublishingSystem.Application.DTOs.Contracts;
 using MangaPublishingSystem.Application.IRepositories;
 using MangaPublishingSystem.Application.IServices;
 using MangaPublishingSystem.Domain.Entities;
+using MangaPublishingSystem.Application.DTOs.Notifications;
 
 namespace MangaPublishingSystem.Application.Services
 {
@@ -15,16 +16,19 @@ namespace MangaPublishingSystem.Application.Services
         private readonly IContractRepository _contractRepository;
         private readonly IUserRepository _userRepository;
         private readonly ISeriesRepository _seriesRepository;
+        private readonly INotificationPublisher _notificationPublisher;
 
         public ContractService(
             IContractRepository repository,
             IUnitOfWork unitOfWork,
             IUserRepository userRepository,
-            ISeriesRepository seriesRepository) : base(repository, unitOfWork)
+            ISeriesRepository seriesRepository,
+            INotificationPublisher notificationPublisher) : base(repository, unitOfWork)
         {
             _contractRepository = repository;
             _userRepository = userRepository;
             _seriesRepository = seriesRepository;
+            _notificationPublisher = notificationPublisher;
         }
 
         public async Task<ContractDto> CreateContractAsync(CreateContractDto dto)
@@ -69,6 +73,15 @@ namespace MangaPublishingSystem.Application.Services
 
             await _contractRepository.AddAsync(contract);
             await _unitOfWork.SaveChangesAsync();
+
+            // Gửi thông báo realtime cho Mangaka để màn hình tự động bật nút "Chấp nhận vốn"
+            await _notificationPublisher.PublishNotificationPayloadAsync(dto.UserId, new NotificationPayload
+            {
+                Title = "Hợp đồng đã được tạo",
+                Message = $"Admin đã tạo hợp đồng thành công cho bộ truyện '{series.Title}'. Bạn có thể chấp nhận vốn ngay bây giờ.",
+                Type = "Contract_Created",
+                Link = $"/mangaka/series/{series.Id}"
+            });
 
             var created = await _contractRepository.GetContractWithDetailsAsync(contract.Id);
             return MapToDto(created!);
