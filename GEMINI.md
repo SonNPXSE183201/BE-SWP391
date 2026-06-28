@@ -10,9 +10,15 @@
 
 Trước khi triển khai bất kỳ tính năng nào liên quan đến nghiệp vụ sáng tác, phân việc, ký hợp đồng hay thanh toán, AI phải đọc tệp tin [SRS.md](file:///d:/SWP391/Project/BE-SWP391/SRS.md) tại gốc dự án để hiểu rõ:
 
-1. **Vai trò các Actor**: Ai được phép gọi API nào (Mangaka, Assistant, Tantou Editor, Editorial Board, System Admin).
+1. **Vai trò các Actor**: 
+   - *Mangaka*: Nộp truyện, duyệt/từ chối task, nhận nhuận bút.
+   - *Assistant*: Nhận việc, nộp tranh, nhận lương.
+   - *Tantou Editor*: Duyệt bản thảo nháp, **trình bộ truyện lên Hội đồng (Cổng 1)**.
+   - *Editorial Board*: **Biểu quyết cấp vốn (Cổng 2)**, đánh giá hủy truyện (axing).
+   - *System Admin*: Cấu hình quy tắc HĐ, **quyết định thủ công khi hòa phiếu (Manual Resolve)**, thiết lập hợp đồng gốc, đối soát VNPay.
 2. **Quy tắc về tiền và ví (Wallet Rules)**: `SetupFundBalance` vs `WithdrawableBalance`.
 3. **Quy tắc Escrow**: Khóa tiền cọc nhiệm vụ khi tạo task, giải ngân khi approve, hoàn tiền khi hủy task.
+4. **Quy tắc Cấp vốn Hai cổng**: Truyện nộp duyệt -> Editor kiểm duyệt -> Trình HĐ -> HĐ Biểu quyết -> Admin duyệt giải ngân.
 
 ## 2. NGUYÊN TẮC KIẾN TRÚC NGHIÊM NGẶT (CLEAN ARCHITECTURE 4 TẦNG)
 
@@ -100,9 +106,12 @@ dotnet build MangaPublishingSystem.sln
 * **Phân tách tệp DTO độc lập (DTO Separation)**:
   * **CẤM TUYỆT ĐỐI** gộp chung nhiều lớp DTO khác nhau vào trong cùng một tệp tin (ví dụ: gộp lớp summary con vào tệp DTO cha).
   * Mỗi lớp DTO bắt buộc phải được khai báo trong một tệp tin C# riêng biệt đặt tên theo đúng tên lớp để đảm bảo cấu trúc sạch sẽ và dễ tích hợp.
-* **Cơ chế Đồng thuận Đa số Động (Dynamic Majority Consensus)**:
-  * Khi xử lý logic bỏ phiếu của hội đồng, không được phép hardcode số lượng thành viên hội đồng.
-  * Phải truy vấn động số lượng người dùng hoạt động (`Active`) có vai trò hội đồng (`RoleId == 3`), tính toán các ngưỡng đồng ý ($\lfloor N / 2 \rfloor + 1$) và từ chối ($N - \text{Ngưỡng Duyệt} + 1$) tương ứng để đưa ra quyết định trạng thái cuối cùng (`Fund_Pending` hoặc `Rejected`).
+* **Cơ chế Biểu quyết Hội đồng Động (Dynamic Board Voting)**:
+  * Tuyệt đối không hardcode số lượng thành viên hội đồng hay ngưỡng duyệt cố định (như $\lfloor N / 2 \rfloor + 1$).
+  * Phải sử dụng cấu hình tập trung từ bảng `BoardVotingConfig` (`ApprovalThresholdPercent`, `RejectionThresholdPercent`, `TiePolicy`, `AutoResolveHours`).
+  * Mẫu số ($N$) để tính ngưỡng luôn là tổng số người dùng đang hoạt động (`Active`) có vai trò HĐ (`RoleId == 3`), KHÔNG PHẢI là số người đã vote.
+  * Phải hỗ trợ xử lý Tie Policy (Escalate cho Admin, tự động Reject, hoặc theo phiếu Chủ tịch `ChairUserId`) và cơ chế Auto Resolve (chốt tự động sau 48h).
+  * Quy tắc **Hai Cổng**: Board chỉ có quyền vote đối với các series ở trạng thái `Pending_Board_Vote` do Editor trình lên.
 * **Phân chia thư mục theo tính năng (Feature Folders)**:
   * Khi triển khai hoặc viết mã cho bất kỳ chức năng/nghiệp vụ mới nào, AI **bắt buộc phải tạo một thư mục riêng biệt đặt tên theo tính năng đó** (ví dụ: thư mục `Chapter`, `Task`, `User`, `Wallet`...) bên trong các thư mục thành phần lớn như `DTOs`, `Validations`, `Services`, `Controllers`.
   * **CẤM TUYỆT ĐỐI** tạo các tệp tin chức năng nằm lộn xộn trực tiếp dưới thư mục gốc (như `DTOs/`, `Validations/`, `Services/`, `Controllers/`) mà không phân cụm theo thư mục tính năng, nhằm đảm bảo nguồn mã được phân bổ khoa học, dễ quản lý và kiểm soát.

@@ -114,6 +114,16 @@ SET IDENTITY_INSERT dbo.Role OFF;
 GO
 
 -- ─────────────────────────────────────────────────────────────────────────
+-- PHASE 2b: BOARD VOTING CONFIG
+-- ─────────────────────────────────────────────────────────────────────────
+PRINT 'Phase 2b: Seeding Board Voting Config...';
+SET IDENTITY_INSERT dbo.BoardVotingConfig ON;
+INSERT INTO dbo.BoardVotingConfig (ConfigId, AutoResolveHours, ApprovalThresholdPercent, RejectionThresholdPercent, TiePolicy, ClearVotesOnResubmit, RequireOddBoardSize, BoardRoleId, ChairUserId, CreateAt)
+VALUES (1, 48, 66, 66, N'Escalate', 1, 1, 3, NULL, GETUTCDATE());
+SET IDENTITY_INSERT dbo.BoardVotingConfig OFF;
+GO
+
+-- ─────────────────────────────────────────────────────────────────────────
 -- PHASE 3: USERS — 12 tài khoản mặc định
 -- ─────────────────────────────────────────────────────────────────────────
 PRINT 'Phase 3: Seeding default users (password: 12345)...';
