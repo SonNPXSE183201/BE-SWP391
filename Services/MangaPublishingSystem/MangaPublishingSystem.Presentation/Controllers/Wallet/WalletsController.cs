@@ -74,6 +74,12 @@ namespace MangaPublishingSystem.Presentation.Controllers.Wallet
             var ipAddr = _httpContextAccessor.HttpContext?.Connection.RemoteIpAddress?.ToString() ?? "127.0.0.1";
             if (ipAddr == "::1") ipAddr = "127.0.0.1"; // IPv6 loopback → IPv4
 
+            var referer = HttpContext.Request.Headers.Referer.ToString();
+            if (referer.Contains("swagger", StringComparison.OrdinalIgnoreCase))
+            {
+                HttpContext.Response.Cookies.Append("swagger_test", "true", new CookieOptions { MaxAge = TimeSpan.FromMinutes(15) });
+            }
+
             var redirectUrl = await _walletService.DepositAsync(userId, depositDto.Amount, ipAddr);
             return Ok(ApiResponse<string>.Success(redirectUrl, "Khởi tạo giao dịch nạp tiền thành công. Vui lòng thanh toán qua liên kết."));
         }
@@ -123,9 +129,21 @@ namespace MangaPublishingSystem.Presentation.Controllers.Wallet
         ///   - Hiển thị: TerminalID, TxnRef, TransactionNo, Amount, BankCode
         /// </summary>
         [HttpGet("deposit/return")]
-        public async Task<IActionResult> DepositReturn([FromQuery] VnpayReturnDto dto)
+        public async Task<IActionResult> DepositReturn([FromQuery] VnpayReturnDto dto, [FromQuery] bool noRedirect = false)
         {
             var query = HttpContext.Request.Query;
+            var acceptHeader = HttpContext.Request.Headers.Accept.ToString();
+            var referer = HttpContext.Request.Headers.Referer.ToString();
+            
+            bool isSwagger = referer.Contains("swagger", StringComparison.OrdinalIgnoreCase);
+            bool isSwaggerCookie = HttpContext.Request.Cookies.ContainsKey("swagger_test");
+            
+            if (isSwaggerCookie)
+            {
+                HttpContext.Response.Cookies.Delete("swagger_test");
+            }
+
+            bool expectsHtml = acceptHeader.Contains("text/html", StringComparison.OrdinalIgnoreCase) && !isSwagger && !noRedirect && !isSwaggerCookie;
 
             // Trích xuất các thông tin hiển thị cho người dùng (theo code mẫu VNPay)
             query.TryGetValue("vnp_TxnRef",             out var txnRef);
@@ -163,7 +181,7 @@ namespace MangaPublishingSystem.Presentation.Controllers.Wallet
                 };
 
                 var invalidRedirect = BuildFrontendRedirectUrl(invalidResult);
-                if (!string.IsNullOrWhiteSpace(invalidRedirect))
+                if (expectsHtml && !string.IsNullOrWhiteSpace(invalidRedirect))
                 {
                     return Redirect(invalidRedirect);
                 }
@@ -180,7 +198,8 @@ namespace MangaPublishingSystem.Presentation.Controllers.Wallet
             try
             {
                 var dbStatus = isTransactionSuccess ? "Success" : "Failed";
-                await _walletService.ConfirmDepositAsync(referenceCode, dbStatus);
+                query.TryGetValue("vnp_BankTranNo", out var bankTranNo);
+                await _walletService.ConfirmDepositAsync(referenceCode, dbStatus, bankCode, bankTranNo, cardType);
             }
             catch
             {
@@ -213,7 +232,7 @@ namespace MangaPublishingSystem.Presentation.Controllers.Wallet
             }
 
             var frontendRedirect = BuildFrontendRedirectUrl(result);
-            if (!string.IsNullOrWhiteSpace(frontendRedirect))
+            if (expectsHtml && !string.IsNullOrWhiteSpace(frontendRedirect))
             {
                 return Redirect(frontendRedirect);
             }
@@ -286,8 +305,12 @@ namespace MangaPublishingSystem.Presentation.Controllers.Wallet
             // Bước 7: Cập nhật Database
             try
             {
+                query.TryGetValue("vnp_BankCode", out var bankCode);
+                query.TryGetValue("vnp_BankTranNo", out var bankTranNo);
+                query.TryGetValue("vnp_CardType", out var cardType);
+
                 var status = isTransactionSuccess ? "Success" : "Failed";
-                await _walletService.ConfirmDepositAsync(referenceCode, status);
+                await _walletService.ConfirmDepositAsync(referenceCode, status, bankCode, bankTranNo, cardType);
                 return Ok(new { RspCode = "00", Message = "Confirm Success" });
             }
             catch (Exception)

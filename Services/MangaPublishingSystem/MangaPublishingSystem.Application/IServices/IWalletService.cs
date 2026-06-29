@@ -10,7 +10,7 @@ namespace MangaPublishingSystem.Application.IServices
         Task<Wallet?> GetWalletByUserIdAsync(int userId);
         Task<string> DepositAsync(int userId, decimal amount, string ipAddr = "127.0.0.1");
         Task<Transaction?> GetDepositByReferenceCodeAsync(string referenceCode);
-        Task<bool> ConfirmDepositAsync(string referenceCode, string status);
+        Task<bool> ConfirmDepositAsync(string referenceCode, string status, string? bankCode = null, string? bankTranNo = null, string? cardType = null);
         Task<Transaction> WithdrawAsync(int userId, decimal amount, string bankName, string accountNumber, string accountName);
         Task<IEnumerable<Transaction>> GetPendingWithdrawalsAsync();
         Task<Transaction> ApproveWithdrawAsync(int transactionId, bool isApproved, string? adminNote);

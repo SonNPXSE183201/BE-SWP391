@@ -101,7 +101,7 @@ namespace MangaPublishingSystem.Application.Services
             return paymentUrl;
         }
 
-        public async Task<bool> ConfirmDepositAsync(string referenceCode, string status)
+        public async Task<bool> ConfirmDepositAsync(string referenceCode, string status, string? bankCode = null, string? bankTranNo = null, string? cardType = null)
         {
             var transactions = await _transactionRepository.FindAsync(t => t.ReferenceCode == referenceCode);
             var transaction = transactions.FirstOrDefault();
@@ -118,6 +118,10 @@ namespace MangaPublishingSystem.Application.Services
             if (status.Equals("Success", StringComparison.OrdinalIgnoreCase))
             {
                 transaction.Status = "Success";
+                transaction.BankName = bankCode; // VNPay only returns BankCode (e.g. VNPAYQR, NCB, VCB)
+                transaction.BankAccountNumber = bankTranNo; // We use TransactionNo at VNPay or BankTranNo
+                transaction.BankAccountName = cardType; // VNPay doesn't provide account name, storing cardType instead
+
                 var wallet = await _walletRepository.GetByIdAsync(transaction.WalletId);
                 if (wallet != null)
                 {
