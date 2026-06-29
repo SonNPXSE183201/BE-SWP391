@@ -141,7 +141,8 @@ VALUES
 ( 8, 3, 'board3',            N'$2a$11$MYGlbol73VYbWKwQNlBWeue7YregoBRkXJg2Kji/OOsDL3xrnKeK6', 'board3@mangapublishing.com',       N'Trần Thị Hội Đồng 3',      N'Active',  GETUTCDATE(), NULL,      NULL,                              NULL,                        0, NULL),
 ( 9, 3, 'board4',            N'$2a$11$MYGlbol73VYbWKwQNlBWeue7YregoBRkXJg2Kji/OOsDL3xrnKeK6', 'board4@mangapublishing.com',       N'Lê Thị Hội Đồng 4',        N'Active',  GETUTCDATE(), NULL,      NULL,                              NULL,                        0, NULL),
 (10, 3, 'board5',            N'$2a$11$MYGlbol73VYbWKwQNlBWeue7YregoBRkXJg2Kji/OOsDL3xrnKeK6', 'board5@mangapublishing.com',       N'Phạm Văn Hội Đồng 5',      N'Active',  GETUTCDATE(), NULL,      NULL,                              NULL,                        0, NULL),
-(11, 3, 'board6',            N'$2a$11$MYGlbol73VYbWKwQNlBWeue7YregoBRkXJg2Kji/OOsDL3xrnKeK6', 'board6@mangapublishing.com',       N'Vũ Văn Hội Đồng 6',        N'Active',  GETUTCDATE(), NULL,      NULL,                              NULL,                        0, NULL);
+(11, 3, 'board6',            N'$2a$11$MYGlbol73VYbWKwQNlBWeue7YregoBRkXJg2Kji/OOsDL3xrnKeK6', 'board6@mangapublishing.com',       N'Vũ Văn Hội Đồng 6',        N'Active',  GETUTCDATE(), NULL,      NULL,                              NULL,                        0, NULL),
+(12, 3, 'board7',            N'$2a$11$MYGlbol73VYbWKwQNlBWeue7YregoBRkXJg2Kji/OOsDL3xrnKeK6', 'board7@mangapublishing.com',       N'Hoàng Văn Hội Đồng 7',     N'Active',  GETUTCDATE(), NULL,      NULL,                              NULL,                        0, NULL);
 SET IDENTITY_INSERT dbo.[User] OFF;
 GO
 
@@ -150,19 +151,21 @@ GO
 -- ─────────────────────────────────────────────────────────────────────────
 PRINT 'Phase 4: Seeding wallets...';
 SET IDENTITY_INSERT dbo.Wallet ON;
-INSERT INTO dbo.Wallet (WalletId, UserId, Kind, SetupFundBalance, WithdrawableBalance, LockedFund, LockedWithdrawable) VALUES
-( 1,  1,  N'User',              0.00,      0.00,      0.00, 0.00),
-( 2,  2,  N'User',              0.00,      0.00,      0.00, 0.00),
-( 3,  3,  N'User',              0.00,      0.00,      0.00, 0.00),
-( 4,  4,  N'User',       38800000.00, 9000000.00, 1200000.00, 0.00),
-( 5,  5,  N'User',              0.00, 1500000.00,      0.00, 0.00),
-( 6,  6,  N'User',              0.00,      0.00,      0.00, 0.00),
-( 7,  7,  N'User',              0.00,      0.00,      0.00, 0.00),
-( 8,  8,  N'User',              0.00,      0.00,      0.00, 0.00),
-( 9,  9,  N'User',              0.00,      0.00,      0.00, 0.00),
-(10, 10,  N'User',              0.00,      0.00,      0.00, 0.00),
-(11, 11,  N'User',              0.00,      0.00,      0.00, 0.00),
-(12, NULL, N'PlatformTreasury', 0.00, 5470000000.00, 0.00, 0.00);
+INSERT INTO dbo.[User]
+    (UserId, RoleId, UserName, PasswordHash, Email, FullName, Status, CreateAt, PenName, PortfolioUrl, Skills, IsOnLeave, AssignedEditorId)
+VALUES
+( 1, 1, 'admin',             N'$2a$11$MYGlbol73VYbWKwQNlBWeue7YregoBRkXJg2Kji/OOsDL3xrnKeK6', 'admin@mangapublishing.com',        N'Nguyễn Văn Admin',          N'Active',  GETUTCDATE(), NULL,      NULL,                              NULL,                        0, NULL),
+( 2, 2, 'editor1',           N'$2a$11$MYGlbol73VYbWKwQNlBWeue7YregoBRkXJg2Kji/OOsDL3xrnKeK6', 'editor.tran@mangapublishing.com',  N'Trần Thị Biên Tập',        N'Active',  GETUTCDATE(), NULL,      NULL,                              NULL,                        0, NULL),
+( 3, 3, 'board1',            N'$2a$11$MYGlbol73VYbWKwQNlBWeue7YregoBRkXJg2Kji/OOsDL3xrnKeK6', 'board.le@mangapublishing.com',     N'Lê Văn Hội Đồng',          N'Active',  GETUTCDATE(), NULL,      NULL,                              NULL,                        0, NULL),
+( 4, 4, 'mangaka1',          N'$2a$11$MYGlbol73VYbWKwQNlBWeue7YregoBRkXJg2Kji/OOsDL3xrnKeK6', 'mangaka.nam@gmail.com',            N'Phan Hoàng Nam',           N'Active',  GETUTCDATE(), N'NamArt', NULL,                              NULL,                        0, 2),
+( 5, 5, 'assistant1',        N'$2a$11$MYGlbol73VYbWKwQNlBWeue7YregoBRkXJg2Kji/OOsDL3xrnKeK6', 'assistant.son@gmail.com',          N'Nguyễn Sơn',               N'Active',  GETUTCDATE(), NULL,      N'https://portfolio.nguyenson.com', N'Vẽ nền, Đi nét, Tô màu',  0, NULL),
+( 6, 5, 'assistant_pending', N'$2a$11$MYGlbol73VYbWKwQNlBWeue7YregoBRkXJg2Kji/OOsDL3xrnKeK6', 'assistant.pending@gmail.com',      N'Nguyễn Văn Chờ Duyệt',     N'Pending', GETUTCDATE(), NULL,      N'https://portfolio.com/pending',   N'Coloring, Lineart',        0, NULL),
+( 7, 3, 'board2',            N'$2a$11$MYGlbol73VYbWKwQNlBWeue7YregoBRkXJg2Kji/OOsDL3xrnKeK6', 'board2@mangapublishing.com',       N'Nguyễn Văn Hội Đồng 2',    N'Active',  GETUTCDATE(), NULL,      NULL,                              NULL,                        0, NULL),
+( 8, 3, 'board3',            N'$2a$11$MYGlbol73VYbWKwQNlBWeue7YregoBRkXJg2Kji/OOsDL3xrnKeK6', 'board3@mangapublishing.com',       N'Trần Thị Hội Đồng 3',      N'Active',  GETUTCDATE(), NULL,      NULL,                              NULL,                        0, NULL),
+( 9, 3, 'board4',            N'$2a$11$MYGlbol73VYbWKwQNlBWeue7YregoBRkXJg2Kji/OOsDL3xrnKeK6', 'board4@mangapublishing.com',       N'Lê Thị Hội Đồng 4',        N'Active',  GETUTCDATE(), NULL,      NULL,                              NULL,                        0, NULL),
+(10, 3, 'board5',            N'$2a$11$MYGlbol73VYbWKwQNlBWeue7YregoBRkXJg2Kji/OOsDL3xrnKeK6', 'board5@mangapublishing.com',       N'Phạm Văn Hội Đồng 5',      N'Active',  GETUTCDATE(), NULL,      NULL,                              NULL,                        0, NULL),
+(11, 3, 'board6',            N'$2a$11$MYGlbol73VYbWKwQNlBWeue7YregoBRkXJg2Kji/OOsDL3xrnKeK6', 'board6@mangapublishing.com',       N'Vũ Văn Hội Đồng 6',        N'Active',  GETUTCDATE(), NULL,      NULL,                              NULL,                        0, NULL),
+(12, 3, 'board7',            N'$2a$11$MYGlbol73VYbWKwQNlBWeue7YregoBRkXJg2Kji/OOsDL3xrnKeK6', 'board7@mangapublishing.com',       N'Hoàng Văn Hội Đồng 7',     N'Active',  GETUTCDATE(), NULL,      NULL,                              NULL,                        0, NULL);
 SET IDENTITY_INSERT dbo.Wallet OFF;
 GO
 
