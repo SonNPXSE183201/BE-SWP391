@@ -11,5 +11,7 @@ namespace MangaPublishingSystem.Application.IServices
         Task PublishWalletUpdatedAsync(int userId, WalletUpdatedPayload payload);
         Task PublishUnreadCountUpdatedAsync(int userId, int count);
         Task PublishBoardDataChangedAsync();
+        /// <summary>Bảng việc làm công khai — broadcast tới mọi client đang kết nối.</summary>
+        Task PublishTaskQueueChangedAsync(TaskStatusChangedPayload payload);
     }
 }

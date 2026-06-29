@@ -113,7 +113,7 @@ namespace MangaPublishingSystem.Application.Services
         public async Task<PendingBoardVotesResponseDto> GetPendingVotesPayloadAsync()
         {
             var rules = await BuildRulesDtoAsync();
-            var seriesList = await _seriesRepository.FindAsync(s => s.Status == "Pending_Board_Vote");
+            var seriesList = await _seriesRepository.FindWithDetailsAsync(s => s.Status == "Pending_Board_Vote");
             var seriesIds = seriesList.Select(s => s.Id).ToList();
             var votes = await _boardVoteRepository.FindAsync(v => seriesIds.Contains(v.SeriesId));
 
@@ -127,7 +127,7 @@ namespace MangaPublishingSystem.Application.Services
 
         public async Task<IEnumerable<SeriesDto>> GetEscalatedSeriesAsync()
         {
-            var seriesList = await _seriesRepository.FindAsync(s => s.Status == "Vote_Escalated");
+            var seriesList = await _seriesRepository.FindWithDetailsAsync(s => s.Status == "Vote_Escalated");
             var seriesIds = seriesList.Select(s => s.Id).ToList();
             var votes = await _boardVoteRepository.FindAsync(v => seriesIds.Contains(v.SeriesId));
             return seriesList.Select(s => MapSeriesDto(s, votes)).OrderByDescending(s => s.UpdateAt).ToList();
@@ -357,6 +357,7 @@ namespace MangaPublishingSystem.Application.Services
                 MangakaName = series.Mangaka?.FullName,
                 EditorName = series.Editor?.FullName,
                 EditorNote = series.EditorNote,
+                MangakaSubmissionNote = series.MangakaSubmissionNote,
                 CreateAt = series.CreateAt,
                 UpdateAt = series.UpdateAt,
                 BoardVotes = allVotes.Where(v => v.SeriesId == series.Id).Select(v => new BoardVoteDto

@@ -181,7 +181,10 @@ namespace MangaPublishingSystem.Presentation.Controllers.Tasks
                 MangakaName = t.Mangaka?.FullName,
                 AssistantName = t.Assistant?.FullName,
                 PageNumber = t.Region?.Page?.PageNumber ?? 0,
+                PageId = t.Region?.PageId ?? 0,
                 PageImageUrl = t.Region?.Page?.RawImageUrl,
+                RegionName = t.Region?.Name,
+                RegionCoordinatesJson = t.Region?.CoordinatesJson,
                 CreateAt = t.CreateAt,
                 UpdateAt = t.UpdateAt
             };
