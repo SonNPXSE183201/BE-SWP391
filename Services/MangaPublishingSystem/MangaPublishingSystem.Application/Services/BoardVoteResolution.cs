@@ -22,7 +22,7 @@ namespace MangaPublishingSystem.Application.Services
 
     public sealed record BoardVoteThresholds(int ApproveThreshold, int RejectThreshold);
 
-    public static class BoardVoteResolution
+    public static class BoardVoteOddMajorityRules
     {
         /// <summary>
         /// N lẻ → ngưỡng duyệt/từ chối = ⌊N/2⌋+1 (vd. N=7 → cần 4 phiếu).

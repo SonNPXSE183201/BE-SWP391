@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using MangaPublishingSystem.Application.Common;
 using MangaPublishingSystem.Application.IRepositories;
 using MangaPublishingSystem.Application.IServices;
 using Notification = MangaPublishingSystem.Domain.Entities.Notification;
@@ -18,6 +19,9 @@ namespace MangaPublishingSystem.Application.Services
         private readonly ITaskVersionRepository _taskVersionRepository;
         private readonly IAssistantProfileRepository _assistantProfileRepository;
         private readonly IRefreshTokenRepository _refreshTokenRepository;
+        private readonly ISeriesRepository _seriesRepository;
+        private readonly IBoardVoteRepository _boardVoteRepository;
+        private readonly IBoardVotingService _boardVotingService;
         private readonly IUnitOfWork _unitOfWork;
         private readonly ILogger<TaskAutomationService> _logger;
 
@@ -30,6 +34,9 @@ namespace MangaPublishingSystem.Application.Services
             ITaskVersionRepository taskVersionRepository,
             IAssistantProfileRepository assistantProfileRepository,
             IRefreshTokenRepository refreshTokenRepository,
+            ISeriesRepository seriesRepository,
+            IBoardVoteRepository boardVoteRepository,
+            IBoardVotingService boardVotingService,
             IUnitOfWork unitOfWork,
             ILogger<TaskAutomationService> logger)
         {
@@ -41,6 +48,9 @@ namespace MangaPublishingSystem.Application.Services
             _taskVersionRepository = taskVersionRepository;
             _assistantProfileRepository = assistantProfileRepository;
             _refreshTokenRepository = refreshTokenRepository;
+            _seriesRepository = seriesRepository;
+            _boardVoteRepository = boardVoteRepository;
+            _boardVotingService = boardVotingService;
             _unitOfWork = unitOfWork;
             _logger = logger;
         }
@@ -231,6 +241,47 @@ namespace MangaPublishingSystem.Application.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Lỗi khi tự động dọn dẹp RefreshToken.");
+            }
+        }
+
+        public async Task AutoResolveExpiredBoardVotesAsync()
+        {
+            _logger.LogInformation("Bắt đầu tự động chốt sổ các truyện bị ngâm quá hạn biểu quyết...");
+            try
+            {
+                var now = DateTime.UtcNow;
+                var config = await _boardVotingService.GetConfigAsync();
+                var rules = await _boardVotingService.BuildRulesDtoAsync();
+
+                var pendingSeries = await _seriesRepository.FindAsync(s =>
+                    s.Status == "Pending_Board_Vote" &&
+                    s.UpdateAt.HasValue &&
+                    s.UpdateAt.Value.AddHours(config.AutoResolveHours) < now);
+
+                foreach (var series in pendingSeries)
+                {
+                    _logger.LogInformation(
+                        "Tự động chốt sổ Series: {SeriesId} sau {Hours}h.",
+                        series.Id,
+                        config.AutoResolveHours);
+
+                    var votes = (await _boardVoteRepository.FindAsync(v => v.SeriesId == series.Id)).ToList();
+                    var (approveCount, rejectCount, _) = BoardVotingRulesCalculator.CountVotes(votes);
+                    var thresholds = BoardVotingRulesCalculator.CalculateThresholds(rules.BoardMemberCount, config);
+
+                    var resolution = BoardVotingRulesCalculator.EvaluateAutoResolve(
+                        thresholds, approveCount, rejectCount, config, votes);
+
+                    series.UpdateAt = now;
+                    await _boardVotingService.ApplyVoteResolutionAsync(
+                        series,
+                        resolution,
+                        "Hết hạn biểu quyết — hệ thống tự chốt theo cấu hình.");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Lỗi khi tự động chốt sổ biểu quyết.");
             }
         }
 

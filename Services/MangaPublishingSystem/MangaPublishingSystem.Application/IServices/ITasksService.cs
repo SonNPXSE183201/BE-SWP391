@@ -17,6 +17,7 @@ namespace MangaPublishingSystem.Application.IServices
         Task<IEnumerable<Tasks>> GetTasksByAssistantIdAsync(int assistantId);
         Task<IEnumerable<TaskVersion>> GetTaskVersionsAsync(int taskId);
         Task<byte[]> GetCompositedPageAsync(int pageId);
+        Task<string> RefreshPageCompositeAsync(int pageId);
         Task<PagedResult<TasksDto>> GetAvailableTasksAsync(GetAvailableTasksRequest request);
         Task<PagedResult<TasksDto>> GetAssistantTasksAsync(int assistantId, GetAssistantTasksRequest request);
         System.Threading.Tasks.Task AcceptTaskAsync(int taskId, int assistantId);
@@ -25,4 +26,4 @@ namespace MangaPublishingSystem.Application.IServices
         Task<TasksDto> GetTaskDetailsByIdAsync(int taskId, int userId, bool isMangaka);
     }
 }
-
+

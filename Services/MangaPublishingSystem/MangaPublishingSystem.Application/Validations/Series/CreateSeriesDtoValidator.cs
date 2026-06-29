@@ -24,7 +24,7 @@ namespace MangaPublishingSystem.Application.Validations.Series
                 .MaximumLength(500).WithMessage("Đường dẫn bản phác thảo (Name) không được vượt quá 500 ký tự.");
 
             RuleFor(x => x.EstimatedProductionBudget)
-                .GreaterThanOrEqualTo(0).WithMessage("Ngân sách sản xuất đề xuất phải lớn hơn hoặc bằng 0 VND.");
+                .GreaterThan(0).WithMessage("Ngân sách bản thảo Nemu phải lớn hơn 0 VND.");
         }
     }
 }

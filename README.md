@@ -214,7 +214,10 @@ Khi bạn (hoặc AI) cần tạo một API chức năng mới (Ví dụ: Tạo 
 ## 6. LỊCH SỬ CẬP NHẬT GẦN NHẤT (IMPLEMENTATION CHANGELOG)
 
 **Giai đoạn P2 & Tối ưu hệ thống:**
-* **Chức năng Duyệt Truyện & Hội đồng Thẩm định**: Đã hoàn thiện luồng nộp duyệt (`POST /api/series/{id}/chapters`), đánh giá của Editor (`POST /api/reviews/series/{id}/submit-to-board`) và danh sách chờ duyệt của Board (`GET /api/votes/pending`).
+* **Chức năng Duyệt Truyện & Hội đồng Thẩm định (Board Voting)**:
+  - Đã hoàn thiện luồng nộp duyệt, đánh giá của Editor (`POST /api/reviews/series/{id}/submit-to-board`).
+  - **Hệ thống Biểu quyết Động**: Thay thế logic tĩnh bằng `BoardVotingConfig`. Hỗ trợ cấu hình ngưỡng duyệt/rớt, chính sách hòa phiếu (`TiePolicy`: Escalate, Reject, ChairDecides).
+  - Tích hợp **Auto-Resolve 48h** (tự chốt phiếu tránh treo vô hạn). Admin có quyền quyết định thủ công khi luồng bị leo thang (`POST /api/admin/board-voting/series/{id}/resolve`).
 * **Quản lý Tranh chấp (Disputes)**: Bổ sung các DTO và API hiển thị danh sách (`GET /api/disputes`) cùng chi tiết bằng chứng tranh chấp (`GET /api/disputes/{taskId}`), giúp Editor xử lý khiếu nại dễ dàng.
 * **Tối ưu hóa (Performance)**: Áp dụng cơ chế **Eager Loading** (`Include`, `ThenInclude`) tại `ChapterRepository` (phương thức `GetPendingReviewChaptersWithDetailsAsync` và `GetChapterWithDetailsByIdAsync`) để giảm thiểu truy vấn N+1 khi hiển thị dữ liệu có tính liên kết phức tạp.
 * **An toàn dữ liệu (ACID Transaction)**: Chức năng Khởi tạo Task (`CreateTaskAsync`) được bọc trong giao dịch cơ sở dữ liệu (`BeginTransactionAsync`), đảm bảo thao tác trừ tiền ký quỹ (Escrow) và gửi thông báo luôn đồng bộ, tự động Rollback nếu có lỗi xảy ra.

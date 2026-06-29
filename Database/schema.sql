@@ -114,7 +114,8 @@ GO
 -- =========================================================================
 CREATE TABLE dbo.Wallet (
     WalletId INT IDENTITY(1,1) NOT NULL,
-    UserId INT NOT NULL,
+    UserId INT NULL,
+    Kind NVARCHAR(32) NOT NULL CONSTRAINT DF_Wallet_Kind DEFAULT N'User',
     SetupFundBalance DECIMAL(18,2) NOT NULL CONSTRAINT DF_Wallet_SetupFund DEFAULT 0.00,
     WithdrawableBalance DECIMAL(18,2) NOT NULL CONSTRAINT DF_Wallet_Withdrawable DEFAULT 0.00,
     LockedFund DECIMAL(18,2) NOT NULL CONSTRAINT DF_Wallet_LockedFund DEFAULT 0.00,
@@ -122,9 +123,12 @@ CREATE TABLE dbo.Wallet (
     CreateAt DATETIME2 NOT NULL CONSTRAINT DF_Wallet_CreateAt DEFAULT GETUTCDATE(),
     UpdateAt DATETIME2 NULL,
     CONSTRAINT PK_Wallet PRIMARY KEY CLUSTERED (WalletId),
-    CONSTRAINT FK_Wallet_User FOREIGN KEY (UserId) REFERENCES dbo.[User] (UserId) ON DELETE CASCADE,
-    CONSTRAINT UQ_Wallet_UserId UNIQUE (UserId)
+    CONSTRAINT FK_Wallet_User FOREIGN KEY (UserId) REFERENCES dbo.[User] (UserId) ON DELETE CASCADE
 );
+GO
+
+CREATE UNIQUE NONCLUSTERED INDEX UQ_Wallet_UserId ON dbo.Wallet (UserId) WHERE UserId IS NOT NULL;
+CREATE UNIQUE NONCLUSTERED INDEX UQ_Wallet_PlatformTreasury ON dbo.Wallet (Kind) WHERE Kind = N'PlatformTreasury';
 GO
 
 -- =========================================================================
@@ -198,6 +202,8 @@ CREATE TABLE dbo.Series (
     SeriesId INT IDENTITY(1,1) NOT NULL,
     MangakaId INT NOT NULL,
     EditorId INT NULL,
+    EditorNote NVARCHAR(MAX) NULL,
+    MangakaSubmissionNote NVARCHAR(MAX) NULL,
     Title NVARCHAR(250) NOT NULL,
     Genre NVARCHAR(100) NULL,
     Synopsis NVARCHAR(MAX) NULL,
@@ -247,6 +253,26 @@ CREATE TABLE dbo.BoardVote (
     CONSTRAINT PK_BoardVote PRIMARY KEY CLUSTERED (VoteId),
     CONSTRAINT FK_BoardVote_Series FOREIGN KEY (SeriesId) REFERENCES dbo.Series (SeriesId) ON DELETE CASCADE,
     CONSTRAINT FK_BoardVote_User FOREIGN KEY (BoardMemberId) REFERENCES dbo.[User] (UserId) ON DELETE NO ACTION
+);
+GO
+
+-- =========================================================================
+-- 9b. TABLE: BoardVotingConfig (singleton cấu hình biểu quyết Hội đồng)
+-- =========================================================================
+CREATE TABLE dbo.BoardVotingConfig (
+    ConfigId INT IDENTITY(1,1) NOT NULL,
+    AutoResolveHours INT NOT NULL CONSTRAINT DF_BoardVotingConfig_AutoResolveHours DEFAULT 48,
+        ApprovalThresholdPercent INT NOT NULL CONSTRAINT DF_BoardVotingConfig_ApprovalPct DEFAULT 66,
+        RejectionThresholdPercent INT NOT NULL CONSTRAINT DF_BoardVotingConfig_RejectionPct DEFAULT 66,
+    TiePolicy NVARCHAR(32) NOT NULL CONSTRAINT DF_BoardVotingConfig_TiePolicy DEFAULT N'Escalate',
+    ClearVotesOnResubmit BIT NOT NULL CONSTRAINT DF_BoardVotingConfig_ClearVotes DEFAULT 1,
+    RequireOddBoardSize BIT NOT NULL CONSTRAINT DF_BoardVotingConfig_OddSize DEFAULT 1,
+    BoardRoleId INT NOT NULL CONSTRAINT DF_BoardVotingConfig_RoleId DEFAULT 3,
+    ChairUserId INT NULL,
+    CreateAt DATETIME2 NOT NULL CONSTRAINT DF_BoardVotingConfig_CreateAt DEFAULT GETUTCDATE(),
+    UpdateAt DATETIME2 NULL,
+    CONSTRAINT PK_BoardVotingConfig PRIMARY KEY CLUSTERED (ConfigId),
+    CONSTRAINT FK_BoardVotingConfig_Chair FOREIGN KEY (ChairUserId) REFERENCES dbo.[User] (UserId) ON DELETE SET NULL
 );
 GO
 

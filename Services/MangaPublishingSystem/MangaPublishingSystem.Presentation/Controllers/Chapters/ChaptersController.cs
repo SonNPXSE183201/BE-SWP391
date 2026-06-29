@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Claims;
 using System.Threading.Tasks;
 using BuildingBlocks.Web.Responses;
 using MangaPublishingSystem.Application.DTOs.Chapters;
@@ -22,6 +23,8 @@ namespace MangaPublishingSystem.Presentation.Controllers.Chapters
             _chapterService = chapterService;
             _pageService = pageService;
         }
+
+        private int CurrentUserId => int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
 
         [HttpGet("{id}")]
         public async Task<ActionResult<ApiResponse<ChapterDto>>> GetChapterById([FromRoute] int id)
@@ -69,6 +72,28 @@ namespace MangaPublishingSystem.Presentation.Controllers.Chapters
             }).ToList();
 
             return Ok(ApiResponse<IEnumerable<PageDto>>.Success(result, "Lấy danh sách trang truyện thành công."));
+        }
+
+        [Authorize(Roles = "Mangaka")]
+        [HttpPost("{id}/pages")]
+        public async Task<ActionResult<ApiResponse<IEnumerable<PageDto>>>> AddPages([FromRoute] int id, [FromForm] AddChapterPagesDto dto)
+        {
+            var pages = await _chapterService.AddPagesAsync(id, CurrentUserId, dto.Pages);
+            var result = pages.Select(p => new PageDto
+            {
+                Id = p.Id,
+                ChapterId = p.ChapterId,
+                PageNumber = p.PageNumber,
+                RawImageUrl = p.RawImageUrl,
+                CompositeImageUrl = p.CompositeImageUrl,
+                BaseLayerUrl = p.BaseLayerUrl,
+                Status = p.Status,
+                IsApproved = p.IsApproved,
+                CreateAt = p.CreateAt,
+                UpdateAt = p.UpdateAt
+            }).ToList();
+
+            return Ok(ApiResponse<IEnumerable<PageDto>>.Success(result, "Tải lên trang truyện bổ sung thành công."));
         }
     }
 }

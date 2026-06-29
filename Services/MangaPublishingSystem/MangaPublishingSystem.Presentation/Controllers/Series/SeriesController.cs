@@ -36,6 +36,7 @@ namespace MangaPublishingSystem.Presentation.Controllers.Series
             }
 
             var result = MapToSeriesDto(series);
+            result.HasContract = await _seriesService.HasContractAsync(series.Id);
             return Ok(ApiResponse<SeriesDto>.Success(result, "Lấy thông tin chi tiết bộ truyện thành công."));
         }
 
@@ -122,7 +123,10 @@ namespace MangaPublishingSystem.Presentation.Controllers.Series
         [HttpPost("{id}/vote")]
         public async Task<ActionResult<ApiResponse<object>>> VoteSeries([FromRoute] int id, [FromBody] VoteSeriesRequestDto dto)
         {
-            await _seriesService.VoteSeriesAsync(id, CurrentUserId, dto.Approved, dto.Comment, dto.RecommendedBudget);
+            var voteChoice = !string.IsNullOrWhiteSpace(dto.VoteChoice)
+                ? dto.VoteChoice
+                : (dto.Approved ? "Approve" : "Reject");
+            await _seriesService.VoteSeriesAsync(id, CurrentUserId, voteChoice, dto.Comment, dto.RecommendedBudget);
             return Ok(ApiResponse<object>.Success(null, "Bỏ phiếu thẩm định bộ truyện thành công."));
         }
 
@@ -165,6 +169,8 @@ namespace MangaPublishingSystem.Presentation.Controllers.Series
                 ResourceFolderUrl = series.ResourceFolderUrl,
                 MangakaName = series.Mangaka?.FullName,
                 EditorName = series.Editor?.FullName,
+                EditorNote = series.EditorNote,
+                MangakaSubmissionNote = series.MangakaSubmissionNote,
                 CreateAt = series.CreateAt,
                 UpdateAt = series.UpdateAt
             };

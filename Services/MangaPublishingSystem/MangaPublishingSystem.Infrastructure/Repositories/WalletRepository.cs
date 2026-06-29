@@ -18,5 +18,11 @@ namespace MangaPublishingSystem.Infrastructure.Repositories
                 .Include(w => w.User)
                 .FirstOrDefaultAsync(w => w.UserId == userId);
         }
+
+        public async Task<Wallet?> GetPlatformTreasuryWalletAsync()
+        {
+            return await _context.Wallets
+                .FirstOrDefaultAsync(w => w.Kind == Domain.Constants.WalletKinds.PlatformTreasury);
+        }
     }
 }

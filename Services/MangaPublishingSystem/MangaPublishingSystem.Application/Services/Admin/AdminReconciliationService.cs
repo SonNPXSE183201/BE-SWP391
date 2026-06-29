@@ -39,7 +39,9 @@ namespace MangaPublishingSystem.Application.Services.Admin
 
         private static ReconciliationRecordDto MapRecord(Domain.Entities.Transaction tx)
         {
-            var userName = tx.ToUser?.FullName ?? tx.FromUser?.FullName ?? tx.Wallet?.User?.FullName ?? "N/A";
+            var userName = tx.Wallet?.Kind == Domain.Constants.WalletKinds.PlatformTreasury
+                ? "Ví quỹ chung NXB"
+                : tx.ToUser?.FullName ?? tx.FromUser?.FullName ?? tx.Wallet?.User?.FullName ?? "N/A";
             var internalStatus = MapInternalStatus(tx.Status);
             var reference = string.IsNullOrWhiteSpace(tx.ReferenceCode) ? $"TXN-{tx.Id:D6}" : tx.ReferenceCode;
             var hasReferenceCode = !string.IsNullOrWhiteSpace(tx.ReferenceCode);
@@ -47,13 +49,24 @@ namespace MangaPublishingSystem.Application.Services.Admin
 
             var reconciliationStatus = !hasReferenceCode && (tx.Type == "Deposit" || tx.Type == "Withdraw")
                 ? "Missing"
-                : internalStatus switch
+                : tx.Type is "Production_Funding" or "Platform_TopUp"
+                    ? (internalStatus is "Completed" or "Success" ? "Matched" : "Pending")
+                    : internalStatus switch
                 {
                     "Completed" or "Success" => "Matched",
                     "Pending" => "Pending",
                     "Failed" => "Mismatch",
                     _ => "Pending"
                 };
+
+            var description = tx.Type switch
+            {
+                "Deposit" => "Nạp tiền vào ví — Deposit (VNPay)",
+                "Withdraw" => "Rút tiền — Withdrawal (VNPay)",
+                "Production_Funding" => "Cấp vốn bản thảo Nemu — Mangaka nhận vốn (F02/F5.4)",
+                "Platform_TopUp" => "Nạp quỹ vào ví chung NXB — Admin",
+                _ => tx.Type
+            };
 
             return new ReconciliationRecordDto
             {
@@ -70,7 +83,7 @@ namespace MangaPublishingSystem.Application.Services.Admin
                 Status = reconciliationStatus,
                 UserName = userName,
                 UserRole = MapUserRole(tx),
-                Description = tx.Type == "Deposit" ? "Nạp tiền vào ví — Deposit" : "Rút tiền — Withdrawal",
+                Description = description,
                 DiscrepancyNote = reconciliationStatus switch
                 {
                     "Mismatch" => "Trạng thái giao dịch nội bộ không khớp đối soát VNPay.",

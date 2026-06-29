@@ -17,10 +17,10 @@ namespace MangaPublishingSystem.Tests
         [Fact]
         public void OddBoard_SevenMembers_FourApprove_PassesWithoutAllVotes()
         {
-            var thresholds = BoardVoteResolution.GetThresholds(7, DefaultSettings);
+            var thresholds = BoardVoteOddMajorityRules.GetThresholds(7, DefaultSettings);
             Assert.Equal(4, thresholds.ApproveThreshold);
 
-            var outcome = BoardVoteResolution.Evaluate(new BoardVoteResolutionInput(
+            var outcome = BoardVoteOddMajorityRules.Evaluate(new BoardVoteResolutionInput(
                 7, 4, 0, 4, null, DefaultSettings));
 
             Assert.Equal(BoardVoteOutcome.Approved, outcome);
@@ -29,7 +29,7 @@ namespace MangaPublishingSystem.Tests
         [Fact]
         public void OddBoard_SevenMembers_ThreeApproveThreeReject_StillPending()
         {
-            var outcome = BoardVoteResolution.Evaluate(new BoardVoteResolutionInput(
+            var outcome = BoardVoteOddMajorityRules.Evaluate(new BoardVoteResolutionInput(
                 7, 3, 3, 6, null, DefaultSettings));
 
             Assert.Equal(BoardVoteOutcome.Pending, outcome);
@@ -39,7 +39,7 @@ namespace MangaPublishingSystem.Tests
         public void EvenBoard_SixMembers_ThrowsWhenRequiredOdd()
         {
             var ex = Assert.Throws<BuildingBlocks.Exceptions.BadRequestException>(() =>
-                BoardVoteResolution.EnsureOddBoardMemberCount(6, DefaultSettings));
+                BoardVoteOddMajorityRules.EnsureOddBoardMemberCount(6, DefaultSettings));
 
             Assert.Contains("số lẻ", ex.Message);
         }
@@ -54,7 +54,7 @@ namespace MangaPublishingSystem.Tests
                 ManualRejectThreshold = 5
             };
 
-            var thresholds = BoardVoteResolution.GetThresholds(7, manual);
+            var thresholds = BoardVoteOddMajorityRules.GetThresholds(7, manual);
             Assert.Equal(5, thresholds.ApproveThreshold);
         }
 
@@ -62,7 +62,7 @@ namespace MangaPublishingSystem.Tests
         public void Deadline_MajorityApprove_Wins()
         {
             var started = DateTime.UtcNow.AddHours(-80);
-            var outcome = BoardVoteResolution.Evaluate(new BoardVoteResolutionInput(
+            var outcome = BoardVoteOddMajorityRules.Evaluate(new BoardVoteResolutionInput(
                 7, 3, 1, 4, started, DefaultSettings));
 
             Assert.Equal(BoardVoteOutcome.Approved, outcome);

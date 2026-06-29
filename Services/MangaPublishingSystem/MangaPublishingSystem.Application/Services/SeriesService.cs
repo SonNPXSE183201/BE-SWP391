@@ -9,11 +9,10 @@ using MangaPublishingSystem.Domain.Enums;
 using MangaPublishingSystem.Application.DTOs.Series;
 using MangaPublishingSystem.Application.DTOs.Chapters;
 using MangaPublishingSystem.Application.DTOs.Reviews;
+using MangaPublishingSystem.Application.Common;
 using MangaPublishingSystem.Application.DTOs.Notifications;
 using MangaPublishingSystem.Application.IRepositories;
 using MangaPublishingSystem.Application.IServices;
-using MangaPublishingSystem.Application.Options;
-using Microsoft.Extensions.Options;
 
 namespace MangaPublishingSystem.Application.Services
 {
@@ -33,7 +32,8 @@ namespace MangaPublishingSystem.Application.Services
         private readonly IRegionRepository _regionRepository;
         private readonly IWalletService _walletService;
         private readonly IStorageService _storageService;
-        private readonly BoardVoteSettings _boardVoteSettings;
+        private readonly IBoardVotingService _boardVotingService;
+        private readonly IPlatformWalletService _platformWalletService;
 
         public SeriesService(
             ISeriesRepository repository, 
@@ -49,7 +49,8 @@ namespace MangaPublishingSystem.Application.Services
             IRegionRepository regionRepository,
             IWalletService walletService,
             IStorageService storageService,
-            IOptions<BoardVoteSettings> boardVoteSettings) 
+            IBoardVotingService boardVotingService,
+            IPlatformWalletService platformWalletService) 
             : base(repository, unitOfWork)
         {
             _seriesRepository = repository;
@@ -64,7 +65,8 @@ namespace MangaPublishingSystem.Application.Services
             _regionRepository = regionRepository;
             _walletService = walletService;
             _storageService = storageService;
-            _boardVoteSettings = boardVoteSettings.Value;
+            _boardVotingService = boardVotingService;
+            _platformWalletService = platformWalletService;
         }
 
         public async Task<Series> CreateSeriesAsync(int mangakaId, CreateSeriesDto createDto)
@@ -134,18 +136,36 @@ namespace MangaPublishingSystem.Application.Services
 
             series.Status = "Pending_Approval";
             series.EditorId = mangaka.AssignedEditorId.Value;
+
+            var submissionNote = submitDto.SubmissionNotes?.Trim();
+            if (!string.IsNullOrWhiteSpace(submissionNote))
+            {
+                if (submissionNote.Length > 2000)
+                {
+                    throw new BadRequestException("Ghi chú không được vượt quá 2000 ký tự.");
+                }
+
+                series.MangakaSubmissionNote = submissionNote;
+            }
+
             _seriesRepository.Update(series);
             await _unitOfWork.SaveChangesAsync();
 
-            var editorNoteSuffix = string.IsNullOrWhiteSpace(submitDto.SubmissionNotes)
+            var editorNoteSuffix = string.IsNullOrWhiteSpace(submissionNote)
                 ? string.Empty
-                : $" Ghi chú: {submitDto.SubmissionNotes.Trim()}";
+                : $" Ghi chú: {submissionNote}";
+
+            var isResubmit = !string.IsNullOrWhiteSpace(series.EditorNote);
+            var notifTitle = isResubmit ? "Series gửi lại chờ duyệt" : "Series mới chờ duyệt";
+            var notifContent = isResubmit
+                ? $"Mangaka đã gửi lại hồ sơ '{series.Title}' sau chỉnh sửa.{editorNoteSuffix}"
+                : $"Bộ truyện mới '{series.Title}' vừa được gửi yêu cầu phê duyệt bản thảo nháp.{editorNoteSuffix}";
 
             // Gửi thông báo realtime cho Editor phụ trách (Phương án 3 — A04)
             var notifEditor = new Notification
             {
                 UserId = series.EditorId.Value,
-                Content = $"Bộ truyện mới '{series.Title}' vừa được gửi yêu cầu phê duyệt bản thảo nháp.{editorNoteSuffix}",
+                Content = notifContent,
                 Type = "Series_Pending_Review",
                 IsRead = false
             };
@@ -155,7 +175,7 @@ namespace MangaPublishingSystem.Application.Services
             var notifEditorPayload = new NotificationPayload
             {
                 Id = notifEditor.Id,
-                Title = "Series mới chờ duyệt",
+                Title = notifTitle,
                 Message = notifEditor.Content,
                 Link = $"/editor/review/{series.Id}",
                 Type = "Series_Pending_Review",
@@ -234,6 +254,12 @@ namespace MangaPublishingSystem.Application.Services
                 throw new ConflictException("Bộ truyện không ở trạng thái chờ nhận vốn cấp phát.");
             }
 
+            var hasContract = await _seriesRepository.HasContractAsync(seriesId);
+            if (!hasContract)
+            {
+                throw new BadRequestException("Vui lòng đợi Quản trị viên khởi tạo Hợp đồng trước khi nhận vốn.");
+            }
+
             await _unitOfWork.BeginTransactionAsync();
             try
             {
@@ -241,7 +267,6 @@ namespace MangaPublishingSystem.Application.Services
                 series.Status = "Active";
                 _seriesRepository.Update(series);
 
-                // Cộng số tiền ApprovedProductionBudget vào ví tác giả (Trường SetupFundBalance của Wallet)
                 var wallet = await _walletRepository.GetWalletByUserIdAsync(mangakaId);
                 if (wallet == null)
                 {
@@ -257,9 +282,11 @@ namespace MangaPublishingSystem.Application.Services
                     await _unitOfWork.SaveChangesAsync();
                 }
 
-                wallet.SetupFundBalance += series.ApprovedProductionBudget;
-                _walletRepository.Update(wallet);
-                await _unitOfWork.SaveChangesAsync();
+                await _platformWalletService.DisburseProductionFundAsync(
+                    seriesId,
+                    mangakaId,
+                    series.ApprovedProductionBudget,
+                    wallet);
 
                 // Gửi thông báo SignalR cập nhật ví
                 await _notificationPublisher.PublishWalletUpdatedAsync(mangakaId, new WalletUpdatedPayload
@@ -299,7 +326,12 @@ namespace MangaPublishingSystem.Application.Services
             }
         }
 
-        public async System.Threading.Tasks.Task VoteSeriesAsync(int seriesId, int boardUserId, bool approved, string comment, decimal recommendedBudget)
+        public async System.Threading.Tasks.Task VoteSeriesAsync(
+            int seriesId,
+            int boardUserId,
+            string voteChoice,
+            string comment,
+            decimal recommendedBudget)
         {
             var series = await _seriesRepository.GetByIdAsync(seriesId);
             if (series == null)
@@ -307,27 +339,39 @@ namespace MangaPublishingSystem.Application.Services
                 throw new NotFoundException("Bộ truyện không tồn tại.");
             }
 
-            if (series.Status != "Pending_Approval" && series.Status != "Pending_Board_Vote" && series.Status != "Fund_Pending" && series.Status != "Rejected")
+            if (series.Status != "Pending_Board_Vote")
             {
-                throw new ConflictException("Chỉ có thể thẩm định bộ truyện đang ở trạng thái Pending_Approval, Pending_Board_Vote, Fund_Pending hoặc Rejected.");
+                throw new ConflictException(
+                    series.Status == "Pending_Approval"
+                        ? "Bộ truyện chưa được Editor trình lên Hội đồng, không thể bỏ phiếu."
+                        : series.Status == "Vote_Escalated"
+                            ? "Biểu quyết đang chờ Quản trị viên xử lý thủ công."
+                            : "Bộ truyện đã được chốt kết quả phê duyệt, không thể bỏ phiếu thêm.");
             }
 
-            // Kiểm tra xem đã vote chưa
-            var existingVotes = await _boardVoteRepository.FindAsync(v => v.SeriesId == seriesId && v.BoardMemberId == boardUserId);
+            var existingVotes = await _boardVoteRepository.FindAsync(v =>
+                v.SeriesId == seriesId && v.BoardMemberId == boardUserId);
             if (existingVotes.Any())
             {
                 throw new ConflictException("Bạn đã bỏ phiếu thẩm định cho bộ truyện này rồi.");
             }
 
-            var boardMemberCount = await GetActiveBoardMemberCountAsync();
-            BoardVoteResolution.EnsureOddBoardMemberCount(boardMemberCount, _boardVoteSettings);
+            var voteType = BoardVotingRulesCalculator.NormalizeVoteType(
+                voteChoice,
+                string.Equals(voteChoice, "Approve", StringComparison.OrdinalIgnoreCase),
+                comment);
+
+            if (voteType == "Approve" && recommendedBudget <= 0)
+            {
+                throw new BadRequestException("Vui lòng nhập ngân sách đề xuất khi phê duyệt.");
+            }
 
             var vote = new BoardVote
             {
                 SeriesId = seriesId,
                 BoardMemberId = boardUserId,
-                VoteType = approved ? "Approve" : "Reject",
-                RecommendedBudget = approved ? recommendedBudget : 0.00m,
+                VoteType = voteType,
+                RecommendedBudget = voteType == "Approve" ? recommendedBudget : 0.00m,
                 Comment = comment,
                 VoteAt = DateTime.Now
             };
@@ -335,159 +379,8 @@ namespace MangaPublishingSystem.Application.Services
             await _boardVoteRepository.AddAsync(vote);
             await _unitOfWork.SaveChangesAsync();
 
-            await ApplyBoardVoteResolutionAsync(series);
-        }
-
-        private async Task<int> GetActiveBoardMemberCountAsync()
-        {
-            var activeBoardMembers = await _userRepository.FindAsync(u => u.RoleId == 3 && u.Status == UserStatus.Active);
-            return activeBoardMembers.Count();
-        }
-
-        private async System.Threading.Tasks.Task ApplyBoardVoteResolutionAsync(Series series)
-        {
-            var boardMemberCount = await GetActiveBoardMemberCountAsync();
-            BoardVoteResolution.EnsureOddBoardMemberCount(boardMemberCount, _boardVoteSettings);
-
-            var allVotes = (await _boardVoteRepository.FindAsync(v => v.SeriesId == series.Id)).ToList();
-            var approveCount = allVotes.Count(v => v.VoteType == "Approve");
-            var rejectCount = allVotes.Count(v => v.VoteType == "Reject");
-            var voteStartedAt = GetBoardVoteStartedAtUtc(series, allVotes);
-
-            var outcome = BoardVoteResolution.Evaluate(new BoardVoteResolutionInput(
-                boardMemberCount,
-                approveCount,
-                rejectCount,
-                allVotes.Count,
-                voteStartedAt,
-                _boardVoteSettings));
-
-            if (outcome == BoardVoteOutcome.Pending)
-            {
-                if (series.Status is "Pending_Approval" or "Pending_Board_Vote")
-                {
-                    series.Status = "Pending_Board_Vote";
-                    _seriesRepository.Update(series);
-                    await _unitOfWork.SaveChangesAsync();
-                }
-
-                return;
-            }
-
-            if (outcome == BoardVoteOutcome.EscalateToEditor)
-            {
-                series.Status = "Pending_Approval";
-                _seriesRepository.Update(series);
-
-                if (series.EditorId.HasValue)
-                {
-                    var notifEditor = new Notification
-                    {
-                        UserId = series.EditorId.Value,
-                        Content = $"Bộ truyện '{series.Title}' cần Editor xử lý lại sau phiên bỏ phiếu Hội đồng (hòa hoặc hết hạn).",
-                        Type = "Series_Board_Escalated",
-                        IsRead = false
-                    };
-                    await _notificationRepository.AddAsync(notifEditor);
-                    await _notificationPublisher.PublishNotificationAsync(
-                        series.EditorId.Value,
-                        notifEditor.Content,
-                        notifEditor.Type);
-                }
-
-                await _unitOfWork.SaveChangesAsync();
-                return;
-            }
-
-            if (outcome == BoardVoteOutcome.Approved)
-            {
-                var wasAlreadyApproved = series.Status == "Fund_Pending";
-                var approveVotes = allVotes.Where(v => v.VoteType == "Approve").ToList();
-                var averageBudget = approveVotes.Any()
-                    ? approveVotes.Average(v => v.RecommendedBudget)
-                    : series.EstimatedProductionBudget;
-
-                series.Status = "Fund_Pending";
-                series.ApprovedProductionBudget = averageBudget;
-                _seriesRepository.Update(series);
-
-                if (!wasAlreadyApproved)
-                {
-                    var notifMangaka = new Notification
-                    {
-                        UserId = series.MangakaId,
-                        Content = $"Bộ truyện '{series.Title}' của bạn đã được phê duyệt cấp vốn với ngân sách {averageBudget:N0} VND. Vui lòng xác nhận nhận gói vốn để bắt đầu hoạt động.",
-                        Type = "Series_Approved",
-                        IsRead = false
-                    };
-                    await _notificationRepository.AddAsync(notifMangaka);
-                    await _unitOfWork.SaveChangesAsync();
-
-                    await _notificationPublisher.PublishNotificationPayloadAsync(series.MangakaId, new NotificationPayload
-                    {
-                        Id = notifMangaka.Id,
-                        Title = "Gói vốn của bạn đã được duyệt",
-                        Message = notifMangaka.Content,
-                        Link = $"/series/{series.Id}",
-                        Type = notifMangaka.Type,
-                        CreateAt = notifMangaka.CreateAt
-                    });
-                }
-
-                await _unitOfWork.SaveChangesAsync();
-                return;
-            }
-
-            var wasAlreadyRejected = series.Status == "Rejected";
-            series.Status = "Rejected";
-            _seriesRepository.Update(series);
-
-            if (!wasAlreadyRejected)
-            {
-                var lastComment = allVotes.OrderByDescending(v => v.VoteAt).FirstOrDefault()?.Comment ?? string.Empty;
-                var notifMangaka = new Notification
-                {
-                    UserId = series.MangakaId,
-                    Content = string.IsNullOrWhiteSpace(lastComment)
-                        ? $"Bộ truyện '{series.Title}' của bạn bị từ chối phê duyệt cấp vốn."
-                        : $"Bộ truyện '{series.Title}' của bạn bị từ chối phê duyệt cấp vốn. Lý do: {lastComment}",
-                    Type = "Series_Rejected",
-                    IsRead = false
-                };
-                await _notificationRepository.AddAsync(notifMangaka);
-                await _unitOfWork.SaveChangesAsync();
-
-                await _notificationPublisher.PublishNotificationPayloadAsync(series.MangakaId, new NotificationPayload
-                {
-                    Id = notifMangaka.Id,
-                    Title = "Bộ truyện bị từ chối phê duyệt",
-                    Message = notifMangaka.Content,
-                    Link = $"/series/{series.Id}",
-                    Type = notifMangaka.Type,
-                    CreateAt = notifMangaka.CreateAt
-                });
-            }
-
-            await _unitOfWork.SaveChangesAsync();
-        }
-
-        private static DateTime? GetBoardVoteStartedAtUtc(Series series, IReadOnlyList<BoardVote> votes)
-        {
-            if (votes.Count > 0)
-            {
-                return votes.Min(v => v.VoteAt).ToUniversalTime();
-            }
-
-            return series.UpdateAt?.ToUniversalTime() ?? series.CreateAt.ToUniversalTime();
-        }
-
-        private async System.Threading.Tasks.Task ProcessStaleBoardVotesAsync(IEnumerable<Series> seriesList)
-        {
-            foreach (var series in seriesList.Where(s =>
-                         s.Status is "Pending_Board_Vote" or "Pending_Approval"))
-            {
-                await ApplyBoardVoteResolutionAsync(series);
-            }
+            var resolution = await _boardVotingService.EvaluateSeriesVotesAsync(seriesId);
+            await _boardVotingService.ApplyVoteResolutionAsync(series, resolution, comment);
         }
 
         private static bool CanCreateChapter(string? status) =>
@@ -600,6 +493,8 @@ namespace MangaPublishingSystem.Application.Services
                 MangakaName = mangaka?.FullName,
                 EditorId = series.EditorId,
                 EditorName = editor?.FullName,
+                EditorNote = series.EditorNote,
+                MangakaSubmissionNote = series.MangakaSubmissionNote,
                 ChapterCount = chapterList.Count,
                 Chapters = chapterList.Select(c => new ChapterSummaryDto
                 {
@@ -627,22 +522,50 @@ namespace MangaPublishingSystem.Application.Services
                 throw new ConflictException("Chỉ có thể gửi duyệt hội đồng khi bộ truyện ở trạng thái Pending_Approval.");
             }
 
-            var boardMemberCount = await GetActiveBoardMemberCountAsync();
-            BoardVoteResolution.EnsureOddBoardMemberCount(boardMemberCount, _boardVoteSettings);
+            var config = await _boardVotingService.GetConfigAsync();
+            if (config.ClearVotesOnResubmit)
+            {
+                await _boardVotingService.ClearVotesForSeriesAsync(seriesId);
+            }
 
             series.Status = "Pending_Board_Vote";
+            series.EditorNote = dto.Notes;
             _seriesRepository.Update(series);
 
             // Gửi thông báo cho Mangaka
+            var notifSummary =
+                $"#{series.Id}# Bộ truyện '{series.Title}' đã được biên tập viên chuyển lên hội đồng thẩm định.{(string.IsNullOrEmpty(dto.Notes) ? "" : $" Ghi chú: {dto.Notes}")}";
+
             var notifMangaka = new Notification
             {
                 UserId = series.MangakaId,
-                Content = $"Bộ truyện '{series.Title}' đã được biên tập viên chuyển lên hội đồng thẩm định. {(string.IsNullOrEmpty(dto.Notes) ? "" : $"Ghi chú: {dto.Notes}")}",
+                Content = TruncateNotificationContent(notifSummary),
                 Type = "Series_Submitted_To_Board",
                 IsRead = false
             };
             await _notificationRepository.AddAsync(notifMangaka);
-            await _notificationPublisher.PublishNotificationAsync(series.MangakaId, notifMangaka.Content, notifMangaka.Type);
+            await _unitOfWork.SaveChangesAsync();
+
+            try
+            {
+                var notifPayload = new NotificationPayload
+                {
+                    Id = notifMangaka.Id,
+                    Title = "Series chờ Hội đồng",
+                    Message = notifSummary.Replace($"#{series.Id}# ", string.Empty),
+                    Link = $"/mangaka/series/{series.Id}",
+                    Type = "Series_Submitted_To_Board",
+                    CreateAt = notifMangaka.CreateAt == default ? DateTime.UtcNow : notifMangaka.CreateAt
+                };
+                await _notificationPublisher.PublishNotificationPayloadAsync(series.MangakaId, notifPayload);
+            }
+            catch
+            {
+                // Không chặn luồng nếu SignalR lỗi — dữ liệu đã lưu DB.
+            }
+
+            // Báo cho các tab Hội đồng tự động refresh
+            await _notificationPublisher.PublishBoardDataChangedAsync();
 
             await _unitOfWork.SaveChangesAsync();
         }
@@ -663,14 +586,7 @@ namespace MangaPublishingSystem.Application.Services
 
         public async Task<IEnumerable<Series>> GetPendingBoardVoteSeriesAsync()
         {
-            var pending = await _seriesRepository.FindAsync(s =>
-                s.Status == "Pending_Board_Vote" || s.Status == "Pending_Approval");
-
-            var list = pending.ToList();
-            await ProcessStaleBoardVotesAsync(list);
-
-            return await _seriesRepository.FindAsync(s =>
-                s.Status == "Pending_Board_Vote" || s.Status == "Pending_Approval");
+            return await _seriesRepository.FindAsync(s => s.Status == "Pending_Board_Vote");
         }
 
         public async System.Threading.Tasks.Task VoteRankingAsync(int seriesId, int boardUserId, string voteType, string? comment)
@@ -793,8 +709,13 @@ namespace MangaPublishingSystem.Application.Services
             }
         }
 
-        public async System.Threading.Tasks.Task RequireSeriesRevisionAsync(int seriesId, int editorId, string comment)
+        public async System.Threading.Tasks.Task RequireSeriesRevisionAsync(int seriesId, int editorId, RequireSeriesRevisionDto dto)
         {
+            if (dto == null)
+            {
+                throw new BadRequestException("Dữ liệu yêu cầu không hợp lệ.");
+            }
+
             var series = await _seriesRepository.GetByIdAsync(seriesId);
             if (series == null)
             {
@@ -811,19 +732,47 @@ namespace MangaPublishingSystem.Application.Services
                 throw new ConflictException("Chỉ có thể yêu cầu sửa đổi khi bộ truyện ở trạng thái chờ duyệt (Pending_Approval).");
             }
 
+            var previousBudget = series.EstimatedProductionBudget;
+            if (dto.SuggestedBudget.HasValue)
+            {
+                series.EstimatedProductionBudget = dto.SuggestedBudget.Value;
+            }
+
+            series.EditorNote = BuildRevisionEditorNote(dto, previousBudget);
+            series.MangakaSubmissionNote = null;
             series.Status = "Draft";
             _seriesRepository.Update(series);
+
+            var notifSummary =
+                $"#{series.Id}# Editor yêu cầu chỉnh sửa hồ sơ '{series.Title}'. Mở trang series để xem chi tiết.";
 
             var notif = new Notification
             {
                 UserId = series.MangakaId,
-                Content = $"Yêu cầu chỉnh sửa bộ truyện '{series.Title}' từ Biên tập viên: {comment}",
+                Content = TruncateNotificationContent(notifSummary),
                 Type = "Series_Revision_Required",
                 IsRead = false
             };
             await _notificationRepository.AddAsync(notif);
-            await _notificationPublisher.PublishNotificationAsync(series.MangakaId, notif.Content, notif.Type);
             await _unitOfWork.SaveChangesAsync();
+
+            try
+            {
+                var notifPayload = new NotificationPayload
+                {
+                    Id = notif.Id,
+                    Title = "Editor yêu cầu chỉnh sửa hồ sơ",
+                    Message = notifSummary.Replace($"#{series.Id}# ", string.Empty),
+                    Link = $"/mangaka/series/{series.Id}",
+                    Type = "Series_Revision_Required",
+                    CreateAt = notif.CreateAt == default ? DateTime.UtcNow : notif.CreateAt
+                };
+                await _notificationPublisher.PublishNotificationPayloadAsync(series.MangakaId, notifPayload);
+            }
+            catch
+            {
+                // Không chặn luồng revision nếu SignalR lỗi — dữ liệu đã lưu DB.
+            }
         }
 
         public async System.Threading.Tasks.Task UpdateSeriesAsync(int seriesId, int mangakaId, CreateSeriesDto dto)
@@ -853,6 +802,94 @@ namespace MangaPublishingSystem.Application.Services
 
             _seriesRepository.Update(series);
             await _unitOfWork.SaveChangesAsync();
+        }
+
+        public async System.Threading.Tasks.Task DeleteSeriesAsync(int id, int currentUserId, string currentUserRole)
+        {
+            var series = await _seriesRepository.GetByIdAsync(id);
+            if (series == null)
+                throw new NotFoundException("Không tìm thấy bộ truyện này.");
+
+            if (currentUserRole == RoleNameTantouEditor)
+            {
+                if (series.EditorId != currentUserId)
+                    throw new ForbiddenException("Bạn không phải biên tập viên phụ trách bộ truyện này.");
+            }
+            else if (currentUserRole != "System Admin")
+            {
+                if (series.MangakaId != currentUserId)
+                    throw new ForbiddenException("Bạn không có quyền xóa bộ truyện này.");
+            }
+
+            _seriesRepository.Delete(series);
+            await _unitOfWork.SaveChangesAsync();
+        }
+
+        public async Task<bool> HasContractAsync(int seriesId)
+        {
+            return await _seriesRepository.HasContractAsync(seriesId);
+        }
+
+        private static readonly Dictionary<string, string> RevisionChecklistLabels = new(StringComparer.OrdinalIgnoreCase)
+        {
+            ["synopsis"] = "Nội dung tóm tắt rõ ràng, hấp dẫn",
+            ["genre"] = "Thể loại phù hợp thị trường mục tiêu",
+            ["name"] = "Phác thảo (Name) đạt chất lượng cơ bản",
+            ["budget"] = "Ngân sách yêu cầu hợp lý",
+        };
+
+        private static string BuildRevisionEditorNote(RequireSeriesRevisionDto dto, decimal previousBudget)
+        {
+            if (dto == null)
+            {
+                return string.Empty;
+            }
+
+            var sections = new List<string>();
+
+            if (dto.FailedChecklistItems is { Count: > 0 })
+            {
+                var checklistIds = dto.FailedChecklistItems
+                    .Where(id => !string.IsNullOrWhiteSpace(id))
+                    .ToList();
+
+                sections.Add("[CHECKLIST:" + string.Join(",", checklistIds) + "]");
+                sections.Add("Cần chỉnh sửa các mục sau:");
+                foreach (var itemId in checklistIds)
+                {
+                    if (RevisionChecklistLabels.TryGetValue(itemId, out var label))
+                    {
+                        sections.Add("• " + label);
+                    }
+                }
+                sections.Add(string.Empty);
+            }
+
+            var comment = dto.Comment?.Trim();
+            if (!string.IsNullOrWhiteSpace(comment))
+            {
+                sections.Add("Nhận xét của Editor:");
+                sections.Add(comment);
+            }
+
+            if (dto.SuggestedBudget.HasValue && dto.SuggestedBudget.Value != previousBudget)
+            {
+                sections.Add(string.Empty);
+                sections.Add(
+                    $"Ngân sách đề xuất của Editor: {dto.SuggestedBudget.Value:N0} VND (Mangaka đề xuất: {previousBudget:N0} VND)");
+            }
+
+            return string.Join("\n", sections.Where(s => s != null)).Trim();
+        }
+
+        private static string TruncateNotificationContent(string content, int maxLength = 1000)
+        {
+            if (string.IsNullOrEmpty(content) || content.Length <= maxLength)
+            {
+                return content;
+            }
+
+            return content[..(maxLength - 1)] + "…";
         }
     }
 }

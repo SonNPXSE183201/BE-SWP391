@@ -10,5 +10,6 @@ namespace MangaPublishingSystem.Application.IServices
         Task PublishTaskStatusChangedAsync(int userId, TaskStatusChangedPayload payload);
         Task PublishWalletUpdatedAsync(int userId, WalletUpdatedPayload payload);
         Task PublishUnreadCountUpdatedAsync(int userId, int count);
+        Task PublishBoardDataChangedAsync();
     }
 }

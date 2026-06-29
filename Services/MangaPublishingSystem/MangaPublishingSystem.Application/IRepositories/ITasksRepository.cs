@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using BuildingBlocks.Web.Responses;
 using MangaPublishingSystem.Domain.Entities;
@@ -8,6 +9,7 @@ namespace MangaPublishingSystem.Application.IRepositories
     {
         Task<PagedResult<Tasks>> GetAvailableTasksAsync(string? skill, int pageNumber, int pageSize);
         Task<PagedResult<Tasks>> GetAssistantTasksAsync(int assistantId, string? status, int pageNumber, int pageSize);
+        Task<IEnumerable<Tasks>> GetMangakaTasksAsync(int mangakaId);
         Task<Tasks?> GetTaskByIdWithDetailsAsync(int id);
     }
-}
+}

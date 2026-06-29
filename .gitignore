@@ -37,3 +37,4 @@ Thumbs.db
 **/appsettings.json
 **/appsettings.Development.json
 **/appsettings.Local.json
+.build-temp/

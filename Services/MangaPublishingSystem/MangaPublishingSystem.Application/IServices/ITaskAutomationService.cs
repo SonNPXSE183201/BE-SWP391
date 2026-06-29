@@ -7,5 +7,6 @@ namespace MangaPublishingSystem.Application.IServices
         Task AutoRefundOverdueTasksAsync();
         Task AutoApproveSubmittedTasksAsync();
         Task CleanExpiredRefreshTokensAsync();
+        Task AutoResolveExpiredBoardVotesAsync();
     }
 }

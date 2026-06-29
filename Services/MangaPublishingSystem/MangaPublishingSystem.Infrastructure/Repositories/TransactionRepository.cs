@@ -33,7 +33,11 @@ namespace MangaPublishingSystem.Infrastructure.Repositories
                 .Include(t => t.Wallet)
                     .ThenInclude(w => w!.User)
                     .ThenInclude(u => u!.Role)
-                .Where(t => t.Type == "Deposit" || t.Type == "Withdrawal")
+                .Where(t =>
+                    t.Type == "Deposit"
+                    || t.Type == "Withdrawal"
+                    || t.Type == "Production_Funding"
+                    || t.Type == "Platform_TopUp")
                 .AsQueryable();
 
             if (from.HasValue)

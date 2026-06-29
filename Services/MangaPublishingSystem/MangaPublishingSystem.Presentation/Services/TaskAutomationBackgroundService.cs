@@ -35,6 +35,7 @@ namespace MangaPublishingSystem.Presentation.Services
                         await taskAutomationService.AutoRefundOverdueTasksAsync();
                         await taskAutomationService.AutoApproveSubmittedTasksAsync();
                         await taskAutomationService.CleanExpiredRefreshTokensAsync();
+                        await taskAutomationService.AutoResolveExpiredBoardVotesAsync();
                     }
                     _logger.LogInformation("Quét tự động hóa nhiệm vụ hoàn tất.");
                 }
@@ -43,8 +44,8 @@ namespace MangaPublishingSystem.Presentation.Services
                     _logger.LogError(ex, "Có lỗi xảy ra trong chu kỳ quét tự động hóa nhiệm vụ.");
                 }
 
-                // Chạy mỗi 1 giờ (có thể cấu hình nhanh hơn để thử nghiệm)
-                await Task.Delay(TimeSpan.FromHours(1), stoppingToken);
+                // Chạy mỗi 1 phút để dễ test
+                await Task.Delay(TimeSpan.FromMinutes(1), stoppingToken);
             }
         }
     }
