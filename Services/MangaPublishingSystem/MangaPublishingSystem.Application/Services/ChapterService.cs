@@ -65,7 +65,7 @@ namespace MangaPublishingSystem.Application.Services
                 throw new BadRequestException("Chapter đã được duyệt trước đó.");
             }
 
-            var contracts = await _contractRepository.FindAsync(c => c.SeriesId == chapter.SeriesId && (c.Status == "Signed" || c.Status == "Active"));
+            var contracts = await _contractRepository.FindAsync(c => c.SeriesId == chapter.SeriesId && c.Status == "Signed");
             var contract = contracts.FirstOrDefault();
             if (contract == null)
             {
