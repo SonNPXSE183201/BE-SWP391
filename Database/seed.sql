@@ -250,7 +250,8 @@ VALUES
  N'http://localhost:9000/manga-publishing/resources/series-4', GETUTCDATE()),
 
 -- [5] Đang biểu quyết Hội đồng
-(5, 4, 2, NULL,
+(5, 4, 2,
+ N'Editor đánh giá: Bản phác thảo đạt chuẩn thẩm mỹ và cốt truyện phù hợp thị trường Seinen. Đề xuất Hội đồng phê duyệt ngân sách 35.000.000 VND.',
  N'Cyber Ronin', N'Seinen, Sci-Fi',
  N'Tương lai đen tối nơi samurai cơ khí chiến đấu vì công lý.',
  N'http://localhost:9000/manga-publishing/covers/cyber-ronin.jpg',

@@ -21,8 +21,11 @@ namespace MangaPublishingSystem.Application.DTOs.Tasks
         
         public string? MangakaName { get; set; }
         public string? AssistantName { get; set; }
+        public int PageId { get; set; }
         public int PageNumber { get; set; }
         public string? PageImageUrl { get; set; }
+        public string? RegionName { get; set; }
+        public string? RegionCoordinatesJson { get; set; }
 
         public DateTime CreateAt { get; set; }
         public DateTime? UpdateAt { get; set; }

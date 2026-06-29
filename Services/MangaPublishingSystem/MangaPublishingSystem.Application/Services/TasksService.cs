@@ -131,6 +131,17 @@ namespace MangaPublishingSystem.Application.Services
                     await _notificationPublisher.PublishTaskStatusChangedAsync(task.AssistantId.Value, taskStatusChanged);
                     await _notificationPublisher.PublishTaskStatusChangedAsync(mangakaId, taskStatusChanged);
                 }
+                else
+                {
+                    // Task công khai — báo toàn bộ client (Trợ lý trên Bảng việc làm) cập nhật realtime
+                    var taskStatusChanged = new TaskStatusChangedPayload
+                    {
+                        TaskId = task.Id,
+                        Status = task.Status,
+                        Message = "Có nhiệm vụ mới trên bảng việc làm công khai."
+                    };
+                    await _notificationPublisher.PublishTaskQueueChangedAsync(taskStatusChanged);
+                }
 
                 await _unitOfWork.SaveChangesAsync();
                 await _unitOfWork.CommitTransactionAsync();
@@ -577,7 +588,10 @@ namespace MangaPublishingSystem.Application.Services
                 MangakaName = t.Mangaka?.FullName,
                 AssistantName = t.Assistant?.FullName,
                 PageNumber = t.Region?.Page?.PageNumber ?? 0,
+                PageId = t.Region?.PageId ?? 0,
                 PageImageUrl = t.Region?.Page?.RawImageUrl,
+                RegionName = t.Region?.Name,
+                RegionCoordinatesJson = t.Region?.CoordinatesJson,
                 CreateAt = t.CreateAt,
                 UpdateAt = t.UpdateAt
             }).ToList();
@@ -615,7 +629,10 @@ namespace MangaPublishingSystem.Application.Services
                 MangakaName = t.Mangaka?.FullName,
                 AssistantName = t.Assistant?.FullName,
                 PageNumber = t.Region?.Page?.PageNumber ?? 0,
+                PageId = t.Region?.PageId ?? 0,
                 PageImageUrl = t.Region?.Page?.RawImageUrl,
+                RegionName = t.Region?.Name,
+                RegionCoordinatesJson = t.Region?.CoordinatesJson,
                 CreateAt = t.CreateAt,
                 UpdateAt = t.UpdateAt
             }).ToList();
@@ -677,7 +694,10 @@ namespace MangaPublishingSystem.Application.Services
                 MangakaName = t.Mangaka?.FullName,
                 AssistantName = t.Assistant?.FullName,
                 PageNumber = t.Region?.Page?.PageNumber ?? 0,
+                PageId = t.Region?.PageId ?? 0,
                 PageImageUrl = t.Region?.Page?.RawImageUrl,
+                RegionName = t.Region?.Name,
+                RegionCoordinatesJson = t.Region?.CoordinatesJson,
                 CreateAt = t.CreateAt,
                 UpdateAt = t.UpdateAt
             };

@@ -50,5 +50,10 @@ namespace MangaPublishingSystem.Presentation.Services
             // Gửi event BoardDataChanged cho tất cả các Client đang kết nối
             await _hubContext.Clients.All.SendAsync("BoardDataChanged");
         }
+
+        public async Task PublishTaskQueueChangedAsync(TaskStatusChangedPayload payload)
+        {
+            await _hubContext.Clients.All.SendAsync("TaskStatusChanged", payload);
+        }
     }
 }
