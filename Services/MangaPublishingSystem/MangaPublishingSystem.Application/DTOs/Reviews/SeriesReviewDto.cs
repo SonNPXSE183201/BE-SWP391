@@ -12,6 +12,7 @@ namespace MangaPublishingSystem.Application.DTOs.Reviews
         public string? CoverArtworkUrl { get; set; }
         public string? ResourceFolderUrl { get; set; }
         public decimal EstimatedProductionBudget { get; set; }
+        public decimal EditorRecommendedBudget { get; set; }
         public decimal ApprovedProductionBudget { get; set; }
         public string Status { get; set; } = null!;
         public int MangakaId { get; set; }

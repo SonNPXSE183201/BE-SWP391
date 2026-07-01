@@ -95,5 +95,33 @@ namespace MangaPublishingSystem.Presentation.Controllers.Chapters
 
             return Ok(ApiResponse<IEnumerable<PageDto>>.Success(result, "Tải lên trang truyện bổ sung thành công."));
         }
+
+        [Authorize(Roles = "Mangaka")]
+        [HttpGet("{id}/production-readiness")]
+        public async Task<ActionResult<ApiResponse<ChapterProductionReadinessDto>>> GetProductionReadiness([FromRoute] int id)
+        {
+            var readiness = await _chapterService.GetProductionReadinessAsync(id, CurrentUserId);
+            return Ok(ApiResponse<ChapterProductionReadinessDto>.Success(readiness, "Lấy trạng thái sản xuất chapter thành công."));
+        }
+
+        [Authorize(Roles = "Mangaka")]
+        [HttpPost("{id}/submit-for-review")]
+        public async Task<ActionResult<ApiResponse<ChapterDto>>> SubmitForReview([FromRoute] int id)
+        {
+            var chapter = await _chapterService.SubmitChapterForReviewAsync(id, CurrentUserId);
+            var result = new ChapterDto
+            {
+                Id = chapter.Id,
+                SeriesId = chapter.SeriesId,
+                ChapterNumber = chapter.ChapterNumber,
+                Title = chapter.Title,
+                ValidPageCount = chapter.ValidPageCount,
+                AppliedGenkouryoPrice = chapter.AppliedGenkouryoPrice,
+                Status = chapter.Status,
+                CreateAt = chapter.CreateAt,
+                UpdateAt = chapter.UpdateAt
+            };
+            return Ok(ApiResponse<ChapterDto>.Success(result, "Đã nộp chapter lên Editor thành công."));
+        }
     }
 }

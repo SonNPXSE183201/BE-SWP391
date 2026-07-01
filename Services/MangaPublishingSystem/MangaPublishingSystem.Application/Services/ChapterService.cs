@@ -9,11 +9,22 @@ using MangaPublishingSystem.Application.IRepositories;
 using MangaPublishingSystem.Application.IServices;
 using MangaPublishingSystem.Application.DTOs.Reviews;
 using MangaPublishingSystem.Application.DTOs.Notifications;
+using MangaPublishingSystem.Application.DTOs.Chapters;
 
 namespace MangaPublishingSystem.Application.Services
 {
     public class ChapterService : GenericService<Chapter>, IChapterService
     {
+        private static readonly HashSet<string> OpenTaskStatuses = new(StringComparer.OrdinalIgnoreCase)
+        {
+            "Pending", "In_Progress", "Submitted", "Revision", "Disputed"
+        };
+
+        private static readonly HashSet<string> SubmitAllowedChapterStatuses = new(StringComparer.OrdinalIgnoreCase)
+        {
+            "Draft", "Revision", "Rejected"
+        };
+
         private readonly IChapterRepository _chapterRepository;
         private readonly ISeriesRepository _seriesRepository;
         private readonly IContractRepository _contractRepository;
@@ -22,6 +33,9 @@ namespace MangaPublishingSystem.Application.Services
         private readonly INotificationRepository _notificationRepository;
         private readonly INotificationPublisher _notificationPublisher;
         private readonly IPageRepository _pageRepository;
+        private readonly IRegionRepository _regionRepository;
+        private readonly ITasksRepository _tasksRepository;
+        private readonly ITasksService _tasksService;
         private readonly IStorageService _storageService;
 
         public ChapterService(
@@ -34,6 +48,9 @@ namespace MangaPublishingSystem.Application.Services
             INotificationRepository notificationRepository,
             INotificationPublisher notificationPublisher,
             IPageRepository pageRepository,
+            IRegionRepository regionRepository,
+            ITasksRepository tasksRepository,
+            ITasksService tasksService,
             IStorageService storageService) 
             : base(repository, unitOfWork)
         {
@@ -45,6 +62,9 @@ namespace MangaPublishingSystem.Application.Services
             _notificationRepository = notificationRepository;
             _notificationPublisher = notificationPublisher;
             _pageRepository = pageRepository;
+            _regionRepository = regionRepository;
+            _tasksRepository = tasksRepository;
+            _tasksService = tasksService;
             _storageService = storageService;
         }
 
@@ -158,7 +178,7 @@ namespace MangaPublishingSystem.Application.Services
                 throw new NotFoundException("Không tìm thấy bộ truyện liên kết với chapter này.");
             }
 
-            chapter.Status = "Rejected";
+            chapter.Status = "Revision";
             _repository.Update(chapter);
             await _unitOfWork.SaveChangesAsync();
 
@@ -280,22 +300,410 @@ namespace MangaPublishingSystem.Application.Services
 
             await _unitOfWork.SaveChangesAsync();
 
-            // Thông báo cho Editor phụ trách (nếu có)
+            return addedPages;
+        }
+
+        public async Task<Chapter?> GetChapterWithDetailsAsync(int chapterId)
+        {
+            return await _chapterRepository.GetChapterWithDetailsByIdAsync(chapterId);
+        }
+
+        public async Task<Page> MarkPageAsReadyAsync(int pageId, int mangakaId)
+        {
+            var page = await _pageRepository.GetByIdAsync(pageId);
+            if (page == null)
+            {
+                throw new NotFoundException("Trang truyện không tồn tại.");
+            }
+
+            var chapter = await _chapterRepository.GetByIdAsync(page.ChapterId);
+            if (chapter == null)
+            {
+                throw new NotFoundException("Không tìm thấy chương truyện.");
+            }
+
+            var series = await _seriesRepository.GetByIdAsync(chapter.SeriesId);
+            if (series == null)
+            {
+                throw new NotFoundException("Không tìm thấy bộ truyện.");
+            }
+
+            if (series.MangakaId != mangakaId)
+            {
+                throw new ForbiddenException("Bạn không phải tác giả của bộ truyện này.");
+            }
+
+            if (!SubmitAllowedChapterStatuses.Contains(chapter.Status))
+            {
+                throw new ConflictException("Chapter không còn ở trạng thái cho phép chỉnh sửa.");
+            }
+
+            if (string.Equals(page.Status, "Composited", StringComparison.OrdinalIgnoreCase))
+            {
+                return page;
+            }
+
+            var regions = (await _regionRepository.FindAsync(r => r.PageId == pageId)).ToList();
+            if (regions.Count > 0)
+            {
+                var regionIds = regions.Select(r => r.Id).ToList();
+                var tasks = (await _tasksRepository.FindAsync(t => regionIds.Contains(t.RegionId))).ToList();
+
+                if (tasks.Any(t => OpenTaskStatuses.Contains(t.Status)))
+                {
+                    throw new BadRequestException(
+                        "Trang còn task Assistant chưa xong. Hãy nghiệm thu task hoặc xóa vùng trước khi đánh dấu.");
+                }
+
+                if (tasks.Count == 0)
+                {
+                    throw new BadRequestException(
+                        "Trang còn vùng Canvas chưa giao task. Xóa vùng nếu không cần Assistant, hoặc giao task và duyệt xong.");
+                }
+
+                if (tasks.Any(t => !string.Equals(t.Status, "Approved", StringComparison.OrdinalIgnoreCase)))
+                {
+                    throw new BadRequestException(
+                        "Trang còn task chưa được nghiệm thu. Hoàn thành trên Canvas trước khi đánh dấu.");
+                }
+
+                await _tasksService.RefreshPageCompositeAsync(pageId);
+                page = await _pageRepository.GetByIdAsync(pageId)
+                    ?? throw new NotFoundException("Trang truyện không tồn tại.");
+            }
+
+            if (string.IsNullOrWhiteSpace(page.CompositeImageUrl))
+            {
+                page.CompositeImageUrl = page.RawImageUrl ?? page.BaseLayerUrl;
+            }
+
+            page.Status = "Composited";
+            _pageRepository.Update(page);
+            await _unitOfWork.SaveChangesAsync();
+            return page;
+        }
+
+        public async Task<Page> ReplacePageImageAsync(int pageId, int mangakaId, IFormFile file)
+        {
+            if (file == null || file.Length == 0)
+            {
+                throw new BadRequestException("Vui lòng chọn ảnh trang để tải lên.");
+            }
+
+            var page = await _pageRepository.GetByIdAsync(pageId);
+            if (page == null)
+            {
+                throw new NotFoundException("Trang truyện không tồn tại.");
+            }
+
+            var chapter = await _chapterRepository.GetByIdAsync(page.ChapterId);
+            if (chapter == null)
+            {
+                throw new NotFoundException("Không tìm thấy chương truyện.");
+            }
+
+            var series = await _seriesRepository.GetByIdAsync(chapter.SeriesId);
+            if (series == null)
+            {
+                throw new NotFoundException("Không tìm thấy bộ truyện.");
+            }
+
+            if (series.MangakaId != mangakaId)
+            {
+                throw new ForbiddenException("Bạn không phải tác giả của bộ truyện này.");
+            }
+
+            if (chapter.Status is "Approved" or "Published")
+            {
+                throw new ConflictException("Chapter đã được duyệt/xuất bản, không thể thay ảnh trang.");
+            }
+
+            if (!SubmitAllowedChapterStatuses.Contains(chapter.Status))
+            {
+                throw new ConflictException("Chapter không còn ở trạng thái cho phép chỉnh sửa.");
+            }
+
+            var regions = (await _regionRepository.FindAsync(r => r.PageId == pageId)).ToList();
+            if (regions.Count > 0)
+            {
+                var regionIds = regions.Select(r => r.Id).ToList();
+                var tasks = (await _tasksRepository.FindAsync(t => regionIds.Contains(t.RegionId))).ToList();
+
+                if (tasks.Any(t => OpenTaskStatuses.Contains(t.Status)))
+                {
+                    throw new BadRequestException(
+                        "Trang còn task Assistant chưa xong. Hãy nghiệm thu hoặc hủy task trước khi thay ảnh.");
+                }
+
+                if (tasks.Count > 0)
+                {
+                    throw new BadRequestException(
+                        "Trang đã có công việc Assistant. Hãy xử lý trên Canvas hoặc xóa vùng chưa giao task trước khi thay ảnh.");
+                }
+
+                foreach (var region in regions)
+                {
+                    _regionRepository.Delete(region);
+                }
+            }
+
+            await using var stream = file.OpenReadStream();
+            var contentType = string.IsNullOrWhiteSpace(file.ContentType)
+                ? "application/octet-stream"
+                : file.ContentType;
+            var imageUrl = await _storageService.UploadFileAsync(stream, file.FileName, contentType);
+
+            page.RawImageUrl = imageUrl;
+            page.BaseLayerUrl = imageUrl;
+            page.CompositeImageUrl = null;
+            page.Status = "Pending";
+            page.IsApproved = false;
+            page.UpdateAt = DateTime.UtcNow;
+            _pageRepository.Update(page);
+            await _unitOfWork.SaveChangesAsync();
+
+            return page;
+        }
+
+        public async Task<ChapterProductionReadinessDto> GetProductionReadinessAsync(int chapterId, int mangakaId)
+        {
+            var (chapter, series, pages, _) = await LoadChapterProductionContextAsync(chapterId, mangakaId);
+            return await BuildProductionReadinessAsync(chapter, pages, ensureComposites: false);
+        }
+
+        public async System.Threading.Tasks.Task<Chapter> SubmitChapterForReviewAsync(int chapterId, int mangakaId)
+        {
+            var (chapter, series, pages, _) = await LoadChapterProductionContextAsync(chapterId, mangakaId);
+
+            if (!SubmitAllowedChapterStatuses.Contains(chapter.Status))
+            {
+                throw new ConflictException("Chapter không ở trạng thái cho phép nộp lên Editor.");
+            }
+
+            var readiness = await BuildProductionReadinessAsync(chapter, pages, ensureComposites: true);
+            if (!readiness.CanSubmit)
+            {
+                var message = readiness.Blockers.Count > 0
+                    ? string.Join(" ", readiness.Blockers)
+                    : "Chapter chưa sẵn sàng để nộp lên Editor.";
+                throw new BadRequestException(message);
+            }
+
+            chapter.Status = "Pending_Review";
+            _repository.Update(chapter);
+            await _unitOfWork.SaveChangesAsync();
+
             if (series.EditorId.HasValue)
             {
                 var notif = new Notification
                 {
                     UserId = series.EditorId.Value,
-                    Content = $"Tác giả đã bổ sung {addedPages.Count} trang cho chapter '{chapter.Title}' (Chapter {chapter.ChapterNumber}) của bộ truyện '{series.Title}'.",
-                    Type = "Chapter_Pages_Added",
+                    Content = $"Tác giả đã nộp chapter '{chapter.Title}' (Chapter {chapter.ChapterNumber}) của bộ '{series.Title}' lên hàng đợi biên tập.",
+                    Type = "Chapter_Submitted",
                     IsRead = false
                 };
                 await _notificationRepository.AddAsync(notif);
                 await _unitOfWork.SaveChangesAsync();
-                await _notificationPublisher.PublishNotificationAsync(series.EditorId.Value, notif.Content, notif.Type);
+
+                var notifPayload = new NotificationPayload
+                {
+                    Id = notif.Id,
+                    Title = "Chapter chờ biên tập",
+                    Message = notif.Content,
+                    Link = "/editor/review",
+                    Type = notif.Type,
+                    CreateAt = notif.CreateAt
+                };
+                await _notificationPublisher.PublishNotificationPayloadAsync(series.EditorId.Value, notifPayload);
             }
 
-            return addedPages;
+            return chapter;
+        }
+
+        private async Task<(Chapter chapter, Series series, List<Page> pages, List<Tasks> tasks)> LoadChapterProductionContextAsync(
+            int chapterId,
+            int mangakaId)
+        {
+            var chapter = await _repository.GetByIdAsync(chapterId);
+            if (chapter == null)
+            {
+                throw new NotFoundException("Không tìm thấy chapter.");
+            }
+
+            var series = await _seriesRepository.GetByIdAsync(chapter.SeriesId);
+            if (series == null)
+            {
+                throw new NotFoundException("Không tìm thấy bộ truyện liên kết với chapter này.");
+            }
+
+            if (series.MangakaId != mangakaId)
+            {
+                throw new ForbiddenException("Bạn không phải tác giả của bộ truyện này.");
+            }
+
+            var pages = (await _pageRepository.FindAsync(p => p.ChapterId == chapterId))
+                .OrderBy(p => p.PageNumber)
+                .ToList();
+
+            var pageIds = pages.Select(p => p.Id).ToList();
+            var regions = pageIds.Count == 0
+                ? new List<Region>()
+                : (await _regionRepository.FindAsync(r => pageIds.Contains(r.PageId))).ToList();
+
+            var regionIds = regions.Select(r => r.Id).ToList();
+            var tasks = regionIds.Count == 0
+                ? new List<Tasks>()
+                : (await _tasksRepository.FindAsync(t => regionIds.Contains(t.RegionId))).ToList();
+
+            return (chapter, series, pages, tasks);
+        }
+
+        private async Task<ChapterProductionReadinessDto> BuildProductionReadinessAsync(
+            Chapter chapter,
+            List<Page> pages,
+            bool ensureComposites)
+        {
+            var blockers = new List<string>();
+            var checks = new List<ChapterProductionCheckDto>();
+            var openTaskCount = 0;
+            var pagesReady = 0;
+
+            var hasPages = pages.Count > 0;
+            checks.Add(new ChapterProductionCheckDto
+            {
+                Key = "pages",
+                Label = "Có ít nhất 1 trang bản thảo",
+                Passed = hasPages,
+                Detail = hasPages ? $"{pages.Count} trang" : null
+            });
+            if (!hasPages)
+            {
+                blockers.Add("Chapter chưa có trang bản thảo.");
+            }
+
+            var pageIds = pages.Select(p => p.Id).ToList();
+            var regions = pageIds.Count == 0
+                ? new List<Region>()
+                : (await _regionRepository.FindAsync(r => pageIds.Contains(r.PageId))).ToList();
+            var regionsByPage = regions.GroupBy(r => r.PageId).ToDictionary(g => g.Key, g => g.ToList());
+
+            var regionIds = regions.Select(r => r.Id).ToList();
+            var tasks = regionIds.Count == 0
+                ? new List<Tasks>()
+                : (await _tasksRepository.FindAsync(t => regionIds.Contains(t.RegionId))).ToList();
+            var tasksByRegion = tasks.GroupBy(t => t.RegionId).ToDictionary(g => g.Key, g => g.ToList());
+
+            openTaskCount = tasks.Count(t => OpenTaskStatuses.Contains(t.Status));
+            var tasksClear = openTaskCount == 0;
+            checks.Add(new ChapterProductionCheckDto
+            {
+                Key = "tasks",
+                Label = "Không còn task Assistant đang chờ xử lý",
+                Passed = tasksClear,
+                Detail = tasksClear ? null : $"{openTaskCount} task chưa hoàn thành"
+            });
+            if (!tasksClear)
+            {
+                blockers.Add($"Còn {openTaskCount} task Assistant chưa hoàn thành (cần nghiệm thu hoặc xử lý trên Canvas).");
+            }
+
+            foreach (var page in pages)
+            {
+                if (string.Equals(page.Status, "Composited", StringComparison.OrdinalIgnoreCase))
+                {
+                    pagesReady++;
+                    continue;
+                }
+
+                var pageRegions = regionsByPage.GetValueOrDefault(page.Id) ?? new List<Region>();
+                if (pageRegions.Count == 0)
+                {
+                    pagesReady++;
+                    continue;
+                }
+
+                var unassignedRegions = pageRegions.Where(r => !tasksByRegion.ContainsKey(r.Id)).ToList();
+                if (unassignedRegions.Count > 0)
+                {
+                    blockers.Add($"Trang {page.PageNumber}: còn {unassignedRegions.Count} vùng chưa giao task.");
+                    continue;
+                }
+
+                var pageTasks = pageRegions.SelectMany(r => tasksByRegion[r.Id]).ToList();
+                if (pageTasks.Any(t => OpenTaskStatuses.Contains(t.Status)))
+                {
+                    continue;
+                }
+
+                if (pageTasks.Any(t => !string.Equals(t.Status, "Approved", StringComparison.OrdinalIgnoreCase)))
+                {
+                    blockers.Add($"Trang {page.PageNumber}: còn task chưa được nghiệm thu.");
+                    continue;
+                }
+
+                if (string.IsNullOrWhiteSpace(page.CompositeImageUrl))
+                {
+                    if (ensureComposites)
+                    {
+                        try
+                        {
+                            await _tasksService.RefreshPageCompositeAsync(page.Id);
+                            var refreshed = await _pageRepository.GetByIdAsync(page.Id);
+                            if (refreshed == null || string.IsNullOrWhiteSpace(refreshed.CompositeImageUrl))
+                            {
+                                blockers.Add($"Trang {page.PageNumber}: chưa tạo được bản gộp (composite).");
+                                continue;
+                            }
+
+                            if (ensureComposites && refreshed.Status != "Composited")
+                            {
+                                refreshed.Status = "Composited";
+                                _pageRepository.Update(refreshed);
+                                await _unitOfWork.SaveChangesAsync();
+                            }
+                        }
+                        catch
+                        {
+                            blockers.Add($"Trang {page.PageNumber}: chưa tạo được bản gộp (composite).");
+                            continue;
+                        }
+                    }
+                    else
+                    {
+                        blockers.Add($"Trang {page.PageNumber}: chưa có bản gộp (composite).");
+                        continue;
+                    }
+                }
+                else if (ensureComposites && page.Status != "Composited")
+                {
+                    page.Status = "Composited";
+                    _pageRepository.Update(page);
+                    await _unitOfWork.SaveChangesAsync();
+                }
+
+                pagesReady++;
+            }
+
+            var compositesReady = pagesReady == pages.Count && pages.Count > 0;
+            checks.Add(new ChapterProductionCheckDto
+            {
+                Key = "composite",
+                Label = "Mọi trang đã sẵn sàng nộp (bản gộp hoặc không cần Assistant)",
+                Passed = compositesReady,
+                Detail = compositesReady ? null : $"{pagesReady}/{pages.Count} trang sẵn sàng"
+            });
+
+            return new ChapterProductionReadinessDto
+            {
+                ChapterId = chapter.Id,
+                Status = chapter.Status,
+                CanSubmit = blockers.Count == 0 && hasPages,
+                TotalPages = pages.Count,
+                PagesReady = pagesReady,
+                OpenTaskCount = openTaskCount,
+                Checks = checks,
+                Blockers = blockers
+            };
         }
     }
 }

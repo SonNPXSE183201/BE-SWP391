@@ -32,6 +32,11 @@ namespace MangaPublishingSystem.Infrastructure.Data.Configurations
                 .HasDefaultValue(0.00m)
                 .IsRequired();
 
+            builder.Property(e => e.EditorRecommendedBudget)
+                .HasColumnType("decimal(18,2)")
+                .HasDefaultValue(0.00m)
+                .IsRequired();
+
             builder.Property(e => e.ApprovedProductionBudget)
                 .HasColumnType("decimal(18,2)")
                 .HasDefaultValue(0.00m)

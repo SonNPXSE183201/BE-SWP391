@@ -23,6 +23,8 @@ namespace MangaPublishingSystem.Infrastructure.Repositories
                 .Include(t => t.Assistant)
                 .Include(t => t.Region)
                     .ThenInclude(r => r.Page)
+                        .ThenInclude(p => p.Chapter)
+                            .ThenInclude(c => c.Series)
                 .Where(t => t.Status == "Pending")
                 .AsQueryable();
 
@@ -45,6 +47,8 @@ namespace MangaPublishingSystem.Infrastructure.Repositories
                 .Include(t => t.Assistant)
                 .Include(t => t.Region)
                     .ThenInclude(r => r.Page)
+                        .ThenInclude(p => p.Chapter)
+                            .ThenInclude(c => c.Series)
                 .Where(t => t.AssistantId == assistantId);
 
             // Lọc theo trạng thái nhiệm vụ nếu được truyền vào
@@ -66,6 +70,8 @@ namespace MangaPublishingSystem.Infrastructure.Repositories
                 .Include(t => t.Assistant)
                 .Include(t => t.Region)
                     .ThenInclude(r => r.Page)
+                        .ThenInclude(p => p.Chapter)
+                            .ThenInclude(c => c.Series)
                 .Where(t => t.MangakaId == mangakaId)
                 .OrderByDescending(t => t.CreateAt)
                 .AsNoTracking()
@@ -79,6 +85,8 @@ namespace MangaPublishingSystem.Infrastructure.Repositories
                 .Include(t => t.Assistant)
                 .Include(t => t.Region)
                     .ThenInclude(r => r.Page)
+                        .ThenInclude(p => p.Chapter)
+                            .ThenInclude(c => c.Series)
                 .AsNoTracking()
                 .FirstOrDefaultAsync(t => t.Id == id);
         }

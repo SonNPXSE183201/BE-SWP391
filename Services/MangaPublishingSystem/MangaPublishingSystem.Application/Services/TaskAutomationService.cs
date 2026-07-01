@@ -266,11 +266,13 @@ namespace MangaPublishingSystem.Application.Services
                         config.AutoResolveHours);
 
                     var votes = (await _boardVoteRepository.FindAsync(v => v.SeriesId == series.Id)).ToList();
-                    var (approveCount, rejectCount, _) = BoardVotingRulesCalculator.CountVotes(votes);
-                    var thresholds = BoardVotingRulesCalculator.CalculateThresholds(rules.BoardMemberCount, config);
+                    var thresholds = BoardVotingRulesCalculator.CalculateThresholds(
+                        rules.BoardMemberCount, config);
+                    var (approveWeight, rejectWeight) = BoardVotingRulesCalculator.CountWeightedVotes(
+                        votes, rules.EffectiveChairUserId, thresholds.ChairWeight);
 
                     var resolution = BoardVotingRulesCalculator.EvaluateAutoResolve(
-                        thresholds, approveCount, rejectCount, config, votes);
+                        thresholds, approveWeight, rejectWeight);
 
                     series.UpdateAt = now;
                     await _boardVotingService.ApplyVoteResolutionAsync(

@@ -18,5 +18,6 @@ namespace MangaPublishingSystem.Application.IServices
         System.Threading.Tasks.Task ClearVotesForSeriesAsync(int seriesId);
         System.Threading.Tasks.Task<BoardVoteResolution> EvaluateSeriesVotesAsync(int seriesId);
         System.Threading.Tasks.Task ApplyVoteResolutionAsync(Series series, BoardVoteResolution resolution, string? rejectComment = null);
+        System.Threading.Tasks.Task ClearChairIfUserDeactivatedAsync(int userId);
     }
 }

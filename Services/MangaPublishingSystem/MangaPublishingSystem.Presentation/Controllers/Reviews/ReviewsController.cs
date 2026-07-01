@@ -37,7 +37,7 @@ namespace MangaPublishingSystem.Presentation.Controllers.Reviews
         [HttpGet("chapters/{chapterId}")]
         public async Task<ActionResult<ApiResponse<Chapter>>> GetChapterById(int chapterId)
         {
-            var chapter = await _chapterService.GetByIdAsync(chapterId);
+            var chapter = await _chapterService.GetChapterWithDetailsAsync(chapterId);
             if (chapter == null)
             {
                 return NotFound(ApiResponse<Chapter>.Failure(404, "Không tìm thấy chapter."));

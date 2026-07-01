@@ -14,6 +14,7 @@ namespace MangaPublishingSystem.Domain.Entities
         public string? Synopsis { get; set; }
         public string? CoverArtworkUrl { get; set; }
         public decimal EstimatedProductionBudget { get; set; }
+        public decimal EditorRecommendedBudget { get; set; }
         public decimal ApprovedProductionBudget { get; set; }
         public string? PublicationSchedule { get; set; }
         public string Status { get; set; } = "Draft";
@@ -26,5 +27,6 @@ namespace MangaPublishingSystem.Domain.Entities
         public virtual ICollection<BoardVote> BoardVotes { get; set; } = new List<BoardVote>();
         public virtual ICollection<Contract> Contracts { get; set; } = new List<Contract>();
         public virtual ICollection<Chapter> Chapters { get; set; } = new List<Chapter>();
+        public virtual ICollection<SeriesAssistant> SeriesAssistants { get; set; } = new List<SeriesAssistant>();
     }
 }

@@ -25,19 +25,22 @@ namespace MangaPublishingSystem.Application.Services
         private readonly IUnitOfWork _unitOfWork;
         private readonly IEmailService _emailService;
         private readonly IPasswordHasher _passwordHasher;
+        private readonly IBoardVotingService _boardVotingService;
 
         public UserService(
             IUserRepository userRepository,
             IWalletRepository walletRepository,
             IUnitOfWork unitOfWork,
             IEmailService emailService,
-            IPasswordHasher passwordHasher)
+            IPasswordHasher passwordHasher,
+            IBoardVotingService boardVotingService)
         {
             _userRepository = userRepository;
             _walletRepository = walletRepository;
             _unitOfWork = unitOfWork;
             _emailService = emailService;
             _passwordHasher = passwordHasher;
+            _boardVotingService = boardVotingService;
         }
 
         public async Task<UserResponseDto> CreateUserByAdminAsync(CreateUserByAdminDto dto)
@@ -230,6 +233,7 @@ namespace MangaPublishingSystem.Application.Services
 
             user.Status = UserStatus.Locked;
             await _unitOfWork.SaveChangesAsync();
+            await _boardVotingService.ClearChairIfUserDeactivatedAsync(id);
 
             return MapUserResponse(user, "Khóa tài khoản thành công.");
         }
