@@ -3,7 +3,14 @@
 -- PROJECT: Manga Creation Workflow & Publishing Management System (MCWPMS)
 -- DATABASE NAME: MangaPublishing
 -- RDBMS: Microsoft SQL Server (MS SQL)
--- DATE: 2026-06-06
+-- DATE: 2026-06-06 (cập nhật 2026-07-01)
+-- CHẠY : sqlcmd -S localhost -f 65001 -i backend/Database/schema.sql
+-- SAU ĐÓ: sqlcmd -S localhost -f 65001 -i backend/Database/seed.sql
+--
+-- Gồm đầy đủ:
+--   • Series.EditorRecommendedBudget (ngân sách Editor đề xuất)
+--   • BoardVotingConfig (biểu quyết HĐ: ChairUserId, ngưỡng 51%, bỏ TiePolicy)
+--   • Series_Assistant (nhóm Trợ lý cố định theo Series — Flow 2)
 -- =========================================================================
 
 USE master;
@@ -29,6 +36,7 @@ SET QUOTED_IDENTIFIER ON;
 GO
 
 -- Drop existing tables in reverse dependency order to avoid constraints conflicts
+IF OBJECT_ID('dbo.Series_Assistant', 'U') IS NOT NULL DROP TABLE dbo.Series_Assistant;
 IF OBJECT_ID('dbo.PortfolioSample', 'U') IS NOT NULL DROP TABLE dbo.PortfolioSample;
 IF OBJECT_ID('dbo.Report', 'U') IS NOT NULL DROP TABLE dbo.Report;
 IF OBJECT_ID('dbo.Annotation', 'U') IS NOT NULL DROP TABLE dbo.Annotation;
@@ -209,6 +217,7 @@ CREATE TABLE dbo.Series (
     Synopsis NVARCHAR(MAX) NULL,
     CoverArtworkUrl NVARCHAR(500) NULL,
     EstimatedProductionBudget DECIMAL(18,2) NOT NULL CONSTRAINT DF_Series_EstBudget DEFAULT 0.00,
+    EditorRecommendedBudget DECIMAL(18,2) NOT NULL CONSTRAINT DF_Series_EditorRecBudget DEFAULT 0.00,
     ApprovedProductionBudget DECIMAL(18,2) NOT NULL CONSTRAINT DF_Series_AppBudget DEFAULT 0.00,
     PublicationSchedule NVARCHAR(50) NULL,
     Status NVARCHAR(50) NOT NULL CONSTRAINT DF_Series_Status DEFAULT N'Draft',
@@ -219,6 +228,27 @@ CREATE TABLE dbo.Series (
     CONSTRAINT FK_Series_Mangaka FOREIGN KEY (MangakaId) REFERENCES dbo.[User] (UserId) ON DELETE NO ACTION,
     CONSTRAINT FK_Series_Editor FOREIGN KEY (EditorId) REFERENCES dbo.[User] (UserId) ON DELETE NO ACTION
 );
+GO
+
+-- =========================================================================
+-- 7b. TABLE: Series_Assistant (Nhóm trợ lý cố định theo Series — Flow 2)
+-- =========================================================================
+CREATE TABLE dbo.Series_Assistant (
+    SeriesId INT NOT NULL,
+    AssistantId INT NOT NULL,
+    RoleInTeam NVARCHAR(100) NOT NULL,
+    JoinedDate DATETIME2 NULL,
+    Status NVARCHAR(20) NOT NULL CONSTRAINT DF_SeriesAssistant_Status DEFAULT N'Pending',
+    CreateAt DATETIME2 NOT NULL CONSTRAINT DF_SeriesAssistant_CreateAt DEFAULT GETUTCDATE(),
+    UpdateAt DATETIME2 NULL,
+    CONSTRAINT PK_Series_Assistant PRIMARY KEY CLUSTERED (SeriesId, AssistantId),
+    CONSTRAINT FK_SeriesAssistant_Series FOREIGN KEY (SeriesId) REFERENCES dbo.Series (SeriesId) ON DELETE CASCADE,
+    CONSTRAINT FK_SeriesAssistant_Assistant FOREIGN KEY (AssistantId) REFERENCES dbo.[User] (UserId) ON DELETE NO ACTION
+);
+GO
+
+CREATE INDEX IX_SeriesAssistant_AssistantId ON dbo.Series_Assistant (AssistantId);
+CREATE INDEX IX_SeriesAssistant_SeriesStatus ON dbo.Series_Assistant (SeriesId, Status);
 GO
 
 -- =========================================================================
@@ -262,11 +292,8 @@ GO
 CREATE TABLE dbo.BoardVotingConfig (
     ConfigId INT IDENTITY(1,1) NOT NULL,
     AutoResolveHours INT NOT NULL CONSTRAINT DF_BoardVotingConfig_AutoResolveHours DEFAULT 48,
-        ApprovalThresholdPercent INT NOT NULL CONSTRAINT DF_BoardVotingConfig_ApprovalPct DEFAULT 66,
-        RejectionThresholdPercent INT NOT NULL CONSTRAINT DF_BoardVotingConfig_RejectionPct DEFAULT 66,
-    TiePolicy NVARCHAR(32) NOT NULL CONSTRAINT DF_BoardVotingConfig_TiePolicy DEFAULT N'Escalate',
+    ApprovalThresholdPercent INT NOT NULL CONSTRAINT DF_BoardVotingConfig_ApprovalPct DEFAULT 51,
     ClearVotesOnResubmit BIT NOT NULL CONSTRAINT DF_BoardVotingConfig_ClearVotes DEFAULT 1,
-    RequireOddBoardSize BIT NOT NULL CONSTRAINT DF_BoardVotingConfig_OddSize DEFAULT 1,
     BoardRoleId INT NOT NULL CONSTRAINT DF_BoardVotingConfig_RoleId DEFAULT 3,
     ChairUserId INT NULL,
     CreateAt DATETIME2 NOT NULL CONSTRAINT DF_BoardVotingConfig_CreateAt DEFAULT GETUTCDATE(),

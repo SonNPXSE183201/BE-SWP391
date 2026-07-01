@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using MangaPublishingSystem.Domain.Entities;
 
 namespace MangaPublishingSystem.Application.Common
@@ -9,160 +8,133 @@ namespace MangaPublishingSystem.Application.Common
     {
         Pending,
         Approved,
-        Rejected,
-        Escalated
+        Rejected
     }
 
     public sealed class BoardVotingThresholds
     {
         public int BoardMemberCount { get; init; }
+        public int ChairWeight { get; init; }
+        public int TotalWeight { get; init; }
         public int ApproveRequired { get; init; }
-        public int RejectRequired { get; init; }
-        public bool IsEvenBoardSize { get; init; }
-        public string? OddBoardSizeWarning { get; init; }
     }
 
     public static class BoardVotingRulesCalculator
     {
-        public const string TiePolicyReject = "Reject";
-        public const string TiePolicyEscalate = "Escalate";
-        public const string TiePolicyChairDecides = "ChairDecides";
-
         public static BoardVotingThresholds CalculateThresholds(int boardMemberCount, BoardVotingConfig config)
         {
-            var n = Math.Max(boardMemberCount, 1);
-            var approveRequired = CalcVotesRequired(n, config.ApprovalThresholdPercent);
-            var rejectRequired = CalcVotesRequired(n, config.RejectionThresholdPercent);
-            var isEven = n % 2 == 0;
-
-            string? warning = null;
-            if (config.RequireOddBoardSize && isEven)
+            if (boardMemberCount < 3)
             {
-                warning =
-                    $"Hội đồng đang có {n} thành viên (số chẵn). Khuyến nghị số lẻ để tránh hòa phiếu.";
+                throw new InvalidOperationException("Hội đồng phải có ít nhất 3 thành viên (N >= 3).");
             }
+
+            var n = boardMemberCount;
+            var originalChairWeight = (n % 2 == 0) ? 2 : 3;
+            var chairWeight = Math.Min(originalChairWeight, n - 2);
+            var totalWeight = chairWeight + (n - 1);
+            var approveRequired = CalcVotesRequired(totalWeight, config.ApprovalThresholdPercent);
 
             return new BoardVotingThresholds
             {
                 BoardMemberCount = n,
-                ApproveRequired = approveRequired,
-                RejectRequired = rejectRequired,
-                IsEvenBoardSize = isEven,
-                OddBoardSizeWarning = warning
+                ChairWeight = chairWeight,
+                TotalWeight = totalWeight,
+                ApproveRequired = approveRequired
             };
         }
 
-        public static (int Approve, int Reject, int Abstain) CountVotes(IEnumerable<BoardVote> votes)
+        public static (int ApproveWeight, int RejectWeight) CountWeightedVotes(
+            IEnumerable<BoardVote> votes, int? chairUserId, int chairWeight)
         {
             var approve = 0;
             var reject = 0;
-            var abstain = 0;
 
             foreach (var vote in votes)
             {
+                var weight = (chairUserId.HasValue && vote.BoardMemberId == chairUserId.Value)
+                    ? chairWeight
+                    : 1;
                 var type = vote.VoteType?.Trim() ?? string.Empty;
-                if (type.Equals("Approve", StringComparison.OrdinalIgnoreCase)) approve++;
-                else if (type.Equals("Reject", StringComparison.OrdinalIgnoreCase)) reject++;
-                else if (type.Equals("Abstain", StringComparison.OrdinalIgnoreCase)) abstain++;
+                if (type.Equals("Approve", StringComparison.OrdinalIgnoreCase))
+                {
+                    approve += weight;
+                }
+                else if (type.Equals("Reject", StringComparison.OrdinalIgnoreCase))
+                {
+                    reject += weight;
+                }
             }
 
-            return (approve, reject, abstain);
+            return (approve, reject);
         }
 
         public static BoardVoteResolution Evaluate(
             BoardVotingThresholds thresholds,
-            int approveCount,
-            int rejectCount,
-            int abstainCount,
+            int approveWeight,
+            int rejectWeight,
             int votesCast,
-            BoardVotingConfig config,
-            IEnumerable<BoardVote> votes)
+            int totalMembers)
         {
-            if (approveCount >= thresholds.ApproveRequired)
+            if (approveWeight >= thresholds.ApproveRequired)
             {
                 return BoardVoteResolution.Approved;
             }
 
-            if (rejectCount >= thresholds.RejectRequired)
+            var maxPossibleApprove = approveWeight + (thresholds.TotalWeight - approveWeight - rejectWeight);
+            if (maxPossibleApprove < thresholds.ApproveRequired)
             {
                 return BoardVoteResolution.Rejected;
             }
 
-            var allMembersVoted = votesCast >= thresholds.BoardMemberCount;
-            if (!allMembersVoted)
+            if (votesCast >= totalMembers)
             {
-                return BoardVoteResolution.Pending;
+                return BoardVoteResolution.Rejected;
             }
 
-            if (approveCount == rejectCount)
-            {
-                return ResolveTie(config, votes);
-            }
-
-            // Tất cả đã vote nhưng không đạt ngưỡng và không hòa Approve/Reject → leo thang Admin
-            return BoardVoteResolution.Escalated;
+            return BoardVoteResolution.Pending;
         }
 
         public static BoardVoteResolution EvaluateAutoResolve(
             BoardVotingThresholds thresholds,
-            int approveCount,
-            int rejectCount,
-            BoardVotingConfig config,
-            IEnumerable<BoardVote> votes)
+            int approveWeight,
+            int rejectWeight)
         {
-            if (approveCount >= thresholds.ApproveRequired)
+            if (approveWeight > rejectWeight)
             {
                 return BoardVoteResolution.Approved;
             }
 
-            if (rejectCount >= thresholds.RejectRequired)
-            {
-                return BoardVoteResolution.Rejected;
-            }
-
-            if (approveCount > rejectCount)
-            {
-                return BoardVoteResolution.Approved;
-            }
-
-            if (rejectCount > approveCount)
-            {
-                return BoardVoteResolution.Rejected;
-            }
-
-            return ResolveTie(config, votes);
+            return BoardVoteResolution.Rejected;
         }
 
-        private static BoardVoteResolution ResolveTie(BoardVotingConfig config, IEnumerable<BoardVote> votes)
+        public static decimal CalculateApprovedBudget(
+            IEnumerable<BoardVote> votes, int? chairUserId, int chairWeight)
         {
-            var policy = config.TiePolicy?.Trim() ?? TiePolicyEscalate;
+            decimal totalBudgetWeight = 0;
+            var totalApproveWeight = 0;
 
-            if (policy.Equals(TiePolicyReject, StringComparison.OrdinalIgnoreCase))
+            foreach (var vote in votes)
             {
-                return BoardVoteResolution.Rejected;
-            }
-
-            if (policy.Equals(TiePolicyChairDecides, StringComparison.OrdinalIgnoreCase) && config.ChairUserId.HasValue)
-            {
-                var chairVote = votes.FirstOrDefault(v => v.BoardMemberId == config.ChairUserId.Value);
-                if (chairVote != null)
+                var type = vote.VoteType?.Trim() ?? string.Empty;
+                if (!type.Equals("Approve", StringComparison.OrdinalIgnoreCase))
                 {
-                    var type = chairVote.VoteType?.Trim() ?? string.Empty;
-                    if (type.Equals("Approve", StringComparison.OrdinalIgnoreCase))
-                    {
-                        return BoardVoteResolution.Approved;
-                    }
-
-                    if (type.Equals("Reject", StringComparison.OrdinalIgnoreCase))
-                    {
-                        return BoardVoteResolution.Rejected;
-                    }
+                    continue;
                 }
 
-                return BoardVoteResolution.Escalated;
+                var weight = (chairUserId.HasValue && vote.BoardMemberId == chairUserId.Value)
+                    ? chairWeight
+                    : 1;
+                totalBudgetWeight += vote.RecommendedBudget * weight;
+                totalApproveWeight += weight;
             }
 
-            return BoardVoteResolution.Escalated;
+            if (totalApproveWeight == 0)
+            {
+                return 0;
+            }
+
+            var rawBudget = totalBudgetWeight / totalApproveWeight;
+            return Math.Round(rawBudget / 1000m) * 1000m;
         }
 
         public static string NormalizeVoteType(string? voteChoice, bool legacyApproved, string? comment)
@@ -172,13 +144,6 @@ namespace MangaPublishingSystem.Application.Common
                 var choice = voteChoice.Trim();
                 if (choice.Equals("Approve", StringComparison.OrdinalIgnoreCase)) return "Approve";
                 if (choice.Equals("Reject", StringComparison.OrdinalIgnoreCase)) return "Reject";
-                if (choice.Equals("Abstain", StringComparison.OrdinalIgnoreCase)) return "Abstain";
-            }
-
-            if (!string.IsNullOrWhiteSpace(comment) &&
-                comment.TrimStart().StartsWith("[Abstain]", StringComparison.OrdinalIgnoreCase))
-            {
-                return "Abstain";
             }
 
             return legacyApproved ? "Approve" : "Reject";
@@ -186,7 +151,6 @@ namespace MangaPublishingSystem.Application.Common
 
         /// <summary>
         /// Số phiếu tối thiểu để đạt ngưỡng %: ceil(N × p / 100) dùng phép nguyên (tránh lỗi float).
-        /// Ví dụ N=6, p=67 → ceil(4.02)=5 vì 4/6=66.67% &lt; 67%. Preset 2/3 nên dùng p=66 → 4 phiếu.
         /// </summary>
         public static int CalcVotesRequired(int memberCount, int thresholdPercent)
         {

@@ -15,12 +15,18 @@
 -- │   3    │ board1            │ 3 Editorial Board│ Active  │ board.le@mangapublishing.com │
 -- │   4    │ mangaka1          │ 4 Mangaka        │ Active  │ mangaka.nam@gmail.com        │
 -- │   5    │ assistant1        │ 5 Assistant      │ Active  │ assistant.son@gmail.com    │
--- │   6    │ assistant_pending │ 5 Assistant      │ Pending │ assistant.pending@gmail.com  │
+-- │   6    │ assistant_pending │ 5 Assistant      │ Pending │ assistant.tran@gmail.com     │
 -- │   7    │ board2            │ 3 Editorial Board│ Active  │ board2@mangapublishing.com   │
 -- │   8    │ board3            │ 3 Editorial Board│ Active  │ board3@mangapublishing.com   │
 -- │   9    │ board4            │ 3 Editorial Board│ Active  │ board4@mangapublishing.com   │
 -- │  10    │ board5            │ 3 Editorial Board│ Active  │ board5@mangapublishing.com   │
 -- │  11    │ board6            │ 3 Editorial Board│ Active  │ board6@mangapublishing.com   │
+-- │  12    │ assistant_linh    │ 5 Assistant      │ Active  │ linh.troly@gmail.com         │
+-- │  13    │ assistant_khoa    │ 5 Assistant      │ Active  │ khoa.troly@gmail.com         │
+-- │  14    │ assistant_an      │ 5 Assistant      │ Active  │ an.troly@gmail.com           │
+-- │  15    │ assistant_hue     │ 5 Assistant      │ Active  │ hue.troly@gmail.com          │
+-- │  16    │ assistant_quang   │ 5 Assistant      │ Active  │ quang.troly@gmail.com        │
+-- │  17    │ assistant_my      │ 5 Assistant      │ Active  │ my.troly@gmail.com           │
 -- └────────┴───────────────────┴──────────────────┴─────────┴──────────────────────────────┘
 -- Ví quỹ chung NXB: bảng Wallet (Kind = PlatformTreasury, UserId NULL) — không có user riêng.
 --
@@ -32,8 +38,9 @@
 --   5 — Pending_Board_Vote   : đang biểu quyết Hội đồng
 --
 -- BẢNG SEED (ngoại trừ __EFMigrationsHistory — do EF quản lý):
---   Role, User, Wallet, Transaction, AssistantProfile, PortfolioSample,
---   Series, Contract, ContractAddendum, Chapter, Page, Region, Tasks,
+--   Role, BoardVotingConfig, User, Wallet, Transaction,
+--   AssistantProfile, PortfolioSample, Series, Series_Assistant,
+--   Contract, ContractAddendum, Chapter, Page, Region, Tasks,
 --   TaskVersion, BoardVote, RankingRecord, Notification,
 --   Annotation, DisputeLog, Report, RefreshToken
 -- =========================================================================
@@ -62,6 +69,7 @@ DELETE FROM dbo.Contract;
 DELETE FROM dbo.BoardVote;
 DELETE FROM dbo.BoardVotingConfig;
 DELETE FROM dbo.RankingRecord;
+DELETE FROM dbo.Series_Assistant;
 DELETE FROM dbo.Series;
 DELETE FROM dbo.Notification;
 DELETE FROM dbo.PortfolioSample;
@@ -114,17 +122,7 @@ SET IDENTITY_INSERT dbo.Role OFF;
 GO
 
 -- ─────────────────────────────────────────────────────────────────────────
--- PHASE 2b: BOARD VOTING CONFIG
--- ─────────────────────────────────────────────────────────────────────────
-PRINT 'Phase 2b: Seeding Board Voting Config...';
-SET IDENTITY_INSERT dbo.BoardVotingConfig ON;
-INSERT INTO dbo.BoardVotingConfig (ConfigId, AutoResolveHours, ApprovalThresholdPercent, RejectionThresholdPercent, TiePolicy, ClearVotesOnResubmit, RequireOddBoardSize, BoardRoleId, ChairUserId, CreateAt)
-VALUES (1, 48, 66, 66, N'Escalate', 1, 1, 3, NULL, GETUTCDATE());
-SET IDENTITY_INSERT dbo.BoardVotingConfig OFF;
-GO
-
--- ─────────────────────────────────────────────────────────────────────────
--- PHASE 3: USERS — 12 tài khoản mặc định
+-- PHASE 3: USERS — tài khoản mặc định
 -- ─────────────────────────────────────────────────────────────────────────
 PRINT 'Phase 3: Seeding default users (password: 12345)...';
 SET IDENTITY_INSERT dbo.[User] ON;
@@ -135,13 +133,19 @@ VALUES
 ( 2, 2, 'editor1',           N'$2a$11$MYGlbol73VYbWKwQNlBWeue7YregoBRkXJg2Kji/OOsDL3xrnKeK6', 'editor.tran@mangapublishing.com',  N'Trần Thị Biên Tập',        N'Active',  GETUTCDATE(), NULL,      NULL,                              NULL,                        0, NULL),
 ( 3, 3, 'board1',            N'$2a$11$MYGlbol73VYbWKwQNlBWeue7YregoBRkXJg2Kji/OOsDL3xrnKeK6', 'board.le@mangapublishing.com',     N'Lê Văn Hội Đồng',          N'Active',  GETUTCDATE(), NULL,      NULL,                              NULL,                        0, NULL),
 ( 4, 4, 'mangaka1',          N'$2a$11$MYGlbol73VYbWKwQNlBWeue7YregoBRkXJg2Kji/OOsDL3xrnKeK6', 'mangaka.nam@gmail.com',            N'Phan Hoàng Nam',           N'Active',  GETUTCDATE(), N'NamArt', NULL,                              NULL,                        0, 2),
-( 5, 5, 'assistant1',        N'$2a$11$MYGlbol73VYbWKwQNlBWeue7YregoBRkXJg2Kji/OOsDL3xrnKeK6', 'assistant.son@gmail.com',          N'Nguyễn Sơn',               N'Active',  GETUTCDATE(), NULL,      N'https://portfolio.nguyenson.com', N'Vẽ nền, Đi nét, Tô màu',  0, NULL),
-( 6, 5, 'assistant_pending', N'$2a$11$MYGlbol73VYbWKwQNlBWeue7YregoBRkXJg2Kji/OOsDL3xrnKeK6', 'assistant.pending@gmail.com',      N'Nguyễn Văn Chờ Duyệt',     N'Pending', GETUTCDATE(), NULL,      N'https://portfolio.com/pending',   N'Coloring, Lineart',        0, NULL),
+( 5, 5, 'assistant1',        N'$2a$11$MYGlbol73VYbWKwQNlBWeue7YregoBRkXJg2Kji/OOsDL3xrnKeK6', 'assistant.son@gmail.com',          N'Nguyễn Sơn',               N'Active',  GETUTCDATE(), N'Sơn Nền',     N'https://portfolio.nguyenson.com',     N'Vẽ nền, Kẻ line, Tô màu',        0, NULL),
+( 6, 5, 'assistant_pending', N'$2a$11$MYGlbol73VYbWKwQNlBWeue7YregoBRkXJg2Kji/OOsDL3xrnKeK6', 'assistant.tran@gmail.com',         N'Đào Bảo Trân',             N'Pending', GETUTCDATE(), N'Trân Màu',    N'https://portfolio.daobaotran.vn',     N'Tô màu, Kẻ line',                0, NULL),
 ( 7, 3, 'board2',            N'$2a$11$MYGlbol73VYbWKwQNlBWeue7YregoBRkXJg2Kji/OOsDL3xrnKeK6', 'board2@mangapublishing.com',       N'Nguyễn Văn Hội Đồng 2',    N'Active',  GETUTCDATE(), NULL,      NULL,                              NULL,                        0, NULL),
 ( 8, 3, 'board3',            N'$2a$11$MYGlbol73VYbWKwQNlBWeue7YregoBRkXJg2Kji/OOsDL3xrnKeK6', 'board3@mangapublishing.com',       N'Trần Thị Hội Đồng 3',      N'Active',  GETUTCDATE(), NULL,      NULL,                              NULL,                        0, NULL),
 ( 9, 3, 'board4',            N'$2a$11$MYGlbol73VYbWKwQNlBWeue7YregoBRkXJg2Kji/OOsDL3xrnKeK6', 'board4@mangapublishing.com',       N'Lê Thị Hội Đồng 4',        N'Active',  GETUTCDATE(), NULL,      NULL,                              NULL,                        0, NULL),
 (10, 3, 'board5',            N'$2a$11$MYGlbol73VYbWKwQNlBWeue7YregoBRkXJg2Kji/OOsDL3xrnKeK6', 'board5@mangapublishing.com',       N'Phạm Văn Hội Đồng 5',      N'Active',  GETUTCDATE(), NULL,      NULL,                              NULL,                        0, NULL),
-(11, 3, 'board6',            N'$2a$11$MYGlbol73VYbWKwQNlBWeue7YregoBRkXJg2Kji/OOsDL3xrnKeK6', 'board6@mangapublishing.com',       N'Vũ Văn Hội Đồng 6',        N'Active',  GETUTCDATE(), NULL,      NULL,                              NULL,                        0, NULL);
+(11, 3, 'board6',            N'$2a$11$MYGlbol73VYbWKwQNlBWeue7YregoBRkXJg2Kji/OOsDL3xrnKeK6', 'board6@mangapublishing.com',       N'Vũ Văn Hội Đồng 6',        N'Active',  GETUTCDATE(), NULL,          NULL,                                  NULL,                              0, NULL),
+(12, 5, 'assistant_linh',    N'$2a$11$MYGlbol73VYbWKwQNlBWeue7YregoBRkXJg2Kji/OOsDL3xrnKeK6', 'linh.troly@gmail.com',             N'Trần Mai Linh',            N'Active',  GETUTCDATE(), N'Linh Mộc',    N'https://portfolio.tranmailinh.vn',    N'Vẽ nền, Đổ bóng, Hiệu ứng',      0, NULL),
+(13, 5, 'assistant_khoa',    N'$2a$11$MYGlbol73VYbWKwQNlBWeue7YregoBRkXJg2Kji/OOsDL3xrnKeK6', 'khoa.troly@gmail.com',             N'Lê Minh Khoa',             N'Active',  GETUTCDATE(), N'Khoa Line',   N'https://portfolio.leminhkhoa.vn',     N'Vẽ cận, Kẻ line, Vẽ thoại',      0, NULL),
+(14, 5, 'assistant_an',      N'$2a$11$MYGlbol73VYbWKwQNlBWeue7YregoBRkXJg2Kji/OOsDL3xrnKeK6', 'an.troly@gmail.com',               N'Phạm Hoài An',             N'Active',  GETUTCDATE(), N'An Sắc',      N'https://portfolio.phamhoaian.vn',     N'Tô màu, Hiệu ứng, Đổ bóng',      0, NULL),
+(15, 5, 'assistant_hue',     N'$2a$11$MYGlbol73VYbWKwQNlBWeue7YregoBRkXJg2Kji/OOsDL3xrnKeK6', 'hue.troly@gmail.com',              N'Vũ Thanh Huệ',             N'Active',  GETUTCDATE(), N'Huệ Chữ',     N'https://portfolio.vuthanhhue.vn',     N'Vẽ thoại, Kẻ line, Dàn trang',   0, NULL),
+(16, 5, 'assistant_quang',   N'$2a$11$MYGlbol73VYbWKwQNlBWeue7YregoBRkXJg2Kji/OOsDL3xrnKeK6', 'quang.troly@gmail.com',            N'Đặng Nhật Quang',          N'Active',  GETUTCDATE(), N'Quang Cảnh',  N'https://portfolio.dangnhatquang.vn',  N'Vẽ nền, Phối cảnh, Hiệu ứng',    0, NULL),
+(17, 5, 'assistant_my',      N'$2a$11$MYGlbol73VYbWKwQNlBWeue7YregoBRkXJg2Kji/OOsDL3xrnKeK6', 'my.troly@gmail.com',               N'Hoàng Uyên My',            N'Active',  GETUTCDATE(), N'My Bóng',     N'https://portfolio.hoanguyenmy.vn',    N'Đổ bóng, Tô màu, Vẽ cận',        0, NULL);
 SET IDENTITY_INSERT dbo.[User] OFF;
 GO
 
@@ -162,7 +166,13 @@ INSERT INTO dbo.Wallet (WalletId, UserId, Kind, SetupFundBalance, WithdrawableBa
 ( 9,  9,  N'User',              0.00,      0.00,      0.00, 0.00),
 (10, 10,  N'User',              0.00,      0.00,      0.00, 0.00),
 (11, 11,  N'User',              0.00,      0.00,      0.00, 0.00),
-(12, NULL, N'PlatformTreasury', 0.00, 5470000000.00, 0.00, 0.00);
+(12, NULL, N'PlatformTreasury', 0.00, 5470000000.00, 0.00, 0.00),
+(13, 12,  N'User',              0.00, 1750000.00,      0.00, 0.00),
+(14, 13,  N'User',              0.00, 2100000.00,      0.00, 0.00),
+(15, 14,  N'User',              0.00, 1850000.00,      0.00, 0.00),
+(16, 15,  N'User',              0.00, 1600000.00,      0.00, 0.00),
+(17, 16,  N'User',              0.00, 2400000.00,      0.00, 0.00),
+(18, 17,  N'User',              0.00, 1950000.00,      0.00, 0.00);
 SET IDENTITY_INSERT dbo.Wallet OFF;
 GO
 
@@ -195,16 +205,34 @@ SET IDENTITY_INSERT dbo.AssistantProfile ON;
 INSERT INTO dbo.AssistantProfile
     (ProfileId, AssistantId, SpecialtyTags, TotalCompletedTasks, OnTimeRate, DisputeRate, CurrentActiveTasks, AverageRating)
 VALUES
-(1, 5, N'Background, Lineart, Coloring', 12, 95.80, 0.00, 1, 4.85),
-(2, 6, N'Coloring, Lineart',              0,  0.00, 0.00, 0, 0.00);
+(1, 5,  N'Vẽ nền, Kẻ line, Tô màu',       12, 95.80, 0.00, 1, 4.85),
+(2, 6,  N'Tô màu, Kẻ line',                0,  0.00, 0.00, 0, 0.00),
+(3, 12, N'Vẽ nền, Đổ bóng, Hiệu ứng',     24, 97.20, 0.00, 2, 4.90),
+(4, 13, N'Vẽ cận, Kẻ line, Vẽ thoại',     18, 93.50, 1.10, 1, 4.70),
+(5, 14, N'Tô màu, Hiệu ứng, Đổ bóng',     21, 96.40, 0.40, 2, 4.82),
+(6, 15, N'Vẽ thoại, Kẻ line, Dàn trang',  15, 91.80, 0.00, 0, 4.55),
+(7, 16, N'Vẽ nền, Phối cảnh, Hiệu ứng',   30, 98.10, 0.20, 1, 4.95),
+(8, 17, N'Đổ bóng, Tô màu, Vẽ cận',       17, 94.70, 0.60, 1, 4.76);
 SET IDENTITY_INSERT dbo.AssistantProfile OFF;
 GO
 
 SET IDENTITY_INSERT dbo.PortfolioSample ON;
 INSERT INTO dbo.PortfolioSample (SampleId, AssistantId, Title, ImageUrl, Category) VALUES
-(1, 5, N'Thiết kế nền thành phố cổ', N'http://localhost:9000/manga-publishing/portfolios/son-bg1.png',  N'Background'),
-(2, 5, N'Đi nét nhân vật chính',    N'http://localhost:9000/manga-publishing/portfolios/son-line1.png', N'Lineart'),
-(3, 6, N'Tô màu demo',              N'http://localhost:9000/manga-publishing/portfolios/pending-color1.png', N'Coloring');
+(1, 5,  N'Thiết kế nền thành phố cổ',      N'http://localhost:9000/manga-publishing/portfolios/son-bg1.png',       N'Vẽ nền'),
+(2, 5,  N'Kẻ line nhân vật chính',         N'http://localhost:9000/manga-publishing/portfolios/son-line1.png',     N'Kẻ line'),
+(3, 6,  N'Tô màu nhân vật học đường',      N'http://localhost:9000/manga-publishing/portfolios/tran-color1.png',   N'Tô màu'),
+(4, 12, N'Bối cảnh rừng sương mù',         N'http://localhost:9000/manga-publishing/portfolios/linh-bg1.png',      N'Vẽ nền'),
+(5, 12, N'Đổ bóng cảnh đêm',               N'http://localhost:9000/manga-publishing/portfolios/linh-shadow1.png',  N'Đổ bóng'),
+(6, 13, N'Cận cảnh biểu cảm nhân vật',     N'http://localhost:9000/manga-publishing/portfolios/khoa-close1.png',   N'Vẽ cận'),
+(7, 13, N'Khung thoại hành động',          N'http://localhost:9000/manga-publishing/portfolios/khoa-dialog1.png',  N'Vẽ thoại'),
+(8, 14, N'Tô màu cảnh lễ hội',             N'http://localhost:9000/manga-publishing/portfolios/an-color1.png',     N'Tô màu'),
+(9, 14, N'Hiệu ứng phép thuật',            N'http://localhost:9000/manga-publishing/portfolios/an-effect1.png',    N'Hiệu ứng'),
+(10, 15, N'Dàn trang hội thoại',           N'http://localhost:9000/manga-publishing/portfolios/hue-layout1.png',   N'Dàn trang'),
+(11, 15, N'Kẻ line khung thoại',           N'http://localhost:9000/manga-publishing/portfolios/hue-line1.png',     N'Kẻ line'),
+(12, 16, N'Phối cảnh phố mưa',             N'http://localhost:9000/manga-publishing/portfolios/quang-bg1.png',     N'Phối cảnh'),
+(13, 16, N'Nền chiến trường đổ nát',       N'http://localhost:9000/manga-publishing/portfolios/quang-bg2.png',     N'Vẽ nền'),
+(14, 17, N'Đổ bóng nhân vật cận cảnh',     N'http://localhost:9000/manga-publishing/portfolios/my-shadow1.png',    N'Đổ bóng'),
+(15, 17, N'Tô màu cảnh hoàng hôn',         N'http://localhost:9000/manga-publishing/portfolios/my-color1.png',     N'Tô màu');
 SET IDENTITY_INSERT dbo.PortfolioSample OFF;
 GO
 
@@ -215,14 +243,14 @@ PRINT 'Phase 7: Seeding series (all workflow states)...';
 SET IDENTITY_INSERT dbo.Series ON;
 INSERT INTO dbo.Series
     (SeriesId, MangakaId, EditorId, EditorNote, Title, Genre, Synopsis, CoverArtworkUrl,
-     EstimatedProductionBudget, ApprovedProductionBudget, PublicationSchedule, Status, ResourceFolderUrl, CreateAt)
+     EstimatedProductionBudget, EditorRecommendedBudget, ApprovedProductionBudget, PublicationSchedule, Status, ResourceFolderUrl, CreateAt)
 VALUES
 -- [1] Đang sản xuất
 (1, 4, 2, NULL,
  N'Hành Trình Kỳ Thú', N'Shounen, Phiêu lưu',
  N'Câu chuyện phiêu lưu kỳ thú của một cậu bé đi tìm kho báu cổ xưa.',
  N'http://localhost:9000/manga-publishing/covers/hanh-trinh-ky-thu.jpg',
- 50000000.00, 45000000.00, N'Weekly', N'In Production',
+ 50000000.00, 45000000.00, 45000000.00, N'Weekly', N'In Production',
  N'http://localhost:9000/manga-publishing/resources/series-1', GETUTCDATE()),
 
 -- [2] Fund_Pending + đã có HĐ → test Phụ lục HĐ (Admin /admin/contracts)
@@ -230,7 +258,7 @@ VALUES
  N'Học Viện Siêu Nhiên', N'Comedy, Fantasy',
  N'Cuộc sống học đường đầy khó khăn tại một ngôi trường đặc biệt.',
  N'http://localhost:9000/manga-publishing/covers/hoc-vien-sieu-nhien.jpg',
- 30000000.00, 30000000.00, NULL, N'Fund_Pending',
+ 30000000.00, 30000000.00, 30000000.00, NULL, N'Fund_Pending',
  N'http://localhost:9000/manga-publishing/resources/series-2', GETUTCDATE()),
 
 -- [3] Fund_Pending + chưa có HĐ → test Tạo HĐ
@@ -238,7 +266,7 @@ VALUES
  N'Tokyo Dreamers', N'Shojo, Romance',
  N'Nhóm bạn trẻ theo đuổi ước mơ tại thành phố Tokyo.',
  N'http://localhost:9000/manga-publishing/covers/tokyo-dreamers.jpg',
- 23000000.00, 23000000.00, N'Bi-weekly', N'Fund_Pending',
+ 23000000.00, 23000000.00, 23000000.00, N'Bi-weekly', N'Fund_Pending',
  N'http://localhost:9000/manga-publishing/resources/series-3', GETUTCDATE()),
 
 -- [4] Editor đang duyệt
@@ -246,7 +274,7 @@ VALUES
  N'Bí Ẩn Midgard', N'Fantasy, Mystery',
  N'Thế giới Midgard ẩn giấu bí mật về nguồn gốc của các chiến binh.',
  N'http://localhost:9000/manga-publishing/covers/bi-an-midgard.jpg',
- 28000000.00, 0.00, NULL, N'Pending_Approval',
+ 28000000.00, 0.00, 0.00, NULL, N'Pending_Approval',
  N'http://localhost:9000/manga-publishing/resources/series-4', GETUTCDATE()),
 
 -- [5] Đang biểu quyết Hội đồng
@@ -255,9 +283,20 @@ VALUES
  N'Cyber Ronin', N'Seinen, Sci-Fi',
  N'Tương lai đen tối nơi samurai cơ khí chiến đấu vì công lý.',
  N'http://localhost:9000/manga-publishing/covers/cyber-ronin.jpg',
- 35000000.00, 0.00, N'Weekly', N'Pending_Board_Vote',
+ 35000000.00, 35000000.00, 0.00, N'Weekly', N'Pending_Board_Vote',
  N'http://localhost:9000/manga-publishing/resources/series-5', GETUTCDATE());
 SET IDENTITY_INSERT dbo.Series OFF;
+GO
+
+-- ─────────────────────────────────────────────────────────────────────────
+-- PHASE 7b: SERIES TEAM (Flow 2 — nhóm Assistant cố định)
+-- ─────────────────────────────────────────────────────────────────────────
+PRINT 'Phase 7b: Seeding series assistant teams...';
+INSERT INTO dbo.Series_Assistant (SeriesId, AssistantId, RoleInTeam, JoinedDate, Status, CreateAt) VALUES
+(1, 5,  N'Vẽ nền & kẻ line', GETUTCDATE(), N'Active', GETUTCDATE()),
+(1, 12, N'Đổ bóng & hiệu ứng', GETUTCDATE(), N'Active', GETUTCDATE()),
+(1, 13, N'Vẽ cận & khung thoại', GETUTCDATE(), N'Active', GETUTCDATE()),
+(1, 14, N'Tô màu', NULL, N'Pending', GETUTCDATE());
 GO
 
 -- ─────────────────────────────────────────────────────────────────────────
@@ -341,9 +380,9 @@ GO
 PRINT 'Phase 10: Seeding board voting config, votes & ranking...';
 SET IDENTITY_INSERT dbo.BoardVotingConfig ON;
 INSERT INTO dbo.BoardVotingConfig
-    (ConfigId, AutoResolveHours, ApprovalThresholdPercent, RejectionThresholdPercent, TiePolicy, ClearVotesOnResubmit, RequireOddBoardSize, BoardRoleId, ChairUserId, CreateAt)
+    (ConfigId, AutoResolveHours, ApprovalThresholdPercent, ClearVotesOnResubmit, BoardRoleId, ChairUserId, CreateAt)
 VALUES
-(1, 48, 66, 66, N'Escalate', 1, 1, 3, 3, GETUTCDATE());
+(1, 48, 51, 1, 3, 3, GETUTCDATE());
 SET IDENTITY_INSERT dbo.BoardVotingConfig OFF;
 GO
 
@@ -440,14 +479,23 @@ INSERT INTO dbo.RefreshToken (RefreshTokenId, UserId, Token, ExpiresAt, IsRevoke
 SET IDENTITY_INSERT dbo.RefreshToken OFF;
 GO
 
+-- Đồng bộ IDENTITY sau khi seed ID cố định
+DBCC CHECKIDENT ('dbo.[User]', RESEED, 17);
+DBCC CHECKIDENT ('dbo.Wallet', RESEED, 18);
+DBCC CHECKIDENT ('dbo.AssistantProfile', RESEED, 8);
+DBCC CHECKIDENT ('dbo.PortfolioSample', RESEED, 15);
+GO
+
 PRINT '';
 PRINT '=================================================================';
 PRINT ' Seed completed successfully.';
 PRINT ' Password for ALL default accounts: 12345';
 PRINT ' Users: admin | editor1 | board1-6 | mangaka1 | assistant1 | assistant_pending';
+PRINT '         assistant_linh | assistant_khoa | assistant_an | assistant_hue | assistant_quang | assistant_my';
 PRINT ' Series: 5 records covering In Production / Fund_Pending / Pending_Approval / Pending_Board_Vote';
+PRINT ' Series_Assistant: 4 members on Series 1 (Flow 2 team)';
 PRINT ' Contracts: Series 1 (Signed), Series 2 (Active) — Series 3 awaiting contract';
-PRINT ' Also seeded: Annotation(5), DisputeLog(1), Report(4), RefreshToken(3)';
+PRINT ' Also seeded: BoardVotingConfig, Annotation(5), DisputeLog(1), Report(4), RefreshToken(3)';
 PRINT ' Note: __EFMigrationsHistory is managed by EF migrations, not seed.sql';
 PRINT '=================================================================';
 GO

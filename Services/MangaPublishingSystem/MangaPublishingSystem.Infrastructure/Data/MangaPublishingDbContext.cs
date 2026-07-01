@@ -38,6 +38,7 @@ namespace MangaPublishingSystem.Infrastructure.Data
         public virtual DbSet<Annotation> Annotations { get; set; } = null!;
         public virtual DbSet<Report> Reports { get; set; } = null!;
         public virtual DbSet<PortfolioSample> PortfolioSamples { get; set; } = null!;
+        public virtual DbSet<SeriesAssistant> SeriesAssistants { get; set; } = null!;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

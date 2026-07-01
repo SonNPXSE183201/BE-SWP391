@@ -119,6 +119,14 @@ namespace MangaPublishingSystem.Presentation.Controllers.Series
             return Ok(ApiResponse<object>.Success(null, "Xác nhận nhận vốn và kích hoạt bộ truyện thành công."));
         }
 
+        [Authorize(Roles = "Mangaka")]
+        [HttpPost("{id}/decline-fund")]
+        public async Task<ActionResult<ApiResponse<object>>> DeclineFund([FromRoute] int id)
+        {
+            await _seriesService.DeclineFundAsync(id, CurrentUserId);
+            return Ok(ApiResponse<object>.Success(null, "Đã từ chối vốn cấp phát. Bộ truyện quay về bản nháp."));
+        }
+
         [Authorize(Roles = "Editorial Board")]
         [HttpPost("{id}/vote")]
         public async Task<ActionResult<ApiResponse<object>>> VoteSeries([FromRoute] int id, [FromBody] VoteSeriesRequestDto dto)
@@ -148,7 +156,7 @@ namespace MangaPublishingSystem.Presentation.Controllers.Series
                 CreateAt = chapter.CreateAt,
                 UpdateAt = chapter.UpdateAt
             };
-            return Ok(ApiResponse<ChapterDto>.Success(result, "Tạo chapter và tải lên trang truyện thành công."));
+            return Ok(ApiResponse<ChapterDto>.Success(result, "Tạo chapter nháp và tải lên trang truyện thành công."));
         }
 
         private static SeriesDto MapToSeriesDto(MangaPublishingSystem.Domain.Entities.Series series)
@@ -163,6 +171,7 @@ namespace MangaPublishingSystem.Presentation.Controllers.Series
                 Synopsis = series.Synopsis,
                 CoverArtworkUrl = series.CoverArtworkUrl,
                 EstimatedProductionBudget = series.EstimatedProductionBudget,
+                EditorRecommendedBudget = series.EditorRecommendedBudget,
                 ApprovedProductionBudget = series.ApprovedProductionBudget,
                 PublicationSchedule = series.PublicationSchedule,
                 Status = series.Status,

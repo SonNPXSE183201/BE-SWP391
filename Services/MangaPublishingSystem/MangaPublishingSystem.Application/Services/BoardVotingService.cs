@@ -60,13 +60,13 @@ namespace MangaPublishingSystem.Application.Services
         public async Task<BoardVotingConfigDto> GetConfigDtoAsync()
         {
             var config = await GetConfigAsync();
-            return await MapConfigDto(config);
+            var boardMembers = await GetActiveBoardMembersAsync(config);
+            return await MapConfigDto(config, boardMembers);
         }
 
         public async Task<BoardVotingConfigDto> UpdateConfigAsync(UpdateBoardVotingConfigDto dto)
         {
-            if (dto.ApprovalThresholdPercent is < 1 or > 100 ||
-                dto.RejectionThresholdPercent is < 1 or > 100)
+            if (dto.ApprovalThresholdPercent is < 1 or > 100)
             {
                 throw new BadRequestException("Ngưỡng phần trăm phải từ 1 đến 100.");
             }
@@ -76,30 +76,39 @@ namespace MangaPublishingSystem.Application.Services
                 throw new BadRequestException("Thời hạn tự chốt phải ít nhất 1 giờ.");
             }
 
-            var allowedPolicies = new[]
+            var config = await GetConfigAsync();
+            var boardMembers = await GetActiveBoardMembersAsync(config);
+
+            if (dto.ChairUserId.HasValue &&
+                boardMembers.All(m => m.Id != dto.ChairUserId.Value))
             {
-                BoardVotingRulesCalculator.TiePolicyReject,
-                BoardVotingRulesCalculator.TiePolicyEscalate,
-                BoardVotingRulesCalculator.TiePolicyChairDecides
-            };
-            if (!allowedPolicies.Contains(dto.TiePolicy, StringComparer.OrdinalIgnoreCase))
-            {
-                throw new BadRequestException("TiePolicy không hợp lệ.");
+                throw new BadRequestException(
+                    "Chủ tịch Hội đồng phải là thành viên HĐ đang hoạt động (Active). Tài khoản bị khóa không thể làm Chủ tịch.");
             }
 
-            var config = await GetConfigAsync();
             config.AutoResolveHours = dto.AutoResolveHours;
             config.ApprovalThresholdPercent = dto.ApprovalThresholdPercent;
-            config.RejectionThresholdPercent = dto.RejectionThresholdPercent;
-            config.TiePolicy = dto.TiePolicy;
             config.ClearVotesOnResubmit = dto.ClearVotesOnResubmit;
-            config.RequireOddBoardSize = dto.RequireOddBoardSize;
             config.ChairUserId = dto.ChairUserId;
             _configRepository.Update(config);
             await _unitOfWork.SaveChangesAsync();
 
             await _notificationPublisher.PublishBoardDataChangedAsync();
-            return await MapConfigDto(config);
+            return await MapConfigDto(config, boardMembers);
+        }
+
+        public async System.Threading.Tasks.Task ClearChairIfUserDeactivatedAsync(int userId)
+        {
+            var config = await GetConfigAsync();
+            if (!config.ChairUserId.HasValue || config.ChairUserId.Value != userId)
+            {
+                return;
+            }
+
+            config.ChairUserId = null;
+            _configRepository.Update(config);
+            await _unitOfWork.SaveChangesAsync();
+            await _notificationPublisher.PublishBoardDataChangedAsync();
         }
 
         public async Task<BoardVotingRulesDto> BuildRulesDtoAsync()
@@ -127,10 +136,7 @@ namespace MangaPublishingSystem.Application.Services
 
         public async Task<IEnumerable<SeriesDto>> GetEscalatedSeriesAsync()
         {
-            var seriesList = await _seriesRepository.FindWithDetailsAsync(s => s.Status == "Vote_Escalated");
-            var seriesIds = seriesList.Select(s => s.Id).ToList();
-            var votes = await _boardVoteRepository.FindAsync(v => seriesIds.Contains(v.SeriesId));
-            return seriesList.Select(s => MapSeriesDto(s, votes)).OrderByDescending(s => s.UpdateAt).ToList();
+            return Array.Empty<SeriesDto>();
         }
 
         public async System.Threading.Tasks.Task ManualResolveAsync(int seriesId, int adminUserId, ManualResolveBoardVoteDto dto)
@@ -143,7 +149,7 @@ namespace MangaPublishingSystem.Application.Services
 
             if (series.Status != "Vote_Escalated" && series.Status != "Pending_Board_Vote")
             {
-                throw new ConflictException("Chỉ có thể quyết định thủ công khi biểu quyết đang treo hoặc đã leo thang.");
+                throw new ConflictException("Chỉ có thể quyết định thủ công khi biểu quyết đang treo.");
             }
 
             if (string.IsNullOrWhiteSpace(dto.Reason))
@@ -153,12 +159,19 @@ namespace MangaPublishingSystem.Application.Services
 
             if (dto.Approved)
             {
+                var config = await GetConfigAsync();
+                var boardMembers = await GetActiveBoardMembersAsync(config);
+                var thresholds = BoardVotingRulesCalculator.CalculateThresholds(boardMembers.Count, config);
                 var allVotes = (await _boardVoteRepository.FindAsync(v => v.SeriesId == seriesId)).ToList();
-                var approveVotes = allVotes.Where(v => v.VoteType == "Approve").ToList();
+                var effectiveChairId = ResolveEffectiveChairUserId(config.ChairUserId, boardMembers);
                 var budget = dto.ApprovedBudget
-                    ?? (approveVotes.Any()
-                        ? approveVotes.Average(v => v.RecommendedBudget)
-                        : series.EstimatedProductionBudget);
+                    ?? BoardVotingRulesCalculator.CalculateApprovedBudget(
+                        allVotes, effectiveChairId, thresholds.ChairWeight);
+
+                if (budget <= 0)
+                {
+                    budget = series.EstimatedProductionBudget;
+                }
 
                 series.Status = "Fund_Pending";
                 series.ApprovedProductionBudget = budget;
@@ -188,11 +201,12 @@ namespace MangaPublishingSystem.Application.Services
             var boardMembers = await GetActiveBoardMembersAsync(config);
             var thresholds = BoardVotingRulesCalculator.CalculateThresholds(boardMembers.Count, config);
             var votes = (await _boardVoteRepository.FindAsync(v => v.SeriesId == seriesId)).ToList();
-            var (approve, reject, abstain) = BoardVotingRulesCalculator.CountVotes(votes);
-            var votesCast = approve + reject + abstain;
+            var effectiveChairId = ResolveEffectiveChairUserId(config.ChairUserId, boardMembers);
+            var (approve, reject) = BoardVotingRulesCalculator.CountWeightedVotes(
+                votes, effectiveChairId, thresholds.ChairWeight);
 
             return BoardVotingRulesCalculator.Evaluate(
-                thresholds, approve, reject, abstain, votesCast, config, votes);
+                thresholds, approve, reject, votes.Count, boardMembers.Count);
         }
 
         public async System.Threading.Tasks.Task ApplyVoteResolutionAsync(Series series, BoardVoteResolution resolution, string? rejectComment = null)
@@ -201,20 +215,27 @@ namespace MangaPublishingSystem.Application.Services
             {
                 case BoardVoteResolution.Approved:
                 {
-                    var votes = (await _boardVoteRepository.FindAsync(v => v.SeriesId == series.Id)).ToList();
-                    var approveVotes = votes.Where(v => v.VoteType == "Approve").ToList();
-                    var averageBudget = approveVotes.Any()
-                        ? approveVotes.Average(v => v.RecommendedBudget)
-                        : series.EstimatedProductionBudget;
-
                     if (series.Status != "Fund_Pending")
                     {
+                        var config = await GetConfigAsync();
+                        var boardMembers = await GetActiveBoardMembersAsync(config);
+                        var thresholds = BoardVotingRulesCalculator.CalculateThresholds(boardMembers.Count, config);
+                        var votes = (await _boardVoteRepository.FindAsync(v => v.SeriesId == series.Id)).ToList();
+                        var effectiveChairId = ResolveEffectiveChairUserId(config.ChairUserId, boardMembers);
+                        var approvedBudget = BoardVotingRulesCalculator.CalculateApprovedBudget(
+                            votes, effectiveChairId, thresholds.ChairWeight);
+
+                        if (approvedBudget <= 0)
+                        {
+                            approvedBudget = series.EstimatedProductionBudget;
+                        }
+
                         series.Status = "Fund_Pending";
-                        series.ApprovedProductionBudget = averageBudget;
+                        series.ApprovedProductionBudget = approvedBudget;
                         _seriesRepository.Update(series);
 
                         var content =
-                            $"Bộ truyện '{series.Title}' đã được phê duyệt cấp vốn với ngân sách {averageBudget:N0} VND. Vui lòng xác nhận nhận gói vốn.";
+                            $"Bộ truyện '{series.Title}' đã được phê duyệt cấp vốn với ngân sách {approvedBudget:N0} VND. Vui lòng xác nhận nhận gói vốn.";
                         await NotifyMangakaAsync(series, "Series_Approved", "Gói vốn đã được duyệt", content);
                     }
                     break;
@@ -229,19 +250,6 @@ namespace MangaPublishingSystem.Application.Services
                         var reason = string.IsNullOrWhiteSpace(rejectComment) ? "Không đạt ngưỡng biểu quyết." : rejectComment;
                         var content = $"Bộ truyện '{series.Title}' bị từ chối phê duyệt cấp vốn. {reason}";
                         await NotifyMangakaAsync(series, "Series_Rejected", "Bộ truyện bị từ chối", content);
-                    }
-                    break;
-                }
-                case BoardVoteResolution.Escalated:
-                {
-                    if (series.Status != "Vote_Escalated")
-                    {
-                        series.Status = "Vote_Escalated";
-                        _seriesRepository.Update(series);
-
-                        var content =
-                            $"Bộ truyện '{series.Title}' đang hòa phiếu / chưa đạt ngưỡng. Quản trị viên sẽ quyết định thủ công.";
-                        await NotifyMangakaAsync(series, "Series_Vote_Escalated", "Biểu quyết cần xử lý thủ công", content);
                     }
                     break;
                 }
@@ -272,26 +280,28 @@ namespace MangaPublishingSystem.Application.Services
             return members.ToList();
         }
 
-        private async Task<BoardVotingConfigDto> MapConfigDto(BoardVotingConfig config)
+        private async Task<BoardVotingConfigDto> MapConfigDto(BoardVotingConfig config, List<User> boardMembers)
         {
             string? chairName = null;
             if (config.ChairUserId.HasValue)
             {
-                var chair = await _userRepository.GetByIdAsync(config.ChairUserId.Value);
+                var chair = boardMembers.FirstOrDefault(u => u.Id == config.ChairUserId.Value)
+                    ?? await _userRepository.GetByIdAsync(config.ChairUserId.Value);
                 chairName = chair?.FullName;
             }
+
+            var (chairIsValid, chairWarning, effectiveChairId) = ResolveChairState(config.ChairUserId, boardMembers, chairName);
 
             return new BoardVotingConfigDto
             {
                 AutoResolveHours = config.AutoResolveHours,
                 ApprovalThresholdPercent = config.ApprovalThresholdPercent,
-                RejectionThresholdPercent = config.RejectionThresholdPercent,
-                TiePolicy = config.TiePolicy,
                 ClearVotesOnResubmit = config.ClearVotesOnResubmit,
-                RequireOddBoardSize = config.RequireOddBoardSize,
                 BoardRoleId = config.BoardRoleId,
                 ChairUserId = config.ChairUserId,
-                ChairUserName = chairName
+                ChairUserName = chairName,
+                ChairIsValid = chairIsValid,
+                ChairInvalidWarning = chairWarning
             };
         }
 
@@ -308,34 +318,63 @@ namespace MangaPublishingSystem.Application.Services
                 chairName = chair?.FullName;
             }
 
-            var tieLabel = config.TiePolicy switch
-            {
-                var p when p.Equals(BoardVotingRulesCalculator.TiePolicyReject, StringComparison.OrdinalIgnoreCase)
-                    => "Hòa → tự động từ chối",
-                var p when p.Equals(BoardVotingRulesCalculator.TiePolicyChairDecides, StringComparison.OrdinalIgnoreCase)
-                    => "Hòa → Chủ tịch HĐ quyết định",
-                _ => "Hòa → chuyển Admin xử lý thủ công"
-            };
+            var (chairIsValid, chairWarning, effectiveChairId) = ResolveChairState(config.ChairUserId, boardMembers, chairName);
+
+            var chairSummary = chairIsValid && !string.IsNullOrWhiteSpace(chairName)
+                ? $"Chủ tịch HĐ = {thresholds.ChairWeight} phiếu ({chairName}). "
+                : $"Chủ tịch HĐ = {thresholds.ChairWeight} phiếu. ";
 
             return new BoardVotingRulesDto
             {
                 BoardMemberCount = thresholds.BoardMemberCount,
                 ApproveRequired = thresholds.ApproveRequired,
-                RejectRequired = thresholds.RejectRequired,
+                TotalWeight = thresholds.TotalWeight,
+                ChairWeight = thresholds.ChairWeight,
                 ApprovalThresholdPercent = config.ApprovalThresholdPercent,
-                RejectionThresholdPercent = config.RejectionThresholdPercent,
-                TiePolicy = config.TiePolicy,
                 AutoResolveHours = config.AutoResolveHours,
-                IsEvenBoardSize = thresholds.IsEvenBoardSize,
-                RequireOddBoardSize = config.RequireOddBoardSize,
-                OddBoardSizeWarning = thresholds.OddBoardSizeWarning,
                 ChairUserId = config.ChairUserId,
                 ChairUserName = chairName,
+                ChairIsValid = chairIsValid,
+                ChairInvalidWarning = chairWarning,
+                EffectiveChairUserId = effectiveChairId,
                 RulesSummary =
-                    $"Cần ≥{thresholds.ApproveRequired}/{thresholds.BoardMemberCount} phiếu Đồng ý ({config.ApprovalThresholdPercent}%) " +
-                    $"hoặc ≥{thresholds.RejectRequired}/{thresholds.BoardMemberCount} phiếu Từ chối ({config.RejectionThresholdPercent}%). " +
-                    $"{tieLabel}. Tự chốt sau {config.AutoResolveHours}h nếu chưa đủ ngưỡng."
+                    $"Cần ≥{thresholds.ApproveRequired}/{thresholds.TotalWeight} trọng số phiếu Đồng ý ({config.ApprovalThresholdPercent}%). " +
+                    chairSummary +
+                    "TV thường = 1 phiếu. " +
+                    $"Tự chốt sau {config.AutoResolveHours}h nếu chưa đủ ngưỡng."
             };
+        }
+
+        private static int? ResolveEffectiveChairUserId(int? chairUserId, List<User> activeBoardMembers)
+        {
+            if (!chairUserId.HasValue)
+            {
+                return null;
+            }
+
+            return activeBoardMembers.Any(m => m.Id == chairUserId.Value) ? chairUserId : null;
+        }
+
+        private static (bool IsValid, string? Warning, int? EffectiveChairUserId) ResolveChairState(
+            int? chairUserId,
+            List<User> activeBoardMembers,
+            string? chairName)
+        {
+            if (!chairUserId.HasValue)
+            {
+                return (true, null, null);
+            }
+
+            if (activeBoardMembers.Any(m => m.Id == chairUserId.Value))
+            {
+                return (true, null, chairUserId);
+            }
+
+            var label = string.IsNullOrWhiteSpace(chairName) ? $"User #{chairUserId}" : chairName;
+            return (
+                false,
+                $"Chủ tịch HĐ ({label}) không còn hoạt động hoặc đã bị khóa. Vui lòng chỉ định Chủ tịch mới — hiện tại mọi TV được tính 1 phiếu.",
+                null);
         }
 
         private static SeriesDto MapSeriesDto(Series series, IEnumerable<BoardVote> allVotes)
@@ -350,6 +389,7 @@ namespace MangaPublishingSystem.Application.Services
                 Synopsis = series.Synopsis,
                 CoverArtworkUrl = series.CoverArtworkUrl,
                 EstimatedProductionBudget = series.EstimatedProductionBudget,
+                EditorRecommendedBudget = series.EditorRecommendedBudget,
                 ApprovedProductionBudget = series.ApprovedProductionBudget,
                 PublicationSchedule = series.PublicationSchedule,
                 Status = series.Status,

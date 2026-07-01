@@ -28,6 +28,7 @@ namespace MangaPublishingSystem.Application.Services
         private readonly IImageCompositor _imageCompositor;
         private readonly IStorageService _storageService;
         private readonly INotificationPublisher _notificationPublisher;
+        private readonly ISeriesAssistantRepository _seriesAssistantRepository;
 
         public TasksService(
             ITasksRepository repository, 
@@ -42,7 +43,8 @@ namespace MangaPublishingSystem.Application.Services
             IUserRepository userRepository,
             IImageCompositor imageCompositor,
             IStorageService storageService,
-            INotificationPublisher notificationPublisher) 
+            INotificationPublisher notificationPublisher,
+            ISeriesAssistantRepository seriesAssistantRepository) 
             : base(repository, unitOfWork)
         {
             _tasksRepository = repository;
@@ -57,11 +59,12 @@ namespace MangaPublishingSystem.Application.Services
             _imageCompositor = imageCompositor;
             _storageService = storageService;
             _notificationPublisher = notificationPublisher;
+            _seriesAssistantRepository = seriesAssistantRepository;
         }
 
         public async Task<Tasks> CreateTaskAsync(int mangakaId, CreateTaskDto createDto)
         {
-            var region = await _regionRepository.GetByIdAsync(createDto.RegionId);
+            var region = await _regionRepository.GetByIdWithPageChapterSeriesAsync(createDto.RegionId);
             if (region == null)
             {
                 throw new NotFoundException("Phân vùng vẽ không tồn tại trên hệ thống.");
@@ -71,6 +74,23 @@ namespace MangaPublishingSystem.Application.Services
             var normalizedAssistantId = createDto.AssistantId.HasValue && createDto.AssistantId.Value > 0
                 ? createDto.AssistantId
                 : null;
+
+            if (!normalizedAssistantId.HasValue)
+            {
+                throw new BadRequestException("Phải chọn Trợ lý trong nhóm dự án (Series_Assistant) để giao việc.");
+            }
+
+            var seriesId = region.Page?.Chapter?.SeriesId ?? 0;
+            if (seriesId <= 0)
+            {
+                throw new NotFoundException("Không xác định được bộ truyện cho vùng vẽ này.");
+            }
+
+            var isTeamMember = await _seriesAssistantRepository.IsActiveMemberAsync(seriesId, normalizedAssistantId.Value);
+            if (!isTeamMember)
+            {
+                throw new BadRequestException("Trợ lý được chọn không thuộc nhóm Active của bộ truyện này.");
+            }
 
             var task = new Tasks
             {
@@ -98,13 +118,13 @@ namespace MangaPublishingSystem.Application.Services
                 task.Status = "Pending";
                 _tasksRepository.Update(task);
 
-                // Gửi thông báo đến trợ lý nếu đã được chỉ định
+                // Gửi thông báo đến trợ lý đã được chỉ định trong nhóm dự án
                 if (task.AssistantId.HasValue)
                 {
                     var notif = new Notification
                     {
                         UserId = task.AssistantId.Value,
-                        Content = $"Bạn có lời mời nhận nhiệm vụ vẽ từ tác giả thù lao {task.PaymentAmount:N0} VND. Hạn chót: {task.Deadline:yyyy-MM-dd HH:mm}.",
+                        Content = $"Bạn được giao nhiệm vụ vẽ từ tác giả thù lao {task.PaymentAmount:N0} VND. Hạn chót: {task.Deadline:yyyy-MM-dd HH:mm}.",
                         Type = "Task_Assigned",
                         IsRead = false
                     };
@@ -130,17 +150,6 @@ namespace MangaPublishingSystem.Application.Services
                     };
                     await _notificationPublisher.PublishTaskStatusChangedAsync(task.AssistantId.Value, taskStatusChanged);
                     await _notificationPublisher.PublishTaskStatusChangedAsync(mangakaId, taskStatusChanged);
-                }
-                else
-                {
-                    // Task công khai — báo toàn bộ client (Trợ lý trên Bảng việc làm) cập nhật realtime
-                    var taskStatusChanged = new TaskStatusChangedPayload
-                    {
-                        TaskId = task.Id,
-                        Status = task.Status,
-                        Message = "Có nhiệm vụ mới trên bảng việc làm công khai."
-                    };
-                    await _notificationPublisher.PublishTaskQueueChangedAsync(taskStatusChanged);
                 }
 
                 await _unitOfWork.SaveChangesAsync();
@@ -663,8 +672,7 @@ namespace MangaPublishingSystem.Application.Services
             else
             {
                 var isAssignedToMe = task.AssistantId == userId;
-                var isOpenInQueue = task.Status == "Pending" && !task.AssistantId.HasValue;
-                if (!isAssignedToMe && !isOpenInQueue)
+                if (!isAssignedToMe)
                 {
                     throw new ForbiddenException("Bạn không có quyền xem nhiệm vụ này.");
                 }
@@ -675,6 +683,8 @@ namespace MangaPublishingSystem.Application.Services
 
         private static TasksDto MapTaskEntityToDto(Tasks t)
         {
+            var page = t.Region?.Page;
+            var chapter = page?.Chapter;
             return new TasksDto
             {
                 Id = t.Id,
@@ -693,9 +703,15 @@ namespace MangaPublishingSystem.Application.Services
                 FeedbackComment = t.FeedbackComment,
                 MangakaName = t.Mangaka?.FullName,
                 AssistantName = t.Assistant?.FullName,
-                PageNumber = t.Region?.Page?.PageNumber ?? 0,
-                PageId = t.Region?.PageId ?? 0,
-                PageImageUrl = t.Region?.Page?.RawImageUrl,
+                SeriesId = chapter?.SeriesId ?? 0,
+                SeriesTitle = chapter?.Series?.Title,
+                ChapterId = chapter?.Id ?? 0,
+                ChapterNumber = chapter?.ChapterNumber ?? 0,
+                ChapterTitle = chapter?.Title,
+                PageId = page?.Id ?? 0,
+                PageNumber = page?.PageNumber ?? 0,
+                PageImageUrl = page?.RawImageUrl,
+                BaseLayerUrl = page?.BaseLayerUrl ?? page?.RawImageUrl,
                 RegionName = t.Region?.Name,
                 RegionCoordinatesJson = t.Region?.CoordinatesJson,
                 CreateAt = t.CreateAt,
