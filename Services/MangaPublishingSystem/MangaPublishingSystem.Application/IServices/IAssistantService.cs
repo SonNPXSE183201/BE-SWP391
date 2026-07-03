@@ -8,6 +8,7 @@ namespace MangaPublishingSystem.Application.IServices
     public interface IAssistantService
     {
         Task<PagedResult<AssistantResponseDto>> GetActiveAssistantsAsync(AssistantFilterDto filter);
+        Task<IEnumerable<AssistantInviteDto>> GetMyInvitesAsync(int assistantId);
         Task<AssistantProfileDto> GetProfileAsync(int assistantId);
         Task<AssistantProfileDto> UpdateProfileAsync(int assistantId, UpdateAssistantProfileDto dto);
         Task<AssistantPortfolioStatsDto> GetPortfolioStatsAsync(int assistantId);

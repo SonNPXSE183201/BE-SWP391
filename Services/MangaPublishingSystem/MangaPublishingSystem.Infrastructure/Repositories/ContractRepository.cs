@@ -19,7 +19,12 @@ namespace MangaPublishingSystem.Infrastructure.Repositories
             return await _context.Series
                 .Include(s => s.Mangaka)
                 .Include(s => s.Contracts)
-                .Where(s => s.Status == "Fund_Pending" || s.Status == "Approved")
+                    .ThenInclude(c => c.ContractAddendums)
+                .Where(s => s.Status == "Fund_Pending" 
+                    || s.Status == "Approved" 
+                    || s.Status == "Active" 
+                    || s.Status == "In Production" 
+                    || s.Status == "In_Production")
                 .OrderByDescending(s => s.UpdateAt ?? s.CreateAt)
                 .ToListAsync();
         }
@@ -27,6 +32,20 @@ namespace MangaPublishingSystem.Infrastructure.Repositories
         public async Task<Contract?> GetBySeriesIdAsync(int seriesId)
         {
             return await _context.Contracts.FirstOrDefaultAsync(c => c.SeriesId == seriesId);
+        }
+
+        public async Task<Contract?> GetSignedWithAddendumsBySeriesIdAsync(int seriesId)
+        {
+            return await GetEffectiveContractWithAddendumsBySeriesIdAsync(seriesId);
+        }
+
+        public async Task<Contract?> GetEffectiveContractWithAddendumsBySeriesIdAsync(int seriesId)
+        {
+            return await _context.Contracts
+                .Include(c => c.ContractAddendums)
+                .Where(c => c.SeriesId == seriesId && (c.Status == "Signed" || c.Status == "Active"))
+                .OrderByDescending(c => c.SignedDate ?? c.CreateAt)
+                .FirstOrDefaultAsync();
         }
 
         public async Task<Contract?> GetWithSeriesAsync(int contractId)

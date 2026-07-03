@@ -9,5 +9,6 @@ namespace MangaPublishingSystem.Application.IRepositories
         Task<IEnumerable<SeriesAssistant>> GetBySeriesIdAsync(int seriesId, string? status = null);
         Task<SeriesAssistant?> GetMembershipAsync(int seriesId, int assistantId);
         Task<bool> IsActiveMemberAsync(int seriesId, int assistantId);
+        Task<IEnumerable<SeriesAssistant>> GetPendingInvitesByAssistantAsync(int assistantId);
     }
 }

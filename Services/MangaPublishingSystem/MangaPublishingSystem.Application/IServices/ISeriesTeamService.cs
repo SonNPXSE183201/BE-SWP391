@@ -10,6 +10,6 @@ namespace MangaPublishingSystem.Application.IServices
         Task<IEnumerable<SeriesAssistantDto>> GetActiveTeamForAssignmentAsync(int seriesId, int mangakaId);
         Task<SeriesAssistantDto> InviteAssistantAsync(int seriesId, int mangakaId, InviteSeriesAssistantDto dto);
         Task<SeriesAssistantDto> RespondToInviteAsync(int seriesId, int assistantId, RespondSeriesInviteDto dto);
-        System.Threading.Tasks.Task RemoveMemberAsync(int seriesId, int mangakaId, int assistantId);
+        System.Threading.Tasks.Task RemoveMemberAsync(int seriesId, int mangakaId, int assistantId, string? roleToRemove = null);
     }
 }

@@ -39,6 +39,16 @@ namespace MangaPublishingSystem.Application.Services.Admin
                     PublishSchedule = string.IsNullOrWhiteSpace(s.PublicationSchedule) ? "Chưa thiết lập" : s.PublicationSchedule,
                     HasContract = contract != null,
                     ContractId = contract?.Id.ToString(),
+                    GenkouryoPrice = contract?.BaseGenkouryoPrice,
+                    SignedDate = contract?.SignedDate?.ToUniversalTime().ToString("o"),
+                    ContractStatus = contract?.Status,
+                    Addendums = contract?.ContractAddendums?.OrderByDescending(a => a.EffectiveDate).Select(a => new ContractAddendumDto
+                    {
+                        Id = a.Id.ToString(),
+                        NewGenkouryoPrice = a.NewGenkouryoPrice,
+                        EffectiveDate = a.EffectiveDate.ToUniversalTime().ToString("o"),
+                        SignedDate = a.SignedDate?.ToUniversalTime().ToString("o")
+                    }).ToList(),
                     Genres = ParseGenres(s.Genre)
                 };
             }).ToList();
@@ -54,7 +64,8 @@ namespace MangaPublishingSystem.Application.Services.Admin
                 throw new NotFoundException("Không tìm thấy bộ truyện.");
             }
 
-            if (series.Status != "Fund_Pending" && series.Status != "Approved")
+            if (series.Status != "Fund_Pending" && series.Status != "Approved" 
+                && series.Status != "Active" && series.Status != "In Production" && series.Status != "In_Production")
             {
                 throw new BadRequestException("Bộ truyện chưa được Hội đồng phê duyệt.");
             }

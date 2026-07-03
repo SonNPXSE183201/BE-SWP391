@@ -64,10 +64,12 @@ namespace MangaPublishingSystem.Presentation.Controllers.Series
         [HttpDelete("{assistantId:int}")]
         public async Task<ActionResult<ApiResponse<object>>> RemoveMember(
             [FromRoute] int seriesId,
-            [FromRoute] int assistantId)
+            [FromRoute] int assistantId,
+            [FromQuery] string? roleToRemove = null)
         {
-            await _seriesTeamService.RemoveMemberAsync(seriesId, CurrentUserId, assistantId);
-            return Ok(ApiResponse<object>.Success(null, "Đã gỡ thành viên khỏi nhóm."));
+            await _seriesTeamService.RemoveMemberAsync(seriesId, CurrentUserId, assistantId, roleToRemove);
+            var message = string.IsNullOrWhiteSpace(roleToRemove) ? "Đã gỡ thành viên khỏi nhóm." : $"Đã gỡ vai trò {roleToRemove} của thành viên.";
+            return Ok(ApiResponse<object>.Success(null, message));
         }
     }
 }

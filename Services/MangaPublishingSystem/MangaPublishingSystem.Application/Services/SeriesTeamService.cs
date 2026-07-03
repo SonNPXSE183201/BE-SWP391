@@ -116,16 +116,39 @@ namespace MangaPublishingSystem.Application.Services
             var existing = await _seriesAssistantRepository.GetMembershipAsync(seriesId, dto.AssistantId);
             if (existing != null)
             {
+                var newRole = dto.RoleInTeam.Trim();
                 if (existing.Status is "Active" or "Pending")
                 {
-                    throw new ConflictException("Trợ lý này đã có trong nhóm hoặc đang chờ phản hồi lời mời.");
-                }
+                    var currentRoles = existing.RoleInTeam
+                        .Split(new[] { ", " }, StringSplitOptions.RemoveEmptyEntries)
+                        .Select(r => r.Trim())
+                        .ToList();
 
-                existing.RoleInTeam = dto.RoleInTeam.Trim();
-                existing.Status = "Pending";
-                existing.JoinedDate = null;
-                existing.UpdateAt = DateTime.UtcNow;
-                _seriesAssistantRepository.Update(existing);
+                    var newRoles = dto.RoleInTeam
+                        .Split(new[] { ", " }, StringSplitOptions.RemoveEmptyEntries)
+                        .Select(r => r.Trim())
+                        .ToList();
+
+                    var rolesToAdd = newRoles.Except(currentRoles, StringComparer.OrdinalIgnoreCase).ToList();
+
+                    if (!rolesToAdd.Any())
+                    {
+                        throw new ConflictException("Trợ lý này đã có tất cả các vai trò này trong nhóm.");
+                    }
+
+                    currentRoles.AddRange(rolesToAdd);
+                    existing.RoleInTeam = string.Join(", ", currentRoles);
+                    existing.UpdateAt = DateTime.UtcNow;
+                    _seriesAssistantRepository.Update(existing);
+                }
+                else
+                {
+                    existing.RoleInTeam = dto.RoleInTeam.Trim();
+                    existing.Status = "Pending";
+                    existing.JoinedDate = null;
+                    existing.UpdateAt = DateTime.UtcNow;
+                    _seriesAssistantRepository.Update(existing);
+                }
             }
             else
             {
@@ -211,7 +234,7 @@ namespace MangaPublishingSystem.Application.Services
             return MapToDto(membership);
         }
 
-        public async System.Threading.Tasks.Task RemoveMemberAsync(int seriesId, int mangakaId, int assistantId)
+        public async System.Threading.Tasks.Task RemoveMemberAsync(int seriesId, int mangakaId, int assistantId, string? roleToRemove = null)
         {
             var series = await _seriesRepository.GetByIdAsync(seriesId);
             if (series == null)
@@ -228,6 +251,25 @@ namespace MangaPublishingSystem.Application.Services
             if (membership == null || membership.Status is "Removed")
             {
                 throw new NotFoundException("Thành viên không tồn tại trong nhóm.");
+            }
+
+            if (!string.IsNullOrWhiteSpace(roleToRemove))
+            {
+                var currentRoles = membership.RoleInTeam
+                    .Split(new[] { ", " }, StringSplitOptions.RemoveEmptyEntries)
+                    .Select(r => r.Trim())
+                    .ToList();
+
+                currentRoles.RemoveAll(r => r.Equals(roleToRemove.Trim(), StringComparison.OrdinalIgnoreCase));
+
+                if (currentRoles.Any())
+                {
+                    membership.RoleInTeam = string.Join(", ", currentRoles);
+                    membership.UpdateAt = DateTime.UtcNow;
+                    _seriesAssistantRepository.Update(membership);
+                    await _unitOfWork.SaveChangesAsync();
+                    return;
+                }
             }
 
             membership.Status = "Removed";

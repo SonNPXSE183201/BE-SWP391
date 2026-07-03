@@ -16,7 +16,7 @@ namespace MangaPublishingSystem.Infrastructure.Repositories
         {
         }
 
-        public async Task<PagedResult<Tasks>> GetAvailableTasksAsync(string? skill, int pageNumber, int pageSize)
+        public async Task<PagedResult<Tasks>> GetAvailableTasksAsync(int assistantId, string? skill, int pageNumber, int pageSize)
         {
             var query = _dbSet.AsQueryable()
                 .Include(t => t.Mangaka)
@@ -25,7 +25,7 @@ namespace MangaPublishingSystem.Infrastructure.Repositories
                     .ThenInclude(r => r.Page)
                         .ThenInclude(p => p.Chapter)
                             .ThenInclude(c => c.Series)
-                .Where(t => t.Status == "Pending")
+                .Where(t => t.Status == "Pending" && (t.AssistantId == null || t.AssistantId == assistantId))
                 .AsQueryable();
 
             // Lọc theo kỹ năng/từ khóa trong mô tả (Description) - không phân biệt hoa thường và dấu
@@ -49,7 +49,7 @@ namespace MangaPublishingSystem.Infrastructure.Repositories
                     .ThenInclude(r => r.Page)
                         .ThenInclude(p => p.Chapter)
                             .ThenInclude(c => c.Series)
-                .Where(t => t.AssistantId == assistantId);
+                .Where(t => t.AssistantId == assistantId && t.Status != "Pending");
 
             // Lọc theo trạng thái nhiệm vụ nếu được truyền vào
             if (!string.IsNullOrWhiteSpace(status))

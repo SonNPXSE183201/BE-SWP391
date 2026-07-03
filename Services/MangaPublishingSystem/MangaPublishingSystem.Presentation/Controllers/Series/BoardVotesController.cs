@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using System.Threading.Tasks;
 using BuildingBlocks.Web.Responses;
 using MangaPublishingSystem.Application.DTOs.Series;
@@ -19,13 +20,15 @@ namespace MangaPublishingSystem.Presentation.Controllers.Series
             _boardVotingService = boardVotingService;
         }
 
+        private int CurrentUserId => int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+
         [HttpGet("pending")]
         public async Task<ActionResult<ApiResponse<PendingBoardVotesResponseDto>>> GetPendingSeries()
         {
-            var result = await _boardVotingService.GetPendingVotesPayloadAsync();
+            var result = await _boardVotingService.GetPendingVotesPayloadAsync(CurrentUserId);
             return Ok(ApiResponse<PendingBoardVotesResponseDto>.Success(
                 result,
-                "Lấy danh sách bộ truyện chờ thẩm định thành công."));
+                "Lấy danh sách biểu quyết thành công."));
         }
 
         [HttpGet("rules")]

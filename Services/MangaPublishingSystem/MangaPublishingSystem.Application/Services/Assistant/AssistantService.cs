@@ -19,6 +19,7 @@ namespace MangaPublishingSystem.Application.Services.Assistant
         private readonly IAssistantProfileRepository _assistantProfileRepository;
         private readonly IPortfolioSampleRepository _portfolioSampleRepository;
         private readonly ITransactionRepository _transactionRepository;
+        private readonly ISeriesAssistantRepository _seriesAssistantRepository;
         private readonly IUnitOfWork _unitOfWork;
 
         public AssistantService(
@@ -27,6 +28,7 @@ namespace MangaPublishingSystem.Application.Services.Assistant
             IAssistantProfileRepository assistantProfileRepository,
             IPortfolioSampleRepository portfolioSampleRepository,
             ITransactionRepository transactionRepository,
+            ISeriesAssistantRepository seriesAssistantRepository,
             IUnitOfWork unitOfWork)
         {
             _assistantRepository = assistantRepository;
@@ -34,7 +36,35 @@ namespace MangaPublishingSystem.Application.Services.Assistant
             _assistantProfileRepository = assistantProfileRepository;
             _portfolioSampleRepository = portfolioSampleRepository;
             _transactionRepository = transactionRepository;
+            _seriesAssistantRepository = seriesAssistantRepository;
             _unitOfWork = unitOfWork;
+        }
+
+        public async Task<IEnumerable<AssistantInviteDto>> GetMyInvitesAsync(int assistantId)
+        {
+            var invites = await _seriesAssistantRepository.GetPendingInvitesByAssistantAsync(assistantId);
+            return invites.Select(sa => new AssistantInviteDto
+            {
+                SeriesId = sa.SeriesId,
+                SeriesTitle = sa.Series?.Title ?? "Không rõ dự án",
+                CoverUrl = sa.Series?.CoverArtworkUrl,
+                RoleInTeam = sa.RoleInTeam,
+                Status = sa.Status,
+                CreateAt = sa.CreateAt,
+
+                // Series detail
+                Genre = sa.Series?.Genre,
+                Synopsis = sa.Series?.Synopsis,
+                PublicationSchedule = sa.Series?.PublicationSchedule,
+                SeriesStatus = sa.Series?.Status,
+
+                // Mangaka info
+                MangakaName = sa.Series?.Mangaka?.FullName,
+                MangakaPenName = sa.Series?.Mangaka?.PenName,
+
+                // Team info
+                TeamSize = sa.Series?.SeriesAssistants?.Count(m => m.Status == "Active") ?? 0
+            });
         }
 
         public async Task<PagedResult<AssistantResponseDto>> GetActiveAssistantsAsync(AssistantFilterDto filter)

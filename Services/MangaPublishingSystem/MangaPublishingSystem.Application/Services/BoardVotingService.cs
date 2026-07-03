@@ -111,6 +111,18 @@ namespace MangaPublishingSystem.Application.Services
             await _notificationPublisher.PublishBoardDataChangedAsync();
         }
 
+        public async System.Threading.Tasks.Task NotifyBoardMembershipChangedAsync(int userId)
+        {
+            var config = await GetConfigAsync();
+            var user = await _userRepository.GetByIdAsync(userId);
+            if (user == null || user.RoleId != config.BoardRoleId)
+            {
+                return;
+            }
+
+            await _notificationPublisher.PublishBoardDataChangedAsync();
+        }
+
         public async Task<BoardVotingRulesDto> BuildRulesDtoAsync()
         {
             var config = await GetConfigAsync();
@@ -119,19 +131,61 @@ namespace MangaPublishingSystem.Application.Services
             return await MapRulesDto(config, thresholds, boardMembers);
         }
 
-        public async Task<PendingBoardVotesResponseDto> GetPendingVotesPayloadAsync()
+        public async Task<PendingBoardVotesResponseDto> GetPendingVotesPayloadAsync(int boardMemberId)
         {
             var rules = await BuildRulesDtoAsync();
-            var seriesList = await _seriesRepository.FindWithDetailsAsync(s => s.Status == "Pending_Board_Vote");
-            var seriesIds = seriesList.Select(s => s.Id).ToList();
-            var votes = await _boardVoteRepository.FindAsync(v => seriesIds.Contains(v.SeriesId));
 
-            var seriesDtos = seriesList.Select(s => MapSeriesDto(s, votes)).OrderByDescending(s => s.UpdateAt).ToList();
+            var pendingSeries = (await _seriesRepository.FindWithDetailsAsync(s => s.Status == "Pending_Board_Vote"))
+                .ToList();
+
+            var myApprovalVotes = (await _boardVoteRepository.FindAsync(v => v.BoardMemberId == boardMemberId))
+                .Where(v => IsBoardApprovalVoteType(v.VoteType))
+                .ToList();
+
+            var votedSeriesIds = myApprovalVotes
+                .Select(v => v.SeriesId)
+                .Distinct()
+                .ToHashSet();
+
+            var resolvedVotedSeries = votedSeriesIds.Count == 0
+                ? new List<Series>()
+                : (await _seriesRepository.FindWithDetailsAsync(s =>
+                    votedSeriesIds.Contains(s.Id) && s.Status != "Pending_Board_Vote")).ToList();
+
+            var seriesList = pendingSeries
+                .Concat(resolvedVotedSeries)
+                .GroupBy(s => s.Id)
+                .Select(g => g.First())
+                .ToList();
+
+            var seriesIds = seriesList.Select(s => s.Id).ToList();
+            List<BoardVote> votes;
+            if (seriesIds.Count == 0)
+            {
+                votes = new List<BoardVote>();
+            }
+            else
+            {
+                votes = (await _boardVoteRepository.FindAsync(v => seriesIds.Contains(v.SeriesId))).ToList();
+            }
+
+            var seriesDtos = seriesList
+                .Select(s => MapSeriesDto(s, votes))
+                .OrderByDescending(s => s.UpdateAt)
+                .ToList();
+
             return new PendingBoardVotesResponseDto
             {
                 Rules = rules,
                 Series = seriesDtos
             };
+        }
+
+        private static bool IsBoardApprovalVoteType(string? voteType)
+        {
+            var type = voteType?.Trim() ?? string.Empty;
+            return type.Equals("Approve", StringComparison.OrdinalIgnoreCase)
+                || type.Equals("Reject", StringComparison.OrdinalIgnoreCase);
         }
 
         public async Task<IEnumerable<SeriesDto>> GetEscalatedSeriesAsync()

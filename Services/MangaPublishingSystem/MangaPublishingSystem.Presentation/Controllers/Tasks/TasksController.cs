@@ -63,6 +63,16 @@ namespace MangaPublishingSystem.Presentation.Controllers.Tasks
             return Ok(ApiResponse<object>.Success(null, "Từ chối bài vẽ thành công. Yêu cầu sửa đổi đã gửi tới Assistant kèm gia hạn."));
         }
 
+        [Authorize(Roles = "Mangaka,Assistant")]
+        [HttpPost("{id}/dispute")]
+        public async Task<ActionResult<ApiResponse<object>>> CreateDispute([FromRoute] int id, [FromBody] CreateDisputeDto disputeDto)
+        {
+            int userId = CurrentUserId;
+            await _tasksService.CreateDisputeAsync(id, userId, disputeDto.Reason);
+            return Ok(ApiResponse<object>.Success(null, "Báo cáo tranh chấp thành công."));
+        }
+
+
         [Authorize(Roles = "Mangaka")]
         [HttpPost("{id}/extension-approval")]
         public async Task<ActionResult<ApiResponse<object>>> HandleExtension([FromRoute] int id, [FromQuery] bool approve)
@@ -105,7 +115,8 @@ namespace MangaPublishingSystem.Presentation.Controllers.Tasks
         [HttpGet("available")]
         public async Task<ActionResult<ApiResponse<PagedResult<TasksDto>>>> GetAvailableTasks([FromQuery] GetAvailableTasksRequest request)
         {
-            var result = await _tasksService.GetAvailableTasksAsync(request);
+            int assistantId = CurrentUserId;
+            var result = await _tasksService.GetAvailableTasksAsync(assistantId, request);
             return Ok(ApiResponse<PagedResult<TasksDto>>.Success(result, "Lấy danh sách nhiệm vụ khả dụng thành công."));
         }
 
@@ -162,6 +173,8 @@ namespace MangaPublishingSystem.Presentation.Controllers.Tasks
 
         private static TasksDto MapToTasksDto(MangaPublishingSystem.Domain.Entities.Tasks t)
         {
+            var page = t.Region?.Page;
+            var chapter = page?.Chapter;
             return new TasksDto
             {
                 Id = t.Id,
@@ -180,9 +193,15 @@ namespace MangaPublishingSystem.Presentation.Controllers.Tasks
                 FeedbackComment = t.FeedbackComment,
                 MangakaName = t.Mangaka?.FullName,
                 AssistantName = t.Assistant?.FullName,
-                PageNumber = t.Region?.Page?.PageNumber ?? 0,
-                PageId = t.Region?.PageId ?? 0,
-                PageImageUrl = t.Region?.Page?.RawImageUrl,
+                SeriesId = chapter?.SeriesId ?? 0,
+                SeriesTitle = chapter?.Series?.Title,
+                ChapterId = chapter?.Id ?? 0,
+                ChapterNumber = chapter?.ChapterNumber ?? 0,
+                ChapterTitle = chapter?.Title,
+                PageId = page?.Id ?? 0,
+                PageNumber = page?.PageNumber ?? 0,
+                PageImageUrl = page?.RawImageUrl,
+                BaseLayerUrl = page?.BaseLayerUrl ?? page?.RawImageUrl,
                 RegionName = t.Region?.Name,
                 RegionCoordinatesJson = t.Region?.CoordinatesJson,
                 CreateAt = t.CreateAt,

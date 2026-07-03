@@ -7,7 +7,7 @@ namespace MangaPublishingSystem.Application.IRepositories
 {
     public interface ITasksRepository : IGenericRepository<Tasks>
     {
-        Task<PagedResult<Tasks>> GetAvailableTasksAsync(string? skill, int pageNumber, int pageSize);
+        Task<PagedResult<Tasks>> GetAvailableTasksAsync(int assistantId, string? skill, int pageNumber, int pageSize);
         Task<PagedResult<Tasks>> GetAssistantTasksAsync(int assistantId, string? status, int pageNumber, int pageSize);
         Task<IEnumerable<Tasks>> GetMangakaTasksAsync(int mangakaId);
         Task<Tasks?> GetTaskByIdWithDetailsAsync(int id);
