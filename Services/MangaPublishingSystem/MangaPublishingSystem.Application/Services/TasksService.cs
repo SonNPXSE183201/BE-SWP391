@@ -164,6 +164,32 @@ namespace MangaPublishingSystem.Application.Services
             return task;
         }
 
+        public async System.Threading.Tasks.Task CreateDisputeAsync(int taskId, int userId, string reason)
+        {
+            var task = await _tasksRepository.GetByIdAsync(taskId);
+            if (task == null)
+            {
+                throw new NotFoundException("Nhiệm vụ không tồn tại.");
+            }
+
+            if (task.MangakaId != userId && task.AssistantId != userId)
+            {
+                throw new ForbiddenException("Bạn không có quyền báo cáo tranh chấp nhiệm vụ này.");
+            }
+
+            if (task.Status != "Submitted" && task.Status != "Revision")
+            {
+                throw new ConflictException("Chỉ có thể tranh chấp nhiệm vụ đang chờ duyệt hoặc yêu cầu sửa.");
+            }
+
+            task.Status = "Disputed";
+            task.FeedbackComment = reason;
+            task.UpdateAt = DateTime.Now;
+
+            _tasksRepository.Update(task);
+            await _unitOfWork.SaveChangesAsync();
+        }
+
         public async System.Threading.Tasks.Task ApproveSubmissionAsync(int taskId, int mangakaId, ApproveTaskDto approveDto)
         {
             var task = await _tasksRepository.GetByIdAsync(taskId);

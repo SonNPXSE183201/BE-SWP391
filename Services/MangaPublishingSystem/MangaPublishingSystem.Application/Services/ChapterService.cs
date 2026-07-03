@@ -85,23 +85,24 @@ namespace MangaPublishingSystem.Application.Services
                 throw new BadRequestException("Chapter đã được duyệt trước đó.");
             }
 
-            var contracts = await _contractRepository.FindAsync(c => c.SeriesId == chapter.SeriesId && c.Status == "Signed");
-            var contract = contracts.FirstOrDefault();
+            var contract = await _contractRepository.GetEffectiveContractWithAddendumsBySeriesIdAsync(chapter.SeriesId);
             if (contract == null)
             {
-                throw new BadRequestException("Không tìm thấy hợp đồng hợp lệ (Signed) cho bộ truyện này.");
+                throw new BadRequestException("Không tìm thấy hợp đồng hợp lệ cho bộ truyện này.");
             }
+
+            var applicablePrice = await GetApplicableGenkouryoPriceAsync(chapter.SeriesId);
 
             await _unitOfWork.BeginTransactionAsync();
             try
             {
                 chapter.Status = "Approved";
                 chapter.ValidPageCount = dto.ValidPageCount;
-                chapter.AppliedGenkouryoPrice = contract.BaseGenkouryoPrice;
+                chapter.AppliedGenkouryoPrice = applicablePrice;
                 chapter.QcChecklistData = dto.QcChecklistData;
                 _repository.Update(chapter);
 
-                decimal amount = dto.ValidPageCount * contract.BaseGenkouryoPrice;
+                decimal amount = dto.ValidPageCount * applicablePrice;
 
                 var wallet = await _walletRepository.GetWalletByUserIdAsync(contract.UserId);
                 if (wallet == null)
@@ -206,7 +207,12 @@ namespace MangaPublishingSystem.Application.Services
 
         public async Task<IEnumerable<Chapter>> GetPendingReviewChaptersForEditorAsync(int editorId)
         {
-            return await _chapterRepository.GetPendingReviewChaptersWithDetailsAsync(editorId);
+            var chapters = (await _chapterRepository.GetPendingReviewChaptersWithDetailsAsync(editorId)).ToList();
+            foreach (var chapter in chapters)
+            {
+                await EnrichGenkouryoPreviewAsync(chapter);
+            }
+            return chapters;
         }
 
         public async System.Threading.Tasks.Task UpdateDeadlineAsync(int chapterId, DateTime deadline)
@@ -305,7 +311,43 @@ namespace MangaPublishingSystem.Application.Services
 
         public async Task<Chapter?> GetChapterWithDetailsAsync(int chapterId)
         {
-            return await _chapterRepository.GetChapterWithDetailsByIdAsync(chapterId);
+            var chapter = await _chapterRepository.GetChapterWithDetailsByIdAsync(chapterId);
+            if (chapter != null)
+            {
+                await EnrichGenkouryoPreviewAsync(chapter);
+            }
+            return chapter;
+        }
+
+        private async Task<decimal> GetApplicableGenkouryoPriceAsync(int seriesId)
+        {
+            var contract = await _contractRepository.GetEffectiveContractWithAddendumsBySeriesIdAsync(seriesId);
+            if (contract == null)
+            {
+                return 0;
+            }
+
+            var now = DateTime.UtcNow;
+            var latestAddendum = contract.ContractAddendums?
+                .Where(a => a.EffectiveDate <= now)
+                .OrderByDescending(a => a.EffectiveDate)
+                .FirstOrDefault();
+
+            return latestAddendum?.NewGenkouryoPrice ?? contract.BaseGenkouryoPrice;
+        }
+
+        private async System.Threading.Tasks.Task EnrichGenkouryoPreviewAsync(Chapter chapter)
+        {
+            if (chapter.AppliedGenkouryoPrice > 0)
+            {
+                return;
+            }
+
+            var price = await GetApplicableGenkouryoPriceAsync(chapter.SeriesId);
+            if (price > 0)
+            {
+                chapter.AppliedGenkouryoPrice = price;
+            }
         }
 
         public async Task<Page> MarkPageAsReadyAsync(int pageId, int mangakaId)

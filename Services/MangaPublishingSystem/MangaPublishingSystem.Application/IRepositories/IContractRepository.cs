@@ -10,6 +10,11 @@ namespace MangaPublishingSystem.Application.IRepositories
 
         Task<Contract?> GetBySeriesIdAsync(int seriesId);
 
+        Task<Contract?> GetSignedWithAddendumsBySeriesIdAsync(int seriesId);
+
+        /// <summary>Hợp đồng đang hiệu lực (Signed hoặc Active) kèm phụ lục.</summary>
+        Task<Contract?> GetEffectiveContractWithAddendumsBySeriesIdAsync(int seriesId);
+
         Task<Contract?> GetWithSeriesAsync(int contractId);
 
         System.Threading.Tasks.Task AddAddendumAsync(ContractAddendum addendum);

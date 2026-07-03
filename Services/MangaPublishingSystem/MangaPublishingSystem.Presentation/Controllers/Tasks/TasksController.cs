@@ -63,6 +63,16 @@ namespace MangaPublishingSystem.Presentation.Controllers.Tasks
             return Ok(ApiResponse<object>.Success(null, "Từ chối bài vẽ thành công. Yêu cầu sửa đổi đã gửi tới Assistant kèm gia hạn."));
         }
 
+        [Authorize(Roles = "Mangaka,Assistant")]
+        [HttpPost("{id}/dispute")]
+        public async Task<ActionResult<ApiResponse<object>>> CreateDispute([FromRoute] int id, [FromBody] CreateDisputeDto disputeDto)
+        {
+            int userId = CurrentUserId;
+            await _tasksService.CreateDisputeAsync(id, userId, disputeDto.Reason);
+            return Ok(ApiResponse<object>.Success(null, "Báo cáo tranh chấp thành công."));
+        }
+
+
         [Authorize(Roles = "Mangaka")]
         [HttpPost("{id}/extension-approval")]
         public async Task<ActionResult<ApiResponse<object>>> HandleExtension([FromRoute] int id, [FromQuery] bool approve)

@@ -34,6 +34,20 @@ namespace MangaPublishingSystem.Infrastructure.Repositories
             return await _context.Contracts.FirstOrDefaultAsync(c => c.SeriesId == seriesId);
         }
 
+        public async Task<Contract?> GetSignedWithAddendumsBySeriesIdAsync(int seriesId)
+        {
+            return await GetEffectiveContractWithAddendumsBySeriesIdAsync(seriesId);
+        }
+
+        public async Task<Contract?> GetEffectiveContractWithAddendumsBySeriesIdAsync(int seriesId)
+        {
+            return await _context.Contracts
+                .Include(c => c.ContractAddendums)
+                .Where(c => c.SeriesId == seriesId && (c.Status == "Signed" || c.Status == "Active"))
+                .OrderByDescending(c => c.SignedDate ?? c.CreateAt)
+                .FirstOrDefaultAsync();
+        }
+
         public async Task<Contract?> GetWithSeriesAsync(int contractId)
         {
             return await _context.Contracts
