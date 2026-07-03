@@ -116,6 +116,8 @@ namespace MangaPublishingSystem.Application.Services.Dashboard
         {
             return status.Equals("Fund_Pending", StringComparison.OrdinalIgnoreCase) 
                 || status.Equals("Approved", StringComparison.OrdinalIgnoreCase) 
+                || status.Equals("In Production", StringComparison.OrdinalIgnoreCase)
+                || status.Equals("In_Production", StringComparison.OrdinalIgnoreCase)
                 || status.Equals("Active", StringComparison.OrdinalIgnoreCase);
         }
 

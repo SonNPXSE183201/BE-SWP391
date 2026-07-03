@@ -47,5 +47,18 @@ namespace MangaPublishingSystem.Infrastructure.Repositories
                     && sa.AssistantId == assistantId
                     && sa.Status == "Active");
         }
+
+        public async Task<IEnumerable<SeriesAssistant>> GetPendingInvitesByAssistantAsync(int assistantId)
+        {
+            return await _dbSet.AsQueryable()
+                .Include(sa => sa.Series)
+                    .ThenInclude(s => s.Mangaka)
+                .Include(sa => sa.Series)
+                    .ThenInclude(s => s.SeriesAssistants)
+                .Where(sa => sa.AssistantId == assistantId && sa.Status == "Pending")
+                .OrderByDescending(sa => sa.CreateAt)
+                .AsNoTrackingWithIdentityResolution()
+                .ToListAsync();
+        }
     }
 }

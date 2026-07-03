@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using BuildingBlocks.Web.Responses;
 using MangaPublishingSystem.Application.DTOs.Assistant;
@@ -23,6 +24,22 @@ namespace MangaPublishingSystem.Presentation.Controllers.Assistant
         {
             var result = await _assistantService.GetActiveAssistantsAsync(filter);
             return Ok(ApiResponse<PagedResult<AssistantResponseDto>>.Success(result, "Lấy danh sách Assistant thành công."));
+        }
+
+        [Authorize(Roles = "Assistant")]
+        [HttpGet("me/invites")]
+        public async Task<ActionResult<ApiResponse<IEnumerable<AssistantInviteDto>>>> GetMyInvites()
+        {
+            try 
+            {
+                var userId = int.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "0");
+                var result = await _assistantService.GetMyInvitesAsync(userId);
+                return Ok(ApiResponse<IEnumerable<AssistantInviteDto>>.Success(result, "Lấy danh sách lời mời thành công."));
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { success = false, statusCode = 500, message = ex.Message + " | " + ex.InnerException?.Message });
+            }
         }
     }
 }

@@ -609,7 +609,8 @@ namespace MangaPublishingSystem.Application.Services
 
             foreach (var page in pages)
             {
-                if (string.Equals(page.Status, "Composited", StringComparison.OrdinalIgnoreCase))
+                if (string.Equals(page.Status, "Composited", StringComparison.OrdinalIgnoreCase) || 
+                    string.Equals(page.Status, "Completed", StringComparison.OrdinalIgnoreCase))
                 {
                     pagesReady++;
                     continue;
@@ -618,7 +619,7 @@ namespace MangaPublishingSystem.Application.Services
                 var pageRegions = regionsByPage.GetValueOrDefault(page.Id) ?? new List<Region>();
                 if (pageRegions.Count == 0)
                 {
-                    pagesReady++;
+                    blockers.Add($"Trang {page.PageNumber}: chưa được đánh dấu sẵn sàng.");
                     continue;
                 }
 
@@ -632,6 +633,7 @@ namespace MangaPublishingSystem.Application.Services
                 var pageTasks = pageRegions.SelectMany(r => tasksByRegion[r.Id]).ToList();
                 if (pageTasks.Any(t => OpenTaskStatuses.Contains(t.Status)))
                 {
+                    // Global open task error handles this, just skip the page level error
                     continue;
                 }
 
@@ -641,47 +643,7 @@ namespace MangaPublishingSystem.Application.Services
                     continue;
                 }
 
-                if (string.IsNullOrWhiteSpace(page.CompositeImageUrl))
-                {
-                    if (ensureComposites)
-                    {
-                        try
-                        {
-                            await _tasksService.RefreshPageCompositeAsync(page.Id);
-                            var refreshed = await _pageRepository.GetByIdAsync(page.Id);
-                            if (refreshed == null || string.IsNullOrWhiteSpace(refreshed.CompositeImageUrl))
-                            {
-                                blockers.Add($"Trang {page.PageNumber}: chưa tạo được bản gộp (composite).");
-                                continue;
-                            }
-
-                            if (ensureComposites && refreshed.Status != "Composited")
-                            {
-                                refreshed.Status = "Composited";
-                                _pageRepository.Update(refreshed);
-                                await _unitOfWork.SaveChangesAsync();
-                            }
-                        }
-                        catch
-                        {
-                            blockers.Add($"Trang {page.PageNumber}: chưa tạo được bản gộp (composite).");
-                            continue;
-                        }
-                    }
-                    else
-                    {
-                        blockers.Add($"Trang {page.PageNumber}: chưa có bản gộp (composite).");
-                        continue;
-                    }
-                }
-                else if (ensureComposites && page.Status != "Composited")
-                {
-                    page.Status = "Composited";
-                    _pageRepository.Update(page);
-                    await _unitOfWork.SaveChangesAsync();
-                }
-
-                pagesReady++;
+                blockers.Add($"Trang {page.PageNumber}: đã duyệt các task nhưng chưa được đánh dấu sẵn sàng.");
             }
 
             var compositesReady = pagesReady == pages.Count && pages.Count > 0;

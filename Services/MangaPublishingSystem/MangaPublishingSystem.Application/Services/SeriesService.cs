@@ -269,8 +269,8 @@ namespace MangaPublishingSystem.Application.Services
             await _unitOfWork.BeginTransactionAsync();
             try
             {
-                // Chuyển trạng thái sang Active
-                series.Status = "Active";
+                // Chuyển trạng thái sang In Production
+                series.Status = "In Production";
                 _seriesRepository.Update(series);
 
                 var wallet = await _walletRepository.GetWalletByUserIdAsync(mangakaId);
@@ -454,7 +454,7 @@ namespace MangaPublishingSystem.Application.Services
         }
 
         private static bool CanCreateChapter(string? status) =>
-            status is "Active" or "Fund_Pending" or "In Production" or "In_Production";
+            status is "In Production" or "In_Production" or "Active" or "Fund_Pending";
 
         public async Task<Chapter> SubmitChapterAsync(int seriesId, int mangakaId, SubmitChapterDto dto)
         {
@@ -674,9 +674,9 @@ namespace MangaPublishingSystem.Application.Services
                 throw new NotFoundException("Bộ truyện không tồn tại.");
             }
 
-            if (series.Status != "Active")
+            if (series.Status != "In Production" && series.Status != "Active")
             {
-                throw new ConflictException("Chỉ có thể biểu quyết trên bộ truyện đang hoạt động (Active).");
+                throw new ConflictException("Chỉ có thể biểu quyết trên bộ truyện đang sản xuất (In Production).");
             }
 
             var existingVotes = await _boardVoteRepository.FindAsync(v => 

@@ -234,6 +234,7 @@ namespace MangaPublishingSystem.Application.Services
             user.Status = UserStatus.Locked;
             await _unitOfWork.SaveChangesAsync();
             await _boardVotingService.ClearChairIfUserDeactivatedAsync(id);
+            await _boardVotingService.NotifyBoardMembershipChangedAsync(id);
 
             return MapUserResponse(user, "Khóa tài khoản thành công.");
         }
@@ -249,6 +250,7 @@ namespace MangaPublishingSystem.Application.Services
 
             user.Status = UserStatus.Active;
             await _unitOfWork.SaveChangesAsync();
+            await _boardVotingService.NotifyBoardMembershipChangedAsync(id);
 
             return MapUserResponse(user, "Mở khóa tài khoản thành công.");
         }

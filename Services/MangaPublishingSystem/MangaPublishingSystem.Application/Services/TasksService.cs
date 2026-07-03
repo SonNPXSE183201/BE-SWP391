@@ -572,10 +572,10 @@ namespace MangaPublishingSystem.Application.Services
             return compositeUrl;
         }
 
-        public async Task<PagedResult<TasksDto>> GetAvailableTasksAsync(GetAvailableTasksRequest request)
+        public async Task<PagedResult<TasksDto>> GetAvailableTasksAsync(int assistantId, GetAvailableTasksRequest request)
         {
             var pagedTasks = await _tasksRepository.GetAvailableTasksAsync(
-                request.Skill, request.PageNumber, request.PageSize);
+                assistantId, request.Skill, request.PageNumber, request.PageSize);
 
             // Ánh xạ từ Tasks entity sang TasksDto
             var dtoItems = pagedTasks.Items.Select(t => new TasksDto
