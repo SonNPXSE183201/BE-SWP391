@@ -27,5 +27,11 @@ namespace MangaPublishingSystem.Application.DTOs.User
 
         [JsonPropertyName("assignedEditorName")]
         public string? AssignedEditorName { get; set; }
+
+        [JsonPropertyName("phoneNumber")]
+        public string? PhoneNumber { get; set; }
+
+        [JsonPropertyName("avatarUrl")]
+        public string? AvatarUrl { get; set; }
     }
 }

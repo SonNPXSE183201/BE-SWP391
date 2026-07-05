@@ -1,6 +1,3 @@
-
-
-
 # HƯỚNG DẪN NGHIỆP VỤ HỆ THỐNG - SRS (DÀNH CHO AI & DEVELOPER)
 
 ## HỆ THỐNG QUẢN LÝ QUY TRÌNH SÁNG TÁC & XUẤT BẢN TRUYỆN TRANH (MCWPMS)
@@ -113,13 +110,13 @@ Hệ thống phân chia người dùng thành 2 nhóm với 5 vai trò phân quy
    * Hai bên ký kết bản ghi nhớ hợp đồng giấy (MOU offline), chốt đơn giá trang vẽ gốc (`BaseGenkouryoPrice` VND/trang).
    * Scout gửi hồ sơ Mangaka cho Admin.
    * Admin nhập thông tin lên hệ thống: Tạo tài khoản Mangaka (F5.1, F5.2), phân bổ một Biên tập viên phụ trách (Tantou Editor), nhập đơn giá trang hợp đồng.
-   * Tác giả nhận được email kích hoạt có kèm mật khẩu tạm thời, đăng nhập, đổi mật khẩu và bắt đầu sử dụng.
+   * Tác giả nhận được email kích hoạt có kèm mật khẩu tạm thời, đăng nhập, đổi mật khẩu và bắt đầu sử dụng. Tác giả có thể tự cập nhật thông tin cá nhân bổ sung (Số điện thoại, Ảnh đại diện, Bút danh) thông qua API Profile (`PUT /api/profile`).
 2. **Đối với Assistant (Đăng ký tự do)**:
    * Assistant truy cập Landing Page -> nhấn "Register".
    * Điền thông tin cá nhân: Họ tên, email, link Portfolio chứa các tác phẩm đã vẽ, và khai báo thẻ kỹ năng chuyên môn (`SpecialtyTags`).
    * Hệ thống lưu tài khoản ở trạng thái `Pending`.
    * Admin duyệt Portfolio ngoại tuyến -> Nếu đạt yêu cầu, Admin bấm Phê duyệt (F5.1) -> Tài khoản chuyển sang `Active`.
-   * Assistant nhận email kích hoạt thành công, đăng nhập và sẵn sàng nhận Task.
+   * Assistant nhận email kích hoạt thành công, đăng nhập và sẵn sàng nhận Task. Assistant cũng có quyền cập nhật Hồ sơ (Số điện thoại, Avatar, Link Portfolio mới, Kỹ năng bổ sung) qua API Profile để làm phong phú CV.
 
 ### Luồng 2 — Phê duyệt truyện & Cấp ngân sách (Series Review & Production Funding)
 

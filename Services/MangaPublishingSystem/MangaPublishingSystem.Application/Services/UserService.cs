@@ -294,6 +294,8 @@ namespace MangaPublishingSystem.Application.Services
                 IsOnLeave = user.IsOnLeave,
                 AssignedEditorId = user.AssignedEditorId,
                 AssignedEditorName = user.AssignedEditor?.FullName,
+                PhoneNumber = user.PhoneNumber,
+                AvatarUrl = user.AvatarUrl,
                 Message = message
             };
         }
@@ -323,7 +325,9 @@ namespace MangaPublishingSystem.Application.Services
                 Status = user.Status.ToString(),
                 CreatedAt = user.CreateAt.ToUniversalTime().ToString("o"),
                 AssignedEditorId = user.AssignedEditorId,
-                AssignedEditorName = user.AssignedEditor?.FullName
+                AssignedEditorName = user.AssignedEditor?.FullName,
+                PhoneNumber = user.PhoneNumber,
+                AvatarUrl = user.AvatarUrl
             };
         }
 
@@ -409,6 +413,9 @@ namespace MangaPublishingSystem.Application.Services
             }
             user.PortfolioUrl = dto.PortfolioUrl;
             user.Skills = dto.Skills;
+            
+            if (dto.PhoneNumber != null) user.PhoneNumber = dto.PhoneNumber;
+            if (dto.AvatarUrl != null) user.AvatarUrl = dto.AvatarUrl;
 
             _userRepository.Update(user);
             await _unitOfWork.SaveChangesAsync();

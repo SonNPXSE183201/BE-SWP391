@@ -142,10 +142,11 @@ Khi bạn (hoặc AI) cần tạo một API chức năng mới (Ví dụ: Tạo 
   dotnet run --project GatewayAPI/GatewayAPI.csproj
   ```
 * **Chạy Script Test API tự động**:
+  * Bao phủ luồng Đăng nhập, Series, Task, Escrow, Hủy truyện, và cập nhật thông tin cá nhân (Profile: SĐT, Avatar).
   * Để hiển thị tiếng Việt chính xác trên console Windows (cmd/powershell), bạn cần đổi code page của terminal sang UTF-8 trước khi chạy script test:
   ```powershell
   chcp 65001
-  node test-api.js
+  node test-all-endpoints.js
   ```
 
 ---

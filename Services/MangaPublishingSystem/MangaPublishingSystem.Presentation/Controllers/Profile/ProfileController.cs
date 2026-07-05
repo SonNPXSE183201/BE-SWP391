@@ -22,6 +22,14 @@ namespace MangaPublishingSystem.Presentation.Controllers.Profile
         private int CurrentUserId => int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
 
         [Authorize]
+        [HttpGet]
+        public async Task<ActionResult<ApiResponse<ProfileResponseDto>>> GetProfile()
+        {
+            var profile = await _profileService.GetMyProfileAsync(CurrentUserId);
+            return Ok(ApiResponse<ProfileResponseDto>.Success(profile, "Lấy thông tin hồ sơ cá nhân thành công."));
+        }
+
+        [Authorize]
         [HttpPut]
         public async Task<ActionResult<ApiResponse<ProfileResponseDto>>> UpdateProfile([FromBody] UpdateProfileDto dto)
         {
