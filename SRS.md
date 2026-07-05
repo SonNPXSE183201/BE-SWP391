@@ -251,6 +251,9 @@ Cơ chế biểu quyết cấp vốn Series hoạt động theo nguyên tắc Ha
   * `Rejected`: Tài khoản đăng ký bị từ chối phê duyệt. Không được phép đăng nhập (báo lỗi: *"Tài khoản của bạn đã bị từ chối phê duyệt."*).
   * `Locked`: Tài khoản bị khóa tạm thời hoặc vĩnh viễn do vi phạm. Không được phép đăng nhập (báo lỗi: *"Tài khoản của bạn đã bị khóa. Vui lòng liên hệ với quản trị viên."*).
 * **A04 (Gán Biên tập viên phụ trách - Tantou Editor)**: Biên tập viên phụ trách được System Admin gán cho Mangaka khi tạo mới hoặc chỉnh sửa tài khoản (thông qua API `PUT /api/admin/users/{id}`). Hệ thống chỉ cho phép gán tài khoản có vai trò là *Tantou Editor* ở trạng thái hoạt động (*Active*) cho tài khoản *Mangaka*. Khi Mangaka gửi duyệt truyện mới, hệ thống sẽ tự động gán `Series.EditorId` từ thông tin `AssignedEditorId` của Mangaka đó.
+* **A05 (Cập nhật hồ sơ cá nhân - Profile Update)**: Hệ thống cung cấp cơ chế cập nhật hồ sơ cá nhân độc lập dựa trên vai trò của người dùng (API `/api/v1/profile`).
+  * Mangaka và Admin/Board/Editor: Chỉ được phép cập nhật Tên (`FullName`) và Bút danh (`PenName`).
+  * Assistant: Ngoài Tên, còn được phép cập nhật liên kết năng lực (`PortfolioUrl`), Kỹ năng (`Skills`) và Nhãn chuyên môn (`SpecialtyTags`). Việc cập nhật phải được xử lý tự động trong cùng một API thay vì gọi các API chuyên trách của Admin.
 
 ### 5.2. Quy tắc Duyệt truyện & Ví sản xuất (Review & Funding Rules)
 
