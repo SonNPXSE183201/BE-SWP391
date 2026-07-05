@@ -12,6 +12,8 @@ namespace MangaPublishingSystem.Application.DTOs.User
         public bool IsOnLeave { get; set; }
         public int? AssignedEditorId { get; set; }
         public string? AssignedEditorName { get; set; }
+        public string? PhoneNumber { get; set; }
+        public string? AvatarUrl { get; set; }
         public string? Message { get; set; }
     }
 }

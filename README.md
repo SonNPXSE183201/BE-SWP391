@@ -142,10 +142,11 @@ Khi bạn (hoặc AI) cần tạo một API chức năng mới (Ví dụ: Tạo 
   dotnet run --project GatewayAPI/GatewayAPI.csproj
   ```
 * **Chạy Script Test API tự động**:
+  * Bao phủ luồng Đăng nhập, Series, Task, Escrow, Hủy truyện, và cập nhật thông tin cá nhân (Profile: SĐT, Avatar).
   * Để hiển thị tiếng Việt chính xác trên console Windows (cmd/powershell), bạn cần đổi code page của terminal sang UTF-8 trước khi chạy script test:
   ```powershell
   chcp 65001
-  node test-api.js
+  node test-all-endpoints.js
   ```
 
 ---
@@ -236,3 +237,6 @@ Khi bạn (hoặc AI) cần tạo một API chức năng mới (Ví dụ: Tạo 
 * **Cơ chế Đồng thuận Biểu quyết Hủy Truyện (Ranking Consensus)**:
   - Áp dụng logic biểu quyết động (Majority Consensus) tại `POST /ranking/votes`.
   - Tự động thanh lý hợp đồng (Cancelled), hoàn cọc (Escrow Refund) và cấp 24 giờ ân hạn (Emergency Grace Period) cho các trợ lý bị ảnh hưởng khi truyện bị đình bản.
+* **Cập nhật Hồ sơ Người dùng (User Profile)**:
+  - Cung cấp API `PUT /api/v1/profile` độc lập để cập nhật thông tin cá nhân tùy theo Role, tách biệt hoàn toàn với API quản lý của Admin.
+  - Mangaka và Admin được phép cập nhật tên (`FullName`), bút danh (`PenName`). Assistant được phép cập nhật cả thông tin kỹ năng (`Skills`, `PortfolioUrl`, `SpecialtyTags`) tự động thông qua cùng một endpoint mà không can thiệp vào các API cũ.

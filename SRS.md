@@ -113,13 +113,13 @@ Hệ thống phân chia người dùng thành 2 nhóm với 5 vai trò phân quy
    * Hai bên ký kết bản ghi nhớ hợp đồng giấy (MOU offline), chốt đơn giá trang vẽ gốc (`BaseGenkouryoPrice` VND/trang).
    * Scout gửi hồ sơ Mangaka cho Admin.
    * Admin nhập thông tin lên hệ thống: Tạo tài khoản Mangaka (F5.1, F5.2), phân bổ một Biên tập viên phụ trách (Tantou Editor), nhập đơn giá trang hợp đồng.
-   * Tác giả nhận được email kích hoạt có kèm mật khẩu tạm thời, đăng nhập, đổi mật khẩu và bắt đầu sử dụng.
+   * Tác giả nhận được email kích hoạt có kèm mật khẩu tạm thời, đăng nhập, đổi mật khẩu và bắt đầu sử dụng. Tác giả có thể tự cập nhật thông tin cá nhân bổ sung (Số điện thoại, Ảnh đại diện, Bút danh) thông qua API Profile (`PUT /api/profile`).
 2. **Đối với Assistant (Đăng ký tự do)**:
    * Assistant truy cập Landing Page -> nhấn "Register".
    * Điền thông tin cá nhân: Họ tên, email, link Portfolio chứa các tác phẩm đã vẽ, và khai báo thẻ kỹ năng chuyên môn (`SpecialtyTags`).
    * Hệ thống lưu tài khoản ở trạng thái `Pending`.
    * Admin duyệt Portfolio ngoại tuyến -> Nếu đạt yêu cầu, Admin bấm Phê duyệt (F5.1) -> Tài khoản chuyển sang `Active`.
-   * Assistant nhận email kích hoạt thành công, đăng nhập và sẵn sàng nhận Task.
+   * Assistant nhận email kích hoạt thành công, đăng nhập và sẵn sàng nhận Task. Assistant cũng có quyền cập nhật Hồ sơ (Số điện thoại, Avatar, Link Portfolio mới, Kỹ năng bổ sung) qua API Profile để làm phong phú CV.
 
 ### Luồng 2 — Phê duyệt truyện & Cấp ngân sách (Series Review & Production Funding)
 
@@ -251,6 +251,9 @@ Cơ chế biểu quyết cấp vốn Series hoạt động theo nguyên tắc Ha
   * `Rejected`: Tài khoản đăng ký bị từ chối phê duyệt. Không được phép đăng nhập (báo lỗi: *"Tài khoản của bạn đã bị từ chối phê duyệt."*).
   * `Locked`: Tài khoản bị khóa tạm thời hoặc vĩnh viễn do vi phạm. Không được phép đăng nhập (báo lỗi: *"Tài khoản của bạn đã bị khóa. Vui lòng liên hệ với quản trị viên."*).
 * **A04 (Gán Biên tập viên phụ trách - Tantou Editor)**: Biên tập viên phụ trách được System Admin gán cho Mangaka khi tạo mới hoặc chỉnh sửa tài khoản (thông qua API `PUT /api/admin/users/{id}`). Hệ thống chỉ cho phép gán tài khoản có vai trò là *Tantou Editor* ở trạng thái hoạt động (*Active*) cho tài khoản *Mangaka*. Khi Mangaka gửi duyệt truyện mới, hệ thống sẽ tự động gán `Series.EditorId` từ thông tin `AssignedEditorId` của Mangaka đó.
+* **A05 (Cập nhật hồ sơ cá nhân - Profile Update)**: Hệ thống cung cấp cơ chế cập nhật hồ sơ cá nhân độc lập dựa trên vai trò của người dùng (API `/api/v1/profile`).
+  * Mangaka và Admin/Board/Editor: Chỉ được phép cập nhật Tên (`FullName`) và Bút danh (`PenName`).
+  * Assistant: Ngoài Tên, còn được phép cập nhật liên kết năng lực (`PortfolioUrl`), Kỹ năng (`Skills`) và Nhãn chuyên môn (`SpecialtyTags`). Việc cập nhật phải được xử lý tự động trong cùng một API thay vì gọi các API chuyên trách của Admin.
 
 ### 5.2. Quy tắc Duyệt truyện & Ví sản xuất (Review & Funding Rules)
 
