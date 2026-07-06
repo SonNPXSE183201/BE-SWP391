@@ -166,3 +166,9 @@ AI phải ghi nhớ và áp dụng nghiêm ngặt các quy tắc trên!
 * **Kiểm thử tích hợp (Integration Tests)**: Hoàn thiện kịch bản thử nghiệm tự động trên Node.js ([`scripts/test/test-all-endpoints.js`](../../scripts/test/test-all-endpoints.js)) với hơn 50+ test cases, bao phủ cả luồng Happy Case và Unhappy Case (Xác thực phân quyền, Khóa quỹ Escrow, Đồng thuận đa số hủy truyện). Tỉ lệ Pass 100%.
 * **Đồng bộ hóa API (Postman & Báo cáo)**: Tất cả API được tích hợp vào `MangaPublishing.postman_collection.json` và chuẩn hóa trong các tệp Markdown (`BE_API_Report.md`, `BE_API_Business_Logic.md`, `FE_API_Testing_Guide.md`).
 * **Cập nhật Hồ sơ Người dùng (User Profile)**: Triển khai API `/api/v1/profile` (GET, PUT) tự động xác định Role để cập nhật các field (SĐT, Avatar, Admin/Mangaka cập nhật Tên, Bút danh; Assistant cập nhật Tên, Kỹ năng, Tags, URL) mà không sửa đổi các controller cũ. Đã tích hợp testcase.
+* **Tích hợp Trợ lý AI (AI Services)**:
+  - Triển khai thành công microservice `AiVisionService` bằng Python FastAPI.
+  - Hoàn thiện tích hợp mô hình **U-Net** hỗ trợ tô màu truyện tranh (Colorization).
+  - Hoàn thiện tích hợp mô hình **YOLOv8** hỗ trợ phân vùng khung tranh (Panel Segmentation).
+  - Kết nối thành công API **Google Gemini** để hỗ trợ tính năng phân tích nội dung truyện và gợi ý thẻ thể loại (Tag Suggestions).
+  - Cấu hình Gateway API và liên kết với Backend C# thông qua `AiIntegrationController`.

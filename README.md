@@ -240,3 +240,8 @@ Khi bạn (hoặc AI) cần tạo một API chức năng mới (Ví dụ: Tạo 
 * **Cập nhật Hồ sơ Người dùng (User Profile)**:
   - Cung cấp API `PUT /api/v1/profile` độc lập để cập nhật thông tin cá nhân tùy theo Role, tách biệt hoàn toàn với API quản lý của Admin.
   - Mangaka và Admin được phép cập nhật tên (`FullName`), bút danh (`PenName`). Assistant được phép cập nhật cả thông tin kỹ năng (`Skills`, `PortfolioUrl`, `SpecialtyTags`) tự động thông qua cùng một endpoint mà không can thiệp vào các API cũ.
+* **Tích hợp Dịch vụ AI (AI Vision & NLP Integration)**:
+  - Tích hợp **Python FastAPI Vision Service** chạy độc lập (cổng 8000) hỗ trợ các mô hình Deep Learning.
+  - Tích hợp **YOLOv8** (`POST /api/ai/segment` và `POST /api/ai/segment/visualize`) để tự động nhận diện và phân vùng các khung tranh (Manga Panels).
+  - Tích hợp mô hình **U-Net** (`POST /api/ai/colorize`) hỗ trợ tô màu tự động cho bản thảo đen trắng, lưu trữ kết quả trên MinIO.
+  - Tích hợp **Google Gemini NLP** (`POST /api/ai/suggest-tags`) tự động phân tích tóm tắt truyện để gợi ý các thẻ thể loại (Tags) phù hợp nhất.
