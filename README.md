@@ -212,6 +212,19 @@ Khi bạn (hoặc AI) cần tạo một API chức năng mới (Ví dụ: Tạo 
 
 ---
 
+### 5.6. Cấu hình & Cài đặt Môi trường Python (AiVisionService)
+* **Mục tiêu**: Thiết lập môi trường Python nội bộ để chạy các mô hình AI (YOLOv8, U-Net) tách biệt với C#.
+* **Các bước Cài đặt**:
+  1. Trỏ vào thư mục service: `cd Services/AiVisionService`
+  2. Tạo môi trường ảo (khuyên dùng `uv`): `uv venv` hoặc `python -m venv venv`
+  3. Cài đặt các thư viện Deep Learning: `uv pip install -r requirements.txt` (Hoặc `pip install -r requirements.txt`).
+* **Khởi động AI Service**:
+  * Tự động: Đứng ở thư mục gốc và chạy file `run-be.bat`. Script sẽ tự động bật thêm 1 terminal chạy `uvicorn` cho AI Service.
+  * Thủ công: Bật terminal, chạy `.\venv\Scripts\activate` sau đó chạy lệnh `python -m uvicorn main:app --port 8000 --reload`.
+* **Lưu ý**: Lần đầu tiên request lên endpoint AI, hệ thống có thể mất vài phút tải mô hình (`.pt` / `.pth`) về máy.
+
+---
+
 ## 6. LỊCH SỬ CẬP NHẬT GẦN NHẤT (IMPLEMENTATION CHANGELOG)
 
 **Giai đoạn P2 & Tối ưu hệ thống:**
