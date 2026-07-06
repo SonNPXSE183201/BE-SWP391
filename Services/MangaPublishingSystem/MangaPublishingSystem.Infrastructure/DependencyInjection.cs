@@ -4,9 +4,11 @@ using System.Linq;
 using MangaPublishingSystem.Application.Common.Security;
 using MangaPublishingSystem.Application.IRepositories;
 using MangaPublishingSystem.Application.IServices;
+using MangaPublishingSystem.Application.IServices.AI;
 using MangaPublishingSystem.Infrastructure.Data;
 using MangaPublishingSystem.Infrastructure.Models;
 using MangaPublishingSystem.Infrastructure.Services;
+using MangaPublishingSystem.Infrastructure.Services.ExternalAiClients;
 using MangaPublishingSystem.Infrastructure.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -67,6 +69,18 @@ namespace MangaPublishingSystem.Infrastructure
             // Security services
             services.AddScoped<IPasswordHasher, BCryptPasswordHasher>();
             services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
+
+            // Đăng ký các Http Clients cho AI Module
+            services.AddHttpClient<IAiVisionClient, FastApiVisionClient>(client =>
+            {
+                client.BaseAddress = new Uri(config["AiSettings:FastApiUrl"] ?? "http://localhost:8000/");
+                client.Timeout = TimeSpan.FromMinutes(5); // AI processing có thể mất thời gian
+            });
+
+            services.AddHttpClient<IGeminiClient, GeminiClient>(client =>
+            {
+                client.Timeout = TimeSpan.FromSeconds(30);
+            });
 
             // VNPay Payment
             services.Configure<VnPaySettings>(config.GetSection("VnPay"));
