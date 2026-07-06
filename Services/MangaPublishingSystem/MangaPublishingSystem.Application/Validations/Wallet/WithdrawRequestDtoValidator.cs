@@ -18,11 +18,11 @@ namespace MangaPublishingSystem.Application.Validations.Wallet
 
             RuleFor(x => x.BankAccountNumber)
                 .NotEmpty().WithMessage("Số tài khoản ngân hàng không được để trống.")
-                .MinimumLength(5).WithMessage("Số tài khoản ngân hàng không hợp lệ.")
-                .MaximumLength(50).WithMessage("Số tài khoản ngân hàng không được vượt quá 50 ký tự.");
+                .Matches(@"^\d{9,14}$").WithMessage("Số tài khoản ngân hàng phải từ 9 đến 14 chữ số.");
 
             RuleFor(x => x.BankAccountName)
                 .NotEmpty().WithMessage("Tên chủ tài khoản không được để trống.")
+                .Matches(@"^[A-Z\s]+$").WithMessage("Tên chủ tài khoản không được chứa ký tự đặc biệt, số và phải viết hoa không dấu.")
                 .MaximumLength(150).WithMessage("Tên chủ tài khoản không được vượt quá 150 ký tự.");
         }
     }

@@ -63,7 +63,7 @@ namespace MangaPublishingSystem.Application.Services.Admin
             {
                 "Deposit" => "Nạp tiền vào ví — Deposit (VNPay)",
                 "Withdraw" => "Rút tiền — Withdrawal (VNPay)",
-                "Production_Funding" => "Cấp vốn bản thảo Nemu — Mangaka nhận vốn (F02/F5.4)",
+                "Production_Funding" => "Cấp vốn bản phác thảo — Tác giả nhận vốn",
                 "Platform_TopUp" => "Nạp quỹ vào ví chung NXB — Admin",
                 _ => tx.Type
             };
@@ -87,7 +87,7 @@ namespace MangaPublishingSystem.Application.Services.Admin
                 DiscrepancyNote = reconciliationStatus switch
                 {
                     "Mismatch" => "Trạng thái giao dịch nội bộ không khớp đối soát VNPay.",
-                    "Missing" => "Giao dịch thiếu mã tham chiếu ReferenceCode theo quy tắc F04.",
+                    "Missing" => "Giao dịch thiếu mã tham chiếu ReferenceCode.",
                     _ => null
                 }
             };

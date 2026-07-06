@@ -75,23 +75,18 @@ namespace MangaPublishingSystem.Application.Common
             int votesCast,
             int totalMembers)
         {
+            // Bug-005: Đợi đủ tất cả thành viên vote xong mới chốt kết quả (trừ khi tự động chốt do hết hạn)
+            if (votesCast < totalMembers)
+            {
+                return BoardVoteResolution.Pending;
+            }
+
             if (approveWeight >= thresholds.ApproveRequired)
             {
                 return BoardVoteResolution.Approved;
             }
 
-            var maxPossibleApprove = approveWeight + (thresholds.TotalWeight - approveWeight - rejectWeight);
-            if (maxPossibleApprove < thresholds.ApproveRequired)
-            {
-                return BoardVoteResolution.Rejected;
-            }
-
-            if (votesCast >= totalMembers)
-            {
-                return BoardVoteResolution.Rejected;
-            }
-
-            return BoardVoteResolution.Pending;
+            return BoardVoteResolution.Rejected;
         }
 
         public static BoardVoteResolution EvaluateAutoResolve(
