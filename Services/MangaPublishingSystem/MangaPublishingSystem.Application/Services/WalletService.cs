@@ -347,6 +347,18 @@ namespace MangaPublishingSystem.Application.Services
                 transaction.Status = "Failed";
                 // Đảo ngược lại Amount trong transaction record để báo cáo khớp
                 transaction.WithdrawableAmount = 0; // Không trừ nữa
+
+                var refundTx = new Transaction
+                {
+                    WalletId = wallet.Id,
+                    Type = "Withdrawal_Refund",
+                    Amount = transaction.Amount,
+                    WithdrawableAmount = transaction.Amount, // Cộng lại tiền
+                    Status = "Success",
+                    ReferenceCode = "REF" + transaction.ReferenceCode.Substring(3), // Change WDR to REF
+                    ToUserId = wallet.UserId
+                };
+                await _transactionRepository.AddAsync(refundTx);
             }
 
             transaction.AdminNote = adminNote;
