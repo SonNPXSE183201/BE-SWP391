@@ -212,6 +212,19 @@ Khi bạn (hoặc AI) cần tạo một API chức năng mới (Ví dụ: Tạo 
 
 ---
 
+### 5.6. Cấu hình & Cài đặt Môi trường Python (AiVisionService)
+* **Mục tiêu**: Thiết lập môi trường Python nội bộ để chạy các mô hình AI (YOLOv8, U-Net) tách biệt với C#.
+* **Các bước Cài đặt**:
+  1. Trỏ vào thư mục service: `cd Services/AiVisionService`
+  2. Tạo môi trường ảo (khuyên dùng `uv`): `uv venv` hoặc `python -m venv venv`
+  3. Cài đặt các thư viện Deep Learning: `uv pip install -r requirements.txt` (Hoặc `pip install -r requirements.txt`).
+* **Khởi động AI Service**:
+  * Tự động: Đứng ở thư mục gốc và chạy file `run-be.bat`. Script sẽ tự động bật thêm 1 terminal chạy `uvicorn` cho AI Service.
+  * Thủ công: Bật terminal, chạy `.\venv\Scripts\activate` sau đó chạy lệnh `python -m uvicorn main:app --port 8000 --reload`.
+* **Lưu ý**: Lần đầu tiên request lên endpoint AI, hệ thống có thể mất vài phút tải mô hình (`.pt` / `.pth`) về máy.
+
+---
+
 ## 6. LỊCH SỬ CẬP NHẬT GẦN NHẤT (IMPLEMENTATION CHANGELOG)
 
 **Giai đoạn P2 & Tối ưu hệ thống:**
@@ -240,3 +253,8 @@ Khi bạn (hoặc AI) cần tạo một API chức năng mới (Ví dụ: Tạo 
 * **Cập nhật Hồ sơ Người dùng (User Profile)**:
   - Cung cấp API `PUT /api/v1/profile` độc lập để cập nhật thông tin cá nhân tùy theo Role, tách biệt hoàn toàn với API quản lý của Admin.
   - Mangaka và Admin được phép cập nhật tên (`FullName`), bút danh (`PenName`). Assistant được phép cập nhật cả thông tin kỹ năng (`Skills`, `PortfolioUrl`, `SpecialtyTags`) tự động thông qua cùng một endpoint mà không can thiệp vào các API cũ.
+* **Tích hợp Dịch vụ AI (AI Vision & NLP Integration)**:
+  - Tích hợp **Python FastAPI Vision Service** chạy độc lập (cổng 8000) hỗ trợ các mô hình Deep Learning.
+  - Tích hợp **YOLOv8** (`POST /api/ai/segment` và `POST /api/ai/segment/visualize`) để tự động nhận diện và phân vùng các khung tranh (Manga Panels).
+  - Tích hợp mô hình **U-Net** (`POST /api/ai/colorize`) hỗ trợ tô màu tự động cho bản thảo đen trắng, lưu trữ kết quả trên MinIO.
+  - Tích hợp **Google Gemini NLP** (`POST /api/ai/suggest-tags`) tự động phân tích tóm tắt truyện để gợi ý các thẻ thể loại (Tags) phù hợp nhất.
