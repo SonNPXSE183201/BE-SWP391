@@ -41,6 +41,10 @@ namespace MangaPublishingSystem.Application.Services
             {
                 throw new BadRequestException("Số tiền nạp vào ví quỹ tối thiểu 10.000 VND.");
             }
+            if (dto.Amount > 1000000000)
+            {
+                throw new BadRequestException("Số tiền nạp vào ví quỹ tối đa 1.000.000.000 VND mỗi giao dịch.");
+            }
 
             var wallet = await GetOrCreateTreasuryWalletAsync();
             var referenceCode = $"PLT{DateTime.UtcNow:yyyyMMddHHmmss}{adminUserId}";

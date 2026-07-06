@@ -26,6 +26,19 @@ namespace MangaPublishingSystem.Presentation.Controllers.Series
 
         private int CurrentUserId => int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
 
+        [Authorize]
+        [HttpGet]
+        public async Task<ActionResult<ApiResponse<IEnumerable<SeriesDto>>>> GetAllSeries([FromQuery] string? status)
+        {
+            var series = await _seriesService.GetAllAsync();
+            if (!string.IsNullOrEmpty(status))
+            {
+                series = series.Where(s => s.Status.Equals(status, StringComparison.OrdinalIgnoreCase));
+            }
+            var result = series.Select(MapToSeriesDto).ToList();
+            return Ok(ApiResponse<IEnumerable<SeriesDto>>.Success(result, "Lấy danh sách tất cả bộ truyện thành công."));
+        }
+
         [HttpGet("{id}")]
         public async Task<ActionResult<ApiResponse<SeriesDto>>> GetSeriesById([FromRoute] int id)
         {

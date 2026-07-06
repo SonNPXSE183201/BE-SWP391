@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.OpenApi.Models;
+using System.Linq;
 
 namespace BuildingBlocks.Web
 {
@@ -30,6 +31,7 @@ namespace BuildingBlocks.Web
                     { securityScheme, new List<string>() }
                 };
                 c.AddSecurityRequirement(securityRequirement);
+                c.ResolveConflictingActions(apiDescriptions => apiDescriptions.First());
             });
             return services;
         }
