@@ -110,6 +110,11 @@ namespace MangaPublishingSystem.Application.Services.Auth
                 Email = user.Email,
                 FullName = user.FullName,
                 RoleName = user.Role.RoleName,
+                AvatarUrl = user.AvatarUrl,
+                PenName = user.PenName,
+                PortfolioUrl = user.PortfolioUrl,
+                Skills = user.Skills,
+                PhoneNumber = user.PhoneNumber,
                 Token = token,
                 RefreshToken = refreshTokenString
             };
@@ -368,6 +373,11 @@ namespace MangaPublishingSystem.Application.Services.Auth
                 Email = user.Email,
                 FullName = user.FullName,
                 RoleName = user.Role.RoleName,
+                AvatarUrl = user.AvatarUrl,
+                PenName = user.PenName,
+                PortfolioUrl = user.PortfolioUrl,
+                Skills = user.Skills,
+                PhoneNumber = user.PhoneNumber,
                 Token = newAccessToken,
                 RefreshToken = newRefreshTokenString
             };

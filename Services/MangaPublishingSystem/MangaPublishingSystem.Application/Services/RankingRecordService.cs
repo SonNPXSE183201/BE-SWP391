@@ -35,7 +35,7 @@ namespace MangaPublishingSystem.Application.Services
 
         public async Task<IEnumerable<RankingRecord>> GetRankingsByPeriodAsync(DateTime period)
         {
-            return await _repository.FindAsync(r => r.RecordedDate.Date == period.Date);
+            return await _repository.FindAsync(r => r.RecordedDate.Date == period.Date, r => r.Series);
         }
     }
 }
