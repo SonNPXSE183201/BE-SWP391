@@ -40,7 +40,29 @@ namespace MangaPublishingSystem.Infrastructure.Services.ExternalAiClients
                     return result;
                 }
 
-                var prompt = $"Dựa vào tóm tắt truyện sau đây, hãy gợi ý cho tôi khoảng 3 đến 5 thể loại (genre/tags) phù hợp nhất bằng tiếng Việt. Chỉ trả về các thể loại ngăn cách bằng dấu phẩy, không giải thích thêm.\nTóm tắt: {synopsis}";
+                var prompt = $@"Dựa vào tóm tắt truyện sau, hãy chọn 3 đến 5 thể loại phù hợp nhất từ danh sách sau:
+- Action (Hành động)
+- Comedy (Hài hước)
+- Romance (Lãng mạn)
+- Fantasy (Kỳ ảo)
+- Sci-Fi (Khoa học viễn tưởng)
+- Horror (Kinh dị)
+- Mystery (Bí ẩn)
+- Thriller (Ly kỳ)
+- Sports (Thể thao)
+- Historical (Lịch sử)
+- Slice of Life (Đời thường)
+- Mecha (Cơ giáp)
+- Isekai (Xuyên không)
+- Shōnen (Nam thiếu niên)
+- Shōjo (Nữ thiếu niên)
+- Seinen (Nam thanh niên)
+- Josei (Nữ thanh niên)
+- Kodomo (Thiếu nhi)
+
+Chỉ trả về MỘT mảng JSON chứa các từ khóa TIẾNG ANH, tuyệt đối không giải thích thêm.
+Ví dụ: [""Action"", ""Romance""]
+Tóm tắt: {synopsis}";
 
                 var requestBody = new
                 {
@@ -53,6 +75,10 @@ namespace MangaPublishingSystem.Infrastructure.Services.ExternalAiClients
                                 new { text = prompt }
                             }
                         }
+                    },
+                    generationConfig = new
+                    {
+                        responseMimeType = "application/json"
                     }
                 };
 
@@ -81,11 +107,21 @@ namespace MangaPublishingSystem.Infrastructure.Services.ExternalAiClients
 
                     if (!string.IsNullOrWhiteSpace(text))
                     {
-                        result.Tags = text.Split(',')
-                            .Select(t => t.Trim())
-                            .Where(t => !string.IsNullOrEmpty(t))
-                            .ToList();
-                        result.Success = true;
+                        try 
+                        {
+                            result.Tags = JsonSerializer.Deserialize<List<string>>(text) ?? new List<string>();
+                            result.Success = true;
+                        }
+                        catch (JsonException ex)
+                        {
+                            _logger.LogError(ex, "Failed to parse Gemini JSON output: " + text);
+                            // Fallback if the model somehow returned comma separated despite the prompt
+                            result.Tags = text.Split(',')
+                                .Select(t => t.Trim().Trim('"').Trim('[').Trim(']'))
+                                .Where(t => !string.IsNullOrEmpty(t))
+                                .ToList();
+                            result.Success = true;
+                        }
                     }
                 }
             }

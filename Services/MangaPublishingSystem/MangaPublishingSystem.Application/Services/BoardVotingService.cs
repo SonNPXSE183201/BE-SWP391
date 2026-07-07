@@ -378,6 +378,13 @@ namespace MangaPublishingSystem.Application.Services
                 ? $"Chủ tịch HĐ = {thresholds.ChairWeight} phiếu ({chairName}). "
                 : $"Chủ tịch HĐ = {thresholds.ChairWeight} phiếu. ";
 
+            var rulesSummary = thresholds.BoardMemberCount < 3
+                ? $"Hội đồng hiện chỉ có {thresholds.BoardMemberCount} thành viên hoạt động (cần tối thiểu 3). Không thể biểu quyết cho đến khi đủ thành viên."
+                : $"Cần ≥{thresholds.ApproveRequired}/{thresholds.TotalWeight} trọng số phiếu Đồng ý ({config.ApprovalThresholdPercent}%). " +
+                    chairSummary +
+                    "TV thường = 1 phiếu. " +
+                    $"Tự chốt sau {config.AutoResolveHours}h nếu chưa đủ ngưỡng.";
+
             return new BoardVotingRulesDto
             {
                 BoardMemberCount = thresholds.BoardMemberCount,
@@ -391,11 +398,7 @@ namespace MangaPublishingSystem.Application.Services
                 ChairIsValid = chairIsValid,
                 ChairInvalidWarning = chairWarning,
                 EffectiveChairUserId = effectiveChairId,
-                RulesSummary =
-                    $"Cần ≥{thresholds.ApproveRequired}/{thresholds.TotalWeight} trọng số phiếu Đồng ý ({config.ApprovalThresholdPercent}%). " +
-                    chairSummary +
-                    "TV thường = 1 phiếu. " +
-                    $"Tự chốt sau {config.AutoResolveHours}h nếu chưa đủ ngưỡng."
+                RulesSummary = rulesSummary
             };
         }
 

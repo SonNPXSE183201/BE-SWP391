@@ -77,6 +77,27 @@ namespace MangaPublishingSystem.Presentation.Controllers.Pages
         }
 
         [Authorize(Roles = "Mangaka")]
+        [HttpPost("{id}/unmark-ready")]
+        public async Task<ActionResult<ApiResponse<PageDto>>> UnmarkPageAsReady([FromRoute] int id)
+        {
+            var page = await _chapterService.UnmarkPageAsReadyAsync(id, CurrentUserId);
+            var result = new PageDto
+            {
+                Id = page.Id,
+                ChapterId = page.ChapterId,
+                PageNumber = page.PageNumber,
+                RawImageUrl = page.RawImageUrl,
+                CompositeImageUrl = page.CompositeImageUrl,
+                BaseLayerUrl = page.BaseLayerUrl,
+                Status = page.Status,
+                IsApproved = page.IsApproved,
+                CreateAt = page.CreateAt,
+                UpdateAt = page.UpdateAt
+            };
+            return Ok(ApiResponse<PageDto>.Success(result, "Đã bỏ đánh dấu sẵn sàng."));
+        }
+
+        [Authorize(Roles = "Mangaka")]
         [HttpPost("{id}/replace-image")]
         public async Task<ActionResult<ApiResponse<PageDto>>> ReplacePageImage(
             [FromRoute] int id,

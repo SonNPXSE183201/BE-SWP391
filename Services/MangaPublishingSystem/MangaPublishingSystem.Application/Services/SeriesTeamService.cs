@@ -164,11 +164,19 @@ namespace MangaPublishingSystem.Application.Services
                 existing = invite;
             }
 
+            bool isActiveMemberGettingNewRole = existing.Status == "Active";
+            string notificationType = isActiveMemberGettingNewRole ? "Series_Team_Role_Assigned" : "Series_Team_Invite";
+            string notificationTitle = isActiveMemberGettingNewRole ? "Vai trò mới trong dự án" : "Lời mời tham gia dự án";
+            string notificationContent = isActiveMemberGettingNewRole
+                ? $"Bạn được giao thêm vai trò {dto.RoleInTeam.Trim()} trong nhóm dự án \"{series.Title}\"."
+                : $"Bạn được mời tham gia nhóm dự án \"{series.Title}\" với vai trò {dto.RoleInTeam.Trim()}.";
+            string notificationLink = isActiveMemberGettingNewRole ? "/assistant/tasks" : $"/assistant/series-invites/{seriesId}";
+
             var notif = new Notification
             {
                 UserId = dto.AssistantId,
-                Content = $"Bạn được mời tham gia nhóm dự án \"{series.Title}\" với vai trò {dto.RoleInTeam.Trim()}.",
-                Type = "Series_Team_Invite",
+                Content = notificationContent,
+                Type = notificationType,
                 IsRead = false,
             };
             await _notificationRepository.AddAsync(notif);
@@ -177,9 +185,9 @@ namespace MangaPublishingSystem.Application.Services
             var payload = new NotificationPayload
             {
                 Id = notif.Id,
-                Title = "Lời mời tham gia dự án",
+                Title = notificationTitle,
                 Message = notif.Content,
-                Link = $"/assistant/series-invites/{seriesId}",
+                Link = notificationLink,
                 Type = notif.Type,
                 CreateAt = notif.CreateAt,
             };
@@ -213,6 +221,17 @@ namespace MangaPublishingSystem.Application.Services
                 };
                 await _notificationRepository.AddAsync(declineNotif);
                 await _unitOfWork.SaveChangesAsync();
+
+                await _notificationPublisher.PublishNotificationPayloadAsync(membership.Series.MangakaId, new NotificationPayload
+                {
+                    Id = declineNotif.Id,
+                    Title = "Trợ lý từ chối tham gia",
+                    Message = declineNotif.Content,
+                    Link = $"/mangaka/series/{seriesId}",
+                    Type = declineNotif.Type,
+                    CreateAt = declineNotif.CreateAt,
+                });
+
                 return MapToDto(membership);
             }
 
@@ -230,6 +249,16 @@ namespace MangaPublishingSystem.Application.Services
             };
             await _notificationRepository.AddAsync(acceptNotif);
             await _unitOfWork.SaveChangesAsync();
+
+            await _notificationPublisher.PublishNotificationPayloadAsync(membership.Series.MangakaId, new NotificationPayload
+            {
+                Id = acceptNotif.Id,
+                Title = "Trợ lý tham gia dự án",
+                Message = acceptNotif.Content,
+                Link = $"/mangaka/series/{seriesId}",
+                Type = acceptNotif.Type,
+                CreateAt = acceptNotif.CreateAt,
+            });
 
             return MapToDto(membership);
         }

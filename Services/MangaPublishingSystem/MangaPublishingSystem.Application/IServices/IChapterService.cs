@@ -32,6 +32,8 @@ namespace MangaPublishingSystem.Application.IServices
         /// </summary>
         Task<Page> MarkPageAsReadyAsync(int pageId, int mangakaId);
 
+        Task<Page> UnmarkPageAsReadyAsync(int pageId, int mangakaId);
+
         /// <summary>
         /// Thay thế ảnh bản thảo của một trang đã tồn tại (Mangaka tự sửa sau feedback Editor).
         /// </summary>
