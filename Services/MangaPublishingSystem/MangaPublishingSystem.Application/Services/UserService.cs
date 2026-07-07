@@ -236,7 +236,20 @@ namespace MangaPublishingSystem.Application.Services
             await _boardVotingService.ClearChairIfUserDeactivatedAsync(id);
             await _boardVotingService.NotifyBoardMembershipChangedAsync(id);
 
-            return MapUserResponse(user, "Khóa tài khoản thành công.");
+            var message = "Khóa tài khoản thành công.";
+            var config = await _boardVotingService.GetConfigAsync();
+            if (user.RoleId == config.BoardRoleId)
+            {
+                var activeBoardMembersCount = (await _userRepository.FindAsync(u => 
+                    u.RoleId == config.BoardRoleId && u.Status == UserStatus.Active)).Count();
+                
+                if (activeBoardMembersCount < 3)
+                {
+                    message += $" Cảnh báo: Hội đồng hiện chỉ còn {activeBoardMembersCount} thành viên hoạt động. Biểu quyết sẽ bị gián đoạn cho đến khi có đủ tối thiểu 3 thành viên.";
+                }
+            }
+
+            return MapUserResponse(user, message);
         }
 
         public async Task<UserResponseDto> UnlockUserAsync(int id)

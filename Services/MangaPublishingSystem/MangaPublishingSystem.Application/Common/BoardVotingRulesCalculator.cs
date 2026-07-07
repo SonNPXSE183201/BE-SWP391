@@ -25,7 +25,13 @@ namespace MangaPublishingSystem.Application.Common
         {
             if (boardMemberCount < 3)
             {
-                throw new InvalidOperationException("Hội đồng phải có ít nhất 3 thành viên (N >= 3).");
+                return new BoardVotingThresholds
+                {
+                    BoardMemberCount = boardMemberCount,
+                    ChairWeight = 0,
+                    TotalWeight = 0,
+                    ApproveRequired = 0
+                };
             }
 
             var n = boardMemberCount;
@@ -75,6 +81,12 @@ namespace MangaPublishingSystem.Application.Common
             int votesCast,
             int totalMembers)
         {
+            // Không đủ thành viên hội đồng để biểu quyết hợp lệ
+            if (totalMembers < 3)
+            {
+                return BoardVoteResolution.Pending;
+            }
+
             // Bug-005: Đợi đủ tất cả thành viên vote xong mới chốt kết quả (trừ khi tự động chốt do hết hạn)
             if (votesCast < totalMembers)
             {
@@ -94,6 +106,11 @@ namespace MangaPublishingSystem.Application.Common
             int approveWeight,
             int rejectWeight)
         {
+            if (thresholds.BoardMemberCount < 3)
+            {
+                return BoardVoteResolution.Pending;
+            }
+
             if (approveWeight > rejectWeight)
             {
                 return BoardVoteResolution.Approved;
