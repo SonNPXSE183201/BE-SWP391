@@ -334,11 +334,11 @@ SET IDENTITY_INSERT dbo.Page ON;
 INSERT INTO dbo.Page
     (PageId, ChapterId, PageNumber, RawImageUrl, CompositeImageUrl, BaseLayerUrl, Status, IsApproved, CreateAt)
 VALUES
-(1, 1, 1, N'http://localhost:9000/manga-publishing/series-1/chap-1/page-1-raw.jpg',       N'http://localhost:9000/manga-publishing/series-1/chap-1/page-1-composite.jpg', N'http://localhost:9000/manga-publishing/series-1/chap-1/page-1-base.jpg', N'Composited', 1, GETUTCDATE()),
-(2, 1, 2, N'http://localhost:9000/manga-publishing/series-1/chap-1/page-2-raw.jpg',       N'http://localhost:9000/manga-publishing/series-1/chap-1/page-2-composite.jpg', N'http://localhost:9000/manga-publishing/series-1/chap-1/page-2-base.jpg', N'Composited', 1, GETUTCDATE()),
-(3, 1, 3, N'http://localhost:9000/manga-publishing/series-1/chap-1/page-3-raw.jpg',       N'http://localhost:9000/manga-publishing/series-1/chap-1/page-3-composite.jpg', N'http://localhost:9000/manga-publishing/series-1/chap-1/page-3-base.jpg', N'Composited', 1, GETUTCDATE()),
-(4, 2, 1, N'http://localhost:9000/manga-publishing/series-1/chap-2/page-1-raw.jpg',       NULL, N'http://localhost:9000/manga-publishing/series-1/chap-2/page-1-base.jpg', N'Pending', 0, GETUTCDATE()),
-(5, 2, 2, N'http://localhost:9000/manga-publishing/series-1/chap-2/page-2-raw.jpg',       NULL, N'http://localhost:9000/manga-publishing/series-1/chap-2/page-2-base.jpg', N'Pending', 0, GETUTCDATE());
+(1, 1, 1, N'http://localhost:9000/manga-publishing/chapters/1/page-1-raw.jpg',       N'http://localhost:9000/manga-publishing/pages/1/page-1-composite.jpg', N'http://localhost:9000/manga-publishing/pages/1/page-1-base.jpg', N'Composited', 1, GETUTCDATE()),
+(2, 1, 2, N'http://localhost:9000/manga-publishing/chapters/1/page-2-raw.jpg',       N'http://localhost:9000/manga-publishing/pages/2/page-2-composite.jpg', N'http://localhost:9000/manga-publishing/pages/2/page-2-base.jpg', N'Composited', 1, GETUTCDATE()),
+(3, 1, 3, N'http://localhost:9000/manga-publishing/chapters/1/page-3-raw.jpg',       N'http://localhost:9000/manga-publishing/pages/3/page-3-composite.jpg', N'http://localhost:9000/manga-publishing/pages/3/page-3-base.jpg', N'Composited', 1, GETUTCDATE()),
+(4, 2, 1, N'http://localhost:9000/manga-publishing/chapters/2/page-1-raw.jpg',       NULL, N'http://localhost:9000/manga-publishing/pages/4/page-1-base.jpg', N'Pending', 0, GETUTCDATE()),
+(5, 2, 2, N'http://localhost:9000/manga-publishing/chapters/2/page-2-raw.jpg',       NULL, N'http://localhost:9000/manga-publishing/pages/5/page-2-base.jpg', N'Pending', 0, GETUTCDATE());
 SET IDENTITY_INSERT dbo.Page OFF;
 GO
 

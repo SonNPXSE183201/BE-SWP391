@@ -41,14 +41,46 @@ namespace MangaPublishingSystem.Presentation.Extensions
             return reader.GetDateTime();
         }
 
+        /// <summary>
+        /// Chuyển DateTime sang giờ Việt Nam (UTC+7) trước khi serialize.
+        /// EF Core đọc từ SQL Server trả về Kind = Unspecified (thực tế là UTC),
+        /// nên cần coi Unspecified = UTC.
+        /// </summary>
         public override void Write(Utf8JsonWriter writer, DateTime value, JsonSerializerOptions options)
         {
-            // Convert to Vietnam timezone (UTC+7) for presentation if it is UTC
-            var localTime = value.Kind == DateTimeKind.Utc 
-                ? TimeZoneInfo.ConvertTimeFromUtc(value, VietnamTimeZone) 
-                : value;
+            // EF Core trả Kind = Unspecified cho DateTime từ SQL Server → coi là UTC
+            var localTime = value.Kind == DateTimeKind.Local
+                ? value
+                : TimeZoneInfo.ConvertTimeFromUtc(
+                      DateTime.SpecifyKind(value, DateTimeKind.Utc),
+                      VietnamTimeZone);
 
             writer.WriteStringValue(localTime.ToString(_format));
         }
     }
+
+    /// <summary>
+    /// Converter cho DateTime? — cần thiết vì JsonConverter&lt;DateTime&gt; không tự xử lý Nullable.
+    /// </summary>
+    public class NullableDateTimeJsonConverter : JsonConverter<DateTime?>
+    {
+        private readonly DateTimeJsonConverter _inner = new();
+
+        public override DateTime? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+        {
+            if (reader.TokenType == JsonTokenType.Null) return null;
+            return _inner.Read(ref reader, typeof(DateTime), options);
+        }
+
+        public override void Write(Utf8JsonWriter writer, DateTime? value, JsonSerializerOptions options)
+        {
+            if (value == null)
+            {
+                writer.WriteNullValue();
+                return;
+            }
+            _inner.Write(writer, value.Value, options);
+        }
+    }
 }
+

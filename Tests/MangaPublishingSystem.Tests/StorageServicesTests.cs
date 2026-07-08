@@ -343,7 +343,7 @@ namespace MangaPublishingSystem.Tests
             var mockStorage = new Mock<IStorageService>();
             var expectedUrl = "http://localhost:5010/uploads/xyz.png";
 
-            mockStorage.Setup(s => s.UploadFileAsync(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<string>()))
+            mockStorage.Setup(s => s.UploadFileAsync(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
                        .ReturnsAsync(expectedUrl);
 
             var controller = new UploadController(mockStorage.Object);
@@ -368,7 +368,7 @@ namespace MangaPublishingSystem.Tests
         public async Task UploadFile_WhenStorageThrowsException_Returns500()
         {
             var mockStorage = new Mock<IStorageService>();
-            mockStorage.Setup(s => s.UploadFileAsync(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<string>()))
+            mockStorage.Setup(s => s.UploadFileAsync(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
                        .ThrowsAsync(new Exception("Lỗi kết nối MinIO"));
 
             var controller = new UploadController(mockStorage.Object);
@@ -393,7 +393,7 @@ namespace MangaPublishingSystem.Tests
         public async Task UploadFile_StorageServiceIsCalled_WithCorrectParameters()
         {
             var mockStorage = new Mock<IStorageService>();
-            mockStorage.Setup(s => s.UploadFileAsync(It.IsAny<Stream>(), "original-name.jpg", "image/jpeg"))
+            mockStorage.Setup(s => s.UploadFileAsync(It.IsAny<Stream>(), "original-name.jpg", "image/jpeg", It.IsAny<string>()))
                        .ReturnsAsync("http://example.com/uploads/uuid.jpg")
                        .Verifiable();
 
@@ -408,7 +408,7 @@ namespace MangaPublishingSystem.Tests
 
             await controller.UploadFile(mockFile.Object);
 
-            mockStorage.Verify(s => s.UploadFileAsync(It.IsAny<Stream>(), "original-name.jpg", "image/jpeg"), Times.Once);
+            mockStorage.Verify(s => s.UploadFileAsync(It.IsAny<Stream>(), "original-name.jpg", "image/jpeg", It.IsAny<string>()), Times.Once);
         }
     }
 

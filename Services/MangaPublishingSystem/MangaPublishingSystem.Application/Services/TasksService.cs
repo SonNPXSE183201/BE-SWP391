@@ -580,7 +580,7 @@ namespace MangaPublishingSystem.Application.Services
             var compositeBytes = await GetCompositedPageAsync(pageId);
             var fileName = $"pages/{pageId}/composite-{DateTime.UtcNow:yyyyMMddHHmmss}.png";
             using var ms = new MemoryStream(compositeBytes);
-            var compositeUrl = await _storageService.UploadFileAsync(ms, fileName, "image/png");
+            var compositeUrl = await _storageService.UploadFileAsync(ms, fileName, "image/png", $"pages/{pageId}");
 
             var page = await _pageRepository.GetByIdAsync(pageId);
             if (page == null)

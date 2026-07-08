@@ -17,7 +17,7 @@ namespace MangaPublishingSystem.Infrastructure.Services
             _settings = options.Value;
         }
 
-        public async Task<string> UploadFileAsync(Stream fileStream, string fileName, string contentType)
+        public async Task<string> UploadFileAsync(Stream fileStream, string fileName, string contentType, string folderPath = "")
         {
             if (string.IsNullOrEmpty(_settings.Bucket))
             {
@@ -25,9 +25,10 @@ namespace MangaPublishingSystem.Infrastructure.Services
             }
 
             var uniqueFileName = Guid.NewGuid().ToString() + Path.GetExtension(fileName);
+            var folder = string.IsNullOrEmpty(folderPath) ? "uploads" : folderPath.TrimEnd('/');
             
             var task = new FirebaseStorage(_settings.Bucket)
-                .Child("uploads")
+                .Child(folder)
                 .Child(uniqueFileName)
                 .PutAsync(fileStream);
 
