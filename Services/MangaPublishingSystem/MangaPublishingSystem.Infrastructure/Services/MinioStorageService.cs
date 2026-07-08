@@ -31,16 +31,17 @@ namespace MangaPublishingSystem.Infrastructure.Services
             _minioClient = builder.Build();
         }
 
-        public async Task<string> UploadFileAsync(Stream fileStream, string fileName, string contentType)
+        public async Task<string> UploadFileAsync(Stream fileStream, string fileName, string contentType, string folderPath = "")
         {
             var uniqueFileName = Guid.NewGuid().ToString() + Path.GetExtension(fileName);
+            var objectName = string.IsNullOrEmpty(folderPath) ? uniqueFileName : $"{folderPath.TrimEnd('/')}/{uniqueFileName}";
 
             await EnsureBucketReadyAsync().ConfigureAwait(false);
 
             // Upload file
             var putObjectArgs = new PutObjectArgs()
                 .WithBucket(_settings.BucketName)
-                .WithObject(uniqueFileName)
+                .WithObject(objectName)
                 .WithStreamData(fileStream)
                 .WithObjectSize(fileStream.Length)
                 .WithContentType(contentType);
@@ -49,7 +50,7 @@ namespace MangaPublishingSystem.Infrastructure.Services
 
             // Trả về url truy cập tệp
             var scheme = _settings.Secure ? "https" : "http";
-            return $"{scheme}://{_settings.Endpoint}/{_settings.BucketName}/{uniqueFileName}";
+            return $"{scheme}://{_settings.Endpoint}/{_settings.BucketName}/{objectName}";
         }
 
         private async Task EnsureBucketReadyAsync()

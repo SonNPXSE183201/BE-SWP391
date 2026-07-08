@@ -31,7 +31,7 @@ namespace MangaPublishingSystem.Presentation.Controllers.Upload
             {
                 using (var stream = file.OpenReadStream())
                 {
-                    var fileUrl = await _storageService.UploadFileAsync(stream, file.FileName, file.ContentType);
+                    var fileUrl = await _storageService.UploadFileAsync(stream, file.FileName, file.ContentType, "uploads");
                     return Ok(ApiResponse<string>.Success(fileUrl, "Tải lên file thành công."));
                 }
             }

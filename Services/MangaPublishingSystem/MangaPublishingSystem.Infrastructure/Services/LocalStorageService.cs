@@ -15,9 +15,10 @@ namespace MangaPublishingSystem.Infrastructure.Services
             _httpContextAccessor = httpContextAccessor;
         }
 
-        public async Task<string> UploadFileAsync(Stream fileStream, string fileName, string contentType)
+        public async Task<string> UploadFileAsync(Stream fileStream, string fileName, string contentType, string folderPath = "")
         {
-            var uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads");
+            var folder = string.IsNullOrEmpty(folderPath) ? "uploads" : folderPath.TrimEnd('/');
+            var uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", folder.Replace("/", "\\"));
             if (!Directory.Exists(uploadsFolder))
             {
                 Directory.CreateDirectory(uploadsFolder);
@@ -32,7 +33,7 @@ namespace MangaPublishingSystem.Infrastructure.Services
             }
             var request = _httpContextAccessor.HttpContext?.Request;
             var baseUrl = request != null ? $"{request.Scheme}://{request.Host}" : "http://localhost:5010";
-            return $"{baseUrl}/uploads/{uniqueFileName}";
+            return $"{baseUrl}/{folder}/{uniqueFileName}";
         }
 
         public Task<bool> DeleteFileAsync(string fileUrl)
@@ -42,8 +43,8 @@ namespace MangaPublishingSystem.Infrastructure.Services
                 if (string.IsNullOrEmpty(fileUrl)) return Task.FromResult(false);
 
                 var uri = new Uri(fileUrl);
-                var fileName = Path.GetFileName(uri.LocalPath);
-                var filePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", fileName);
+                var localPath = uri.LocalPath.TrimStart('/');
+                var filePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", localPath.Replace("/", "\\"));
 
                 if (File.Exists(filePath))
                 {

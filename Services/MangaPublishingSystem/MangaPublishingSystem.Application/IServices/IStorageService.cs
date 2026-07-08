@@ -8,7 +8,7 @@ namespace MangaPublishingSystem.Application.IServices
         /// <summary>
         /// Tải file lên bộ lưu trữ và trả về URL tuyệt đối để truy cập công cộng.
         /// </summary>
-        Task<string> UploadFileAsync(Stream fileStream, string fileName, string contentType);
+        Task<string> UploadFileAsync(Stream fileStream, string fileName, string contentType, string folderPath = "");
 
         /// <summary>
         /// Xóa file khỏi bộ lưu trữ bằng đường dẫn URL hoặc tên file.

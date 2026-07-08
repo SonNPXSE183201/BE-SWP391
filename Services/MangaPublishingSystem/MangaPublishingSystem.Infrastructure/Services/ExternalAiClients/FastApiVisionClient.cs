@@ -58,7 +58,7 @@ namespace MangaPublishingSystem.Infrastructure.Services.ExternalAiClients
                     var imageStream = await response.Content.ReadAsStreamAsync(cancellationToken);
                     
                     string fileName = $"segmented_{Guid.NewGuid():N}.jpg";
-                    string uploadedUrl = await _storageService.UploadFileAsync(imageStream, fileName, "image/jpeg");
+                    string uploadedUrl = await _storageService.UploadFileAsync(imageStream, fileName, "image/jpeg", "ai-processed");
 
                     return new AiColorizationResultDto 
                     { 
@@ -91,7 +91,7 @@ namespace MangaPublishingSystem.Infrastructure.Services.ExternalAiClients
                     
                     // Upload the colorized image back to MinIO via IStorageService
                     string fileName = $"colorized_{Guid.NewGuid():N}.png";
-                    string uploadedUrl = await _storageService.UploadFileAsync(imageStream, fileName, "image/png");
+                    string uploadedUrl = await _storageService.UploadFileAsync(imageStream, fileName, "image/png", "ai-processed");
 
                     return new AiColorizationResultDto 
                     { 

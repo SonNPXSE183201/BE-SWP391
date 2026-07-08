@@ -497,7 +497,7 @@ namespace MangaPublishingSystem.Application.Services
                     var contentType = string.IsNullOrWhiteSpace(file.ContentType)
                         ? "application/octet-stream"
                         : file.ContentType;
-                    var imageUrl = await _storageService.UploadFileAsync(stream, file.FileName, contentType);
+                    var imageUrl = await _storageService.UploadFileAsync(stream, file.FileName, contentType, $"chapters/{chapter.Id}");
 
                     var page = new Page
                     {
