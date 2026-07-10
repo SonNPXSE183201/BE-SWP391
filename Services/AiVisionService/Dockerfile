@@ -12,4 +12,8 @@ RUN pip install --no-cache-dir -r /tmp/requirements.txt
 WORKDIR /app
 COPY . /app
 
+# Tự động tạo thư mục và tải model weights cho Colorizer
+RUN mkdir -p manga_colorization/denoising/models && \
+    python download_unet.py
+
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
