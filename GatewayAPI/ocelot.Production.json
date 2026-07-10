@@ -5,8 +5,8 @@
       "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [
         {
-          "Host": "ai-service",
-          "Port": 8000
+          "Host": "manga-api",
+          "Port": 8080
         }
       ],
       "UpstreamPathTemplate": "/api/v1/ai/{everything}",
