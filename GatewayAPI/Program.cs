@@ -34,11 +34,13 @@ builder.Services.AddOcelot(builder.Configuration);
 var app = builder.Build();
 
 // --- PIPELINE ---
-if (app.Environment.IsDevelopment() || app.Environment.EnvironmentName == "Docker")
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
+// if (app.Environment.IsDevelopment() || app.Environment.EnvironmentName == "Docker")
+// {
+//     app.UseSwagger();
+//     app.UseSwaggerUI();
+// }
+app.UseSwagger();
+app.UseSwaggerUI();
 
 app.UseHttpsRedirection();
 app.UseCors("Default");
