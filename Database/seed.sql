@@ -107,6 +107,7 @@ DBCC CHECKIDENT ('dbo.[User]', RESEED, 0);
 DBCC CHECKIDENT ('dbo.Role', RESEED, 0);
 GO
 
+-- Run Script Seed Azure DB
 -- ─────────────────────────────────────────────────────────────────────────
 -- PHASE 2: ROLES
 -- ─────────────────────────────────────────────────────────────────────────

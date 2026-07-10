@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  gateway-api:
+    build:
+      context: .
+      dockerfile: GatewayAPI/Dockerfile
+    ports:
+      - "5000:8080" # ASP.NET Core 8 defaults to 8080 in container
+    depends_on:
+      - manga-api
+      - ai-service
+    env_file:
+      - .env
+
+  manga-api:
+    build:
+      context: .
+      dockerfile: Services/MangaPublishingSystem/MangaPublishingSystem.Presentation/Dockerfile
+    ports:
+      - "5010:8080"
+    env_file:
+      - .env
+      
+  ai-service:
+    build:
+      context: ./Services/AiVisionService
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
