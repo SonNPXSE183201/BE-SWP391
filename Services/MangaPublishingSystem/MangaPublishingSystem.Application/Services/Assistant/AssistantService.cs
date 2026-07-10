@@ -9,6 +9,7 @@ using MangaPublishingSystem.Application.DTOs.Assistant;
 using MangaPublishingSystem.Application.IRepositories;
 using MangaPublishingSystem.Application.IServices;
 using MangaPublishingSystem.Domain.Entities;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace MangaPublishingSystem.Application.Services.Assistant
 {
@@ -21,6 +22,7 @@ namespace MangaPublishingSystem.Application.Services.Assistant
         private readonly ITransactionRepository _transactionRepository;
         private readonly ISeriesAssistantRepository _seriesAssistantRepository;
         private readonly IUnitOfWork _unitOfWork;
+        private readonly IMemoryCache _cache;
 
         public AssistantService(
             IAssistantRepository assistantRepository,
@@ -29,7 +31,8 @@ namespace MangaPublishingSystem.Application.Services.Assistant
             IPortfolioSampleRepository portfolioSampleRepository,
             ITransactionRepository transactionRepository,
             ISeriesAssistantRepository seriesAssistantRepository,
-            IUnitOfWork unitOfWork)
+            IUnitOfWork unitOfWork,
+            IMemoryCache cache)
         {
             _assistantRepository = assistantRepository;
             _userRepository = userRepository;
@@ -38,6 +41,7 @@ namespace MangaPublishingSystem.Application.Services.Assistant
             _transactionRepository = transactionRepository;
             _seriesAssistantRepository = seriesAssistantRepository;
             _unitOfWork = unitOfWork;
+            _cache = cache;
         }
 
         public async Task<IEnumerable<AssistantInviteDto>> GetMyInvitesAsync(int assistantId)
@@ -69,7 +73,19 @@ namespace MangaPublishingSystem.Application.Services.Assistant
 
         public async Task<PagedResult<AssistantResponseDto>> GetActiveAssistantsAsync(AssistantFilterDto filter)
         {
-            return await _assistantRepository.GetActiveAssistantsAsync(filter);
+            string cacheKey = $"ActiveAssistants_{filter.PageNumber}_{filter.PageSize}_{filter.SearchTerm?.ToLower()}";
+
+            if (!_cache.TryGetValue(cacheKey, out PagedResult<AssistantResponseDto>? pagedResult))
+            {
+                pagedResult = await _assistantRepository.GetActiveAssistantsAsync(filter);
+                
+                var cacheEntryOptions = new MemoryCacheEntryOptions()
+                    .SetAbsoluteExpiration(TimeSpan.FromMinutes(3));
+
+                _cache.Set(cacheKey, pagedResult, cacheEntryOptions);
+            }
+
+            return pagedResult!;
         }
 
         public async Task<AssistantProfileDto> GetProfileAsync(int assistantId)

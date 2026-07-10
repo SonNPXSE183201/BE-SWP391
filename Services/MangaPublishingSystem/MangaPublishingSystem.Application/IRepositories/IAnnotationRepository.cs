@@ -8,5 +8,6 @@ namespace MangaPublishingSystem.Application.IRepositories
     {
         Task<IEnumerable<Annotation>> GetAnnotationsWithDetailsAsync(int? pageId, int? taskVersionId);
         Task<Annotation?> GetAnnotationWithDetailsByIdAsync(int id);
+        Task<bool> IsMangakaOfAnnotationAsync(int annotationId, int mangakaId);
     }
 }

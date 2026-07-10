@@ -283,7 +283,7 @@ namespace MangaPublishingSystem.Application.Services
                 var contentType = string.IsNullOrWhiteSpace(file.ContentType)
                     ? "application/octet-stream"
                     : file.ContentType;
-                var imageUrl = await _storageService.UploadFileAsync(stream, file.FileName, contentType);
+                var imageUrl = await _storageService.UploadFileAsync(stream, file.FileName, contentType, $"chapters/{chapter.Id}");
 
                 var page = new Page
                 {
@@ -389,7 +389,11 @@ namespace MangaPublishingSystem.Application.Services
             if (regions.Count > 0)
             {
                 var regionIds = regions.Select(r => r.Id).ToList();
-                var tasks = (await _tasksRepository.FindAsync(t => regionIds.Contains(t.RegionId))).ToList();
+                var allTasks = (await _tasksRepository.FindAsync(t => regionIds.Contains(t.RegionId))).ToList();
+
+                var tasks = allTasks.GroupBy(t => t.RegionId)
+                                    .Select(g => g.OrderByDescending(t => t.Id).First())
+                                    .ToList();
 
                 if (tasks.Any(t => OpenTaskStatuses.Contains(t.Status)))
                 {
@@ -420,6 +424,42 @@ namespace MangaPublishingSystem.Application.Services
             }
 
             page.Status = "Composited";
+            _pageRepository.Update(page);
+            await _unitOfWork.SaveChangesAsync();
+            return page;
+        }
+
+        public async Task<Page> UnmarkPageAsReadyAsync(int pageId, int mangakaId)
+        {
+            var page = await _pageRepository.GetByIdAsync(pageId);
+            if (page == null)
+            {
+                throw new NotFoundException("Trang truyện không tồn tại.");
+            }
+
+            var chapter = await _chapterRepository.GetByIdAsync(page.ChapterId);
+            if (chapter == null)
+            {
+                throw new NotFoundException("Không tìm thấy chương truyện.");
+            }
+
+            var series = await _seriesRepository.GetByIdAsync(chapter.SeriesId);
+            if (series == null)
+            {
+                throw new NotFoundException("Không tìm thấy bộ truyện.");
+            }
+
+            if (series.MangakaId != mangakaId)
+            {
+                throw new ForbiddenException("Bạn không phải tác giả của bộ truyện này.");
+            }
+
+            if (!SubmitAllowedChapterStatuses.Contains(chapter.Status))
+            {
+                throw new ConflictException("Chapter không còn ở trạng thái cho phép chỉnh sửa.");
+            }
+
+            page.Status = "InProgress";
             _pageRepository.Update(page);
             await _unitOfWork.SaveChangesAsync();
             return page;
@@ -493,7 +533,7 @@ namespace MangaPublishingSystem.Application.Services
             var contentType = string.IsNullOrWhiteSpace(file.ContentType)
                 ? "application/octet-stream"
                 : file.ContentType;
-            var imageUrl = await _storageService.UploadFileAsync(stream, file.FileName, contentType);
+            var imageUrl = await _storageService.UploadFileAsync(stream, file.FileName, contentType, $"pages/{pageId}");
 
             page.RawImageUrl = imageUrl;
             page.BaseLayerUrl = imageUrl;
@@ -630,9 +670,14 @@ namespace MangaPublishingSystem.Application.Services
             var regionsByPage = regions.GroupBy(r => r.PageId).ToDictionary(g => g.Key, g => g.ToList());
 
             var regionIds = regions.Select(r => r.Id).ToList();
-            var tasks = regionIds.Count == 0
+            var allTasks = regionIds.Count == 0
                 ? new List<Tasks>()
                 : (await _tasksRepository.FindAsync(t => regionIds.Contains(t.RegionId))).ToList();
+            
+            var tasks = allTasks.GroupBy(t => t.RegionId)
+                                .Select(g => g.OrderByDescending(t => t.Id).First())
+                                .ToList();
+
             var tasksByRegion = tasks.GroupBy(t => t.RegionId).ToDictionary(g => g.Key, g => g.ToList());
 
             openTaskCount = tasks.Count(t => OpenTaskStatuses.Contains(t.Status));

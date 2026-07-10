@@ -121,9 +121,15 @@ namespace MangaPublishingSystem.Application.Services
                 throw new NotFoundException("Chú thích không tồn tại.");
             }
 
-            if (annotation.CreatedByUserId != userId)
+            bool isOwner = annotation.CreatedByUserId == userId;
+            if (!isOwner)
             {
-                throw new ForbiddenException("Bạn không có quyền xóa chú thích của người khác.");
+                isOwner = await _annotationRepository.IsMangakaOfAnnotationAsync(id, userId);
+            }
+
+            if (!isOwner)
+            {
+                throw new ForbiddenException("Bạn không có quyền xóa chú thích này.");
             }
 
             _repository.Delete(annotation);

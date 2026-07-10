@@ -31,6 +31,7 @@ PRINT 'Database "MangaPublishing" created successfully.';
 GO
 
 USE MangaPublishing;
+-- Run Script Azure
 GO
 SET QUOTED_IDENTIFIER ON;
 GO
@@ -49,6 +50,7 @@ IF OBJECT_ID('dbo.Chapter', 'U') IS NOT NULL DROP TABLE dbo.Chapter;
 IF OBJECT_ID('dbo.ContractAddendum', 'U') IS NOT NULL DROP TABLE dbo.ContractAddendum;
 IF OBJECT_ID('dbo.Contract', 'U') IS NOT NULL DROP TABLE dbo.Contract;
 IF OBJECT_ID('dbo.BoardVote', 'U') IS NOT NULL DROP TABLE dbo.BoardVote;
+IF OBJECT_ID('dbo.BoardVotingConfig', 'U') IS NOT NULL DROP TABLE dbo.BoardVotingConfig;
 IF OBJECT_ID('dbo.RankingRecord', 'U') IS NOT NULL DROP TABLE dbo.RankingRecord;
 IF OBJECT_ID('dbo.Series', 'U') IS NOT NULL DROP TABLE dbo.Series;
 IF OBJECT_ID('dbo.Notification', 'U') IS NOT NULL DROP TABLE dbo.Notification;

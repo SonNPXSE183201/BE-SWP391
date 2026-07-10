@@ -41,5 +41,26 @@ namespace MangaPublishingSystem.Infrastructure.Repositories
                     .ThenInclude(u => u.Role)
                 .FirstOrDefaultAsync(a => a.Id == id);
         }
+
+        public async Task<bool> IsMangakaOfAnnotationAsync(int annotationId, int mangakaId)
+        {
+            var annotation = await _context.Annotations
+                .Include(a => a.Page)
+                    .ThenInclude(p => p.Chapter)
+                        .ThenInclude(c => c.Series)
+                .Include(a => a.TaskVersion)
+                    .ThenInclude(tv => tv.Task)
+                .FirstOrDefaultAsync(a => a.Id == annotationId);
+
+            if (annotation == null) return false;
+
+            if (annotation.Page?.Chapter?.Series?.MangakaId == mangakaId)
+                return true;
+
+            if (annotation.TaskVersion?.Task?.MangakaId == mangakaId)
+                return true;
+
+            return false;
+        }
     }
 }
