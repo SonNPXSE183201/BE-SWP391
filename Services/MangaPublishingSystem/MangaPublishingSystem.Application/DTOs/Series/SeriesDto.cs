@@ -25,5 +25,9 @@ namespace MangaPublishingSystem.Application.DTOs.Series
         public DateTime? UpdateAt { get; set; }
         public System.Collections.Generic.ICollection<BoardVoteDto>? BoardVotes { get; set; }
         public bool HasContract { get; set; }
+        public int? ContractId { get; set; }
+        public string? ContractStatus { get; set; }
+        public decimal? BaseGenkouryoPrice { get; set; }
+        public DateTime? ContractSignedDate { get; set; }
     }
 }

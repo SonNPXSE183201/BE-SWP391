@@ -227,7 +227,7 @@ namespace MangaPublishingSystem.Application.Services
                     budget = series.EstimatedProductionBudget;
                 }
 
-                series.Status = "Fund_Pending";
+                series.Status = "Approved";
                 series.ApprovedProductionBudget = budget;
                 _seriesRepository.Update(series);
 
@@ -269,7 +269,7 @@ namespace MangaPublishingSystem.Application.Services
             {
                 case BoardVoteResolution.Approved:
                 {
-                    if (series.Status != "Fund_Pending")
+                    if (series.Status != "Approved")
                     {
                         var config = await GetConfigAsync();
                         var boardMembers = await GetActiveBoardMembersAsync(config);
@@ -284,7 +284,7 @@ namespace MangaPublishingSystem.Application.Services
                             approvedBudget = series.EstimatedProductionBudget;
                         }
 
-                        series.Status = "Fund_Pending";
+                        series.Status = "Approved";
                         series.ApprovedProductionBudget = approvedBudget;
                         _seriesRepository.Update(series);
 

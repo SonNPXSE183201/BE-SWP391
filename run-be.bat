@@ -16,10 +16,10 @@ dotnet clean MangaPublishingSystem.sln -c Debug >nul 2>nul
 echo Building solution...
 dotnet build MangaPublishingSystem.sln -c Debug
 
-:: 4. Initialize Database
-echo Initializing database schema and seed data...
-sqlcmd -S localhost -f 65001 -i Database\schema.sql
-sqlcmd -S localhost -f 65001 -i Database\seed.sql
+:: 4. Initialize Database (Đã comment để tránh mất dữ liệu test)
+:: echo Initializing database schema and seed data...
+:: sqlcmd -S localhost -f 65001 -i Database\schema.sql
+:: sqlcmd -S localhost -f 65001 -i Database\seed.sql
 :: Check if Windows Terminal (wt.exe) is available
 where wt >nul 2>nul
 if %ERRORLEVEL% equ 0 (

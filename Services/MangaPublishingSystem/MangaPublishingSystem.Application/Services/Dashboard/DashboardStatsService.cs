@@ -30,13 +30,58 @@ namespace MangaPublishingSystem.Application.Services.Dashboard
 
         public async Task<DashboardStatsResponseDto> GetStatsAsync(int userId, string roleName)
         {
-            return roleName switch
+            var normalizedRoleName = await ResolveRoleNameAsync(userId, roleName);
+
+            return normalizedRoleName switch
             {
-                "System Admin" => await BuildAdminStatsAsync(roleName),
-                "Editorial Board" => await BuildBoardStatsAsync(roleName),
-                "Tantou Editor" => await BuildEditorStatsAsync(userId, roleName),
-                "Mangaka" => await BuildMangakaStatsAsync(userId, roleName),
-                _ => throw new ForbiddenException("Vai trò của bạn không được phép truy cập thống kê dashboard.")
+                "System Admin" => await BuildAdminStatsAsync(normalizedRoleName),
+                "Editorial Board" => await BuildBoardStatsAsync(normalizedRoleName),
+                "Tantou Editor" => await BuildEditorStatsAsync(userId, normalizedRoleName),
+                "Mangaka" => await BuildMangakaStatsAsync(userId, normalizedRoleName),
+                _ => throw new ForbiddenException("Vai tro cua ban khong duoc phep truy cap thong ke dashboard.")
+            };
+        }
+
+        private async Task<string> ResolveRoleNameAsync(int userId, string roleName)
+        {
+            var normalizedRoleName = NormalizeRoleName(roleName);
+            if (!string.IsNullOrWhiteSpace(normalizedRoleName))
+            {
+                return normalizedRoleName;
+            }
+
+            var user = userId > 0 ? await _userRepository.GetByIdWithDetailsAsync(userId) : null;
+            normalizedRoleName = NormalizeRoleName(user?.Role?.RoleName);
+            if (!string.IsNullOrWhiteSpace(normalizedRoleName))
+            {
+                return normalizedRoleName;
+            }
+
+            return user?.RoleId switch
+            {
+                1 => "System Admin",
+                2 => "Tantou Editor",
+                3 => "Editorial Board",
+                4 => "Mangaka",
+                _ => string.Empty
+            };
+        }
+
+        private static string NormalizeRoleName(string? roleName)
+        {
+            if (string.IsNullOrWhiteSpace(roleName))
+            {
+                return string.Empty;
+            }
+
+            var normalized = roleName.Trim().Replace("_", " ").ToLowerInvariant();
+            return normalized switch
+            {
+                "system admin" or "systemadmin" or "admin" => "System Admin",
+                "editorial board" or "editorialboard" or "board" or "board member" => "Editorial Board",
+                "tantou editor" or "tantoueditor" or "editor" => "Tantou Editor",
+                "mangaka" or "author" => "Mangaka",
+                _ => roleName.Trim()
             };
         }
 
@@ -94,35 +139,47 @@ namespace MangaPublishingSystem.Application.Services.Dashboard
             {
                 Role = MapRoleForFe(roleName),
                 MySeries = mySeries.Count,
-                OpenTasks = tasks.Count(t => t.Status is "Pending" or "In-Progress" or "In_Progress"),
+                OpenTasks = tasks.Count(t => IsOpenTask(t.Status)),
                 SetupFundBalance = wallet?.SetupFundBalance ?? 0,
                 WithdrawableBalance = wallet?.WithdrawableBalance ?? 0,
                 InProductionSeries = mySeries.Count(s => IsInProduction(s.Status))
             };
         }
 
-        private static bool IsPendingApproval(string status)
+        private static bool IsOpenTask(string? status)
         {
+            if (string.IsNullOrWhiteSpace(status)) return false;
+            return status.Equals("Pending", StringComparison.OrdinalIgnoreCase)
+                || status.Equals("In-Progress", StringComparison.OrdinalIgnoreCase)
+                || status.Equals("In_Progress", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool IsPendingApproval(string? status)
+        {
+            if (string.IsNullOrWhiteSpace(status)) return false;
             return status.Equals("Pending_Approval", StringComparison.OrdinalIgnoreCase)
                 || status.Equals("Pending", StringComparison.OrdinalIgnoreCase);
         }
 
-        private static bool IsPendingBoardVote(string status)
+        private static bool IsPendingBoardVote(string? status)
         {
+            if (string.IsNullOrWhiteSpace(status)) return false;
             return status.Equals("Pending_Board_Vote", StringComparison.OrdinalIgnoreCase);
         }
 
-        private static bool IsBoardApproved(string status)
+        private static bool IsBoardApproved(string? status)
         {
-            return status.Equals("Fund_Pending", StringComparison.OrdinalIgnoreCase) 
-                || status.Equals("Approved", StringComparison.OrdinalIgnoreCase) 
+            if (string.IsNullOrWhiteSpace(status)) return false;
+            return status.Equals("Fund_Pending", StringComparison.OrdinalIgnoreCase)
+                || status.Equals("Approved", StringComparison.OrdinalIgnoreCase)
                 || status.Equals("In Production", StringComparison.OrdinalIgnoreCase)
                 || status.Equals("In_Production", StringComparison.OrdinalIgnoreCase)
                 || status.Equals("Active", StringComparison.OrdinalIgnoreCase);
         }
 
-        private static bool IsInProduction(string status)
+        private static bool IsInProduction(string? status)
         {
+            if (string.IsNullOrWhiteSpace(status)) return false;
             return status.Equals("In Production", StringComparison.OrdinalIgnoreCase)
                 || status.Equals("In_Production", StringComparison.OrdinalIgnoreCase);
         }
