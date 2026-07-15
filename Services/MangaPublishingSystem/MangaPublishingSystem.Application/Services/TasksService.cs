@@ -98,12 +98,17 @@ namespace MangaPublishingSystem.Application.Services
                 RegionId = createDto.RegionId,
                 AssistantId = normalizedAssistantId,
                 Description = createDto.Description,
+                AcceptanceCriteria = createDto.AcceptanceCriteria,
                 PaymentAmount = createDto.PaymentAmount,
                 Deadline = createDto.Deadline,
                 ZIndex_Order = createDto.ZIndex_Order,
                 Status = "Draft",
                 ExtensionStatus = "None"
             };
+
+            int? assignmentAssistantId = null;
+            NotificationPayload? assignmentNotificationPayload = null;
+            TaskStatusChangedPayload? assignmentTaskStatusChanged = null;
 
             await _unitOfWork.BeginTransactionAsync();
             try
@@ -140,7 +145,8 @@ namespace MangaPublishingSystem.Application.Services
                         Type = notif.Type,
                         CreateAt = notif.CreateAt
                     };
-                    await _notificationPublisher.PublishNotificationPayloadAsync(task.AssistantId.Value, notifPayload);
+                    assignmentAssistantId = task.AssistantId.Value;
+                    assignmentNotificationPayload = notifPayload;
 
                     var taskStatusChanged = new TaskStatusChangedPayload
                     {
@@ -148,8 +154,7 @@ namespace MangaPublishingSystem.Application.Services
                         Status = task.Status,
                         Message = "Nhiệm vụ vẽ mới được tạo."
                     };
-                    await _notificationPublisher.PublishTaskStatusChangedAsync(task.AssistantId.Value, taskStatusChanged);
-                    await _notificationPublisher.PublishTaskStatusChangedAsync(mangakaId, taskStatusChanged);
+                    assignmentTaskStatusChanged = taskStatusChanged;
                 }
 
                 await _unitOfWork.SaveChangesAsync();
@@ -159,6 +164,15 @@ namespace MangaPublishingSystem.Application.Services
             {
                 await _unitOfWork.RollbackTransactionAsync();
                 throw;
+            }
+
+            // Publish realtime events only after the transaction is committed so
+            // clients that refetch immediately can see the newly assigned task.
+            if (assignmentAssistantId.HasValue && assignmentNotificationPayload != null && assignmentTaskStatusChanged != null)
+            {
+                await _notificationPublisher.PublishNotificationPayloadAsync(assignmentAssistantId.Value, assignmentNotificationPayload);
+                await _notificationPublisher.PublishTaskStatusChangedAsync(assignmentAssistantId.Value, assignmentTaskStatusChanged);
+                await _notificationPublisher.PublishTaskStatusChangedAsync(mangakaId, assignmentTaskStatusChanged);
             }
 
             return task;
@@ -611,6 +625,7 @@ namespace MangaPublishingSystem.Application.Services
                 RegionId = t.RegionId,
                 AssistantId = t.AssistantId,
                 Description = t.Description,
+                AcceptanceCriteria = t.AcceptanceCriteria,
                 PaymentAmount = t.PaymentAmount,
                 Deadline = t.Deadline,
                 ExtensionRequestDays = t.ExtensionRequestDays,
@@ -652,6 +667,7 @@ namespace MangaPublishingSystem.Application.Services
                 RegionId = t.RegionId,
                 AssistantId = t.AssistantId,
                 Description = t.Description,
+                AcceptanceCriteria = t.AcceptanceCriteria,
                 PaymentAmount = t.PaymentAmount,
                 Deadline = t.Deadline,
                 ExtensionRequestDays = t.ExtensionRequestDays,
@@ -718,6 +734,7 @@ namespace MangaPublishingSystem.Application.Services
                 RegionId = t.RegionId,
                 AssistantId = t.AssistantId,
                 Description = t.Description,
+                AcceptanceCriteria = t.AcceptanceCriteria,
                 PaymentAmount = t.PaymentAmount,
                 Deadline = t.Deadline,
                 ExtensionRequestDays = t.ExtensionRequestDays,

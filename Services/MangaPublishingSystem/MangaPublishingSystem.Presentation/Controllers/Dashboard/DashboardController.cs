@@ -24,7 +24,24 @@ namespace MangaPublishingSystem.Presentation.Controllers.Dashboard
             _dashboardStatsService = dashboardStatsService;
         }
 
-        private int CurrentUserId => int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+        private int CurrentUserId
+        {
+            get
+            {
+                var rawUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                    ?? User.FindFirst("nameid")?.Value
+                    ?? User.FindFirst("sub")?.Value
+                    ?? "0";
+
+                return int.TryParse(rawUserId, out var userId) ? userId : 0;
+            }
+        }
+
+        private string CurrentUserRole =>
+            User.FindFirst(ClaimTypes.Role)?.Value
+            ?? User.FindFirst("role")?.Value
+            ?? User.FindFirst("Role")?.Value
+            ?? string.Empty;
 
         [HttpGet("admin")]
         [Authorize(Roles = "System Admin")]
@@ -38,8 +55,7 @@ namespace MangaPublishingSystem.Presentation.Controllers.Dashboard
         [Authorize(Roles = "System Admin,Editorial Board,Tantou Editor,Mangaka")]
         public async Task<ActionResult<ApiResponse<DashboardStatsResponseDto>>> GetStats()
         {
-            var role = User.FindFirst(ClaimTypes.Role)?.Value ?? string.Empty;
-            var result = await _dashboardStatsService.GetStatsAsync(CurrentUserId, role);
+            var result = await _dashboardStatsService.GetStatsAsync(CurrentUserId, CurrentUserRole);
             return Ok(ApiResponse<DashboardStatsResponseDto>.Success(result, "Lấy thống kê dashboard thành công."));
         }
     }

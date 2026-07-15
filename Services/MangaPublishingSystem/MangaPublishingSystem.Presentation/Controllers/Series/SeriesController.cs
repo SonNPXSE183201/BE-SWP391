@@ -49,7 +49,7 @@ namespace MangaPublishingSystem.Presentation.Controllers.Series
             }
 
             var result = MapToSeriesDto(series);
-            result.HasContract = await _seriesService.HasContractAsync(series.Id);
+            await FillContractSummaryAsync(result);
             return Ok(ApiResponse<SeriesDto>.Success(result, "Lấy thông tin chi tiết bộ truyện thành công."));
         }
 
@@ -121,6 +121,10 @@ namespace MangaPublishingSystem.Presentation.Controllers.Series
             int mangakaId = CurrentUserId;
             var seriesList = await _seriesService.GetSeriesByMangakaIdAsync(mangakaId);
             var result = seriesList.Select(MapToSeriesDto).ToList();
+            foreach (var item in result)
+            {
+                await FillContractSummaryAsync(item);
+            }
             return Ok(ApiResponse<IEnumerable<SeriesDto>>.Success(result, "Lấy danh sách bộ truyện thành công."));
         }
 
@@ -129,7 +133,15 @@ namespace MangaPublishingSystem.Presentation.Controllers.Series
         public async Task<ActionResult<ApiResponse<object>>> AcceptFund([FromRoute] int id)
         {
             await _seriesService.AcceptFundAsync(id, CurrentUserId);
-            return Ok(ApiResponse<object>.Success(null, "Xác nhận nhận vốn và kích hoạt bộ truyện thành công."));
+            return Ok(ApiResponse<object>.Success(null, "Đã xác nhận mức vốn. Admin có thể lập hợp đồng cho bộ truyện."));
+        }
+
+        [Authorize(Roles = "Mangaka")]
+        [HttpPost("{id}/sign-contract")]
+        public async Task<ActionResult<ApiResponse<object>>> SignContract([FromRoute] int id)
+        {
+            await _seriesService.SignContractAsync(id, CurrentUserId);
+            return Ok(ApiResponse<object>.Success(null, "Đã ký hợp đồng và nhận vốn thành công."));
         }
 
         [Authorize(Roles = "Mangaka")]
@@ -196,6 +208,16 @@ namespace MangaPublishingSystem.Presentation.Controllers.Series
                 CreateAt = series.CreateAt,
                 UpdateAt = series.UpdateAt
             };
+        }
+
+        private async Task FillContractSummaryAsync(SeriesDto dto)
+        {
+            var contract = await _seriesService.GetContractBySeriesIdAsync(dto.Id);
+            dto.HasContract = contract != null;
+            dto.ContractId = contract?.Id;
+            dto.ContractStatus = contract?.Status;
+            dto.BaseGenkouryoPrice = contract?.BaseGenkouryoPrice;
+            dto.ContractSignedDate = contract?.SignedDate;
         }
     }
 }
