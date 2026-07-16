@@ -25,6 +25,7 @@ namespace MangaPublishingSystem.Application.Services
         private readonly INotificationRepository _notificationRepository;
         private readonly INotificationPublisher _notificationPublisher;
         private readonly IBoardVoteRepository _boardVoteRepository;
+        private readonly IContractRepository _contractRepository;
         private readonly IWalletRepository _walletRepository;
         private readonly IChapterRepository _chapterRepository;
         private readonly IPageRepository _pageRepository;
@@ -42,6 +43,7 @@ namespace MangaPublishingSystem.Application.Services
             INotificationRepository notificationRepository,
             INotificationPublisher notificationPublisher,
             IBoardVoteRepository boardVoteRepository,
+            IContractRepository contractRepository,
             IWalletRepository walletRepository,
             IChapterRepository chapterRepository,
             IPageRepository pageRepository,
@@ -58,6 +60,7 @@ namespace MangaPublishingSystem.Application.Services
             _notificationRepository = notificationRepository;
             _notificationPublisher = notificationPublisher;
             _boardVoteRepository = boardVoteRepository;
+            _contractRepository = contractRepository;
             _walletRepository = walletRepository;
             _chapterRepository = chapterRepository;
             _pageRepository = pageRepository;
@@ -241,37 +244,96 @@ namespace MangaPublishingSystem.Application.Services
             var series = await _seriesRepository.GetByIdAsync(seriesId);
             if (series == null)
             {
-                throw new NotFoundException("Bộ truyện không tồn tại.");
+                throw new NotFoundException("Bo truyen khong ton tai.");
             }
 
             if (series.MangakaId != mangakaId)
             {
-                throw new ForbiddenException("Bạn không phải tác giả của bộ truyện này.");
+                throw new ForbiddenException("Ban khong phai tac gia cua bo truyen nay.");
+            }
+
+            if (series.Status != "Approved")
+            {
+                throw new ConflictException("Chi co the xac nhan von sau khi Hoi dong da phe duyet goi von.");
+            }
+
+            series.Status = "Fund_Pending";
+            _seriesRepository.Update(series);
+
+            var admins = await _userRepository.FindAsync(u => u.RoleId == 1 && u.Status == UserStatus.Active);
+            var content = $"Mangaka da xac nhan muc von {series.ApprovedProductionBudget:N0} VND cho bo truyen '{series.Title}'. Vui long lap hop dong.";
+
+            foreach (var admin in admins)
+            {
+                await _notificationRepository.AddAsync(new Notification
+                {
+                    UserId = admin.Id,
+                    Content = content,
+                    Type = "Fund_Accepted",
+                    IsRead = false
+                });
+            }
+
+            await _unitOfWork.SaveChangesAsync();
+            await _notificationPublisher.PublishBoardDataChangedAsync();
+
+            foreach (var admin in admins)
+            {
+                await _notificationPublisher.PublishNotificationPayloadAsync(admin.Id, new NotificationPayload
+                {
+                    Title = "Can lap hop dong",
+                    Message = content,
+                    Type = "Fund_Accepted",
+                    Link = "/admin/contracts",
+                    CreateAt = DateTime.UtcNow
+                });
+            }
+        }
+
+        public async System.Threading.Tasks.Task SignContractAsync(int seriesId, int mangakaId)
+        {
+            var series = await _seriesRepository.GetByIdAsync(seriesId);
+            if (series == null)
+            {
+                throw new NotFoundException("Bo truyen khong ton tai.");
+            }
+
+            if (series.MangakaId != mangakaId)
+            {
+                throw new ForbiddenException("Ban khong phai tac gia cua bo truyen nay.");
             }
 
             if (series.Status != "Fund_Pending")
             {
-                throw new ConflictException("Bộ truyện không ở trạng thái chờ nhận vốn cấp phát.");
+                throw new ConflictException("Chi co the ky hop dong sau khi da xac nhan muc von va Admin da lap hop dong.");
             }
 
-            var hasContract = await _seriesRepository.HasContractAsync(seriesId);
-            if (!hasContract)
+            var contract = await _contractRepository.GetBySeriesIdAsync(seriesId);
+            if (contract == null)
             {
-                throw new BadRequestException("Vui lòng đợi Quản trị viên khởi tạo Hợp đồng trước khi nhận vốn.");
+                throw new BadRequestException("Admin chua lap hop dong cho bo truyen nay.");
+            }
+
+            if (contract.Status != "Pending")
+            {
+                throw new ConflictException("Hop dong khong o trang thai cho Mangaka ky.");
             }
 
             var treasury = await _platformWalletService.GetTreasuryAsync();
             if (treasury.Balance < series.ApprovedProductionBudget)
             {
-                throw new BadRequestException("Ngân quỹ hệ thống hiện đang tạm hết, vui lòng thử lại sau.");
+                throw new BadRequestException("Ngan quy he thong hien dang tam het, vui long thu lai sau.");
             }
 
             await _unitOfWork.BeginTransactionAsync();
             try
             {
-                // Chuyển trạng thái sang In Production
                 series.Status = "In Production";
                 _seriesRepository.Update(series);
+
+                contract.Status = "Signed";
+                contract.SignedDate = DateTime.UtcNow;
+                _contractRepository.Update(contract);
 
                 var wallet = await _walletRepository.GetWalletByUserIdAsync(mangakaId);
                 if (wallet == null)
@@ -294,7 +356,6 @@ namespace MangaPublishingSystem.Application.Services
                     series.ApprovedProductionBudget,
                     wallet);
 
-                // Gửi thông báo SignalR cập nhật ví
                 await _notificationPublisher.PublishWalletUpdatedAsync(mangakaId, new WalletUpdatedPayload
                 {
                     WalletId = wallet.Id,
@@ -302,12 +363,11 @@ namespace MangaPublishingSystem.Application.Services
                     WithdrawableBalance = wallet.WithdrawableBalance
                 });
 
-                // Tạo log thông báo nhận vốn
                 var notif = new Notification
                 {
                     UserId = mangakaId,
-                    Content = $"Xác nhận nhận vốn thành công cho bộ truyện '{series.Title}'. Số tiền {series.ApprovedProductionBudget:N0} VND đã được nạp vào ví ký quỹ của bạn.",
-                    Type = "Wallet_Fund_Accepted",
+                    Content = $"Đã ký hợp đồng cho bộ truyện '{series.Title}'. Số tiền {series.ApprovedProductionBudget:N0} VND đã được nạp vào quỹ thiết lập của bạn.",
+                    Type = "Contract_Signed",
                     IsRead = false
                 };
                 await _notificationRepository.AddAsync(notif);
@@ -316,13 +376,14 @@ namespace MangaPublishingSystem.Application.Services
                 await _notificationPublisher.PublishNotificationPayloadAsync(mangakaId, new NotificationPayload
                 {
                     Id = notif.Id,
-                    Title = "Nhận vốn thành công",
+                    Title = "Ký hợp đồng thành công",
                     Message = notif.Content,
-                    Link = $"/wallet",
+                    Link = "/wallet",
                     Type = notif.Type,
                     CreateAt = notif.CreateAt
                 });
 
+                await _notificationPublisher.PublishBoardDataChangedAsync();
                 await _unitOfWork.CommitTransactionAsync();
             }
             catch (Exception)
@@ -331,7 +392,6 @@ namespace MangaPublishingSystem.Application.Services
                 throw;
             }
         }
-
         public async System.Threading.Tasks.Task DeclineFundAsync(int seriesId, int mangakaId)
         {
             var series = await _seriesRepository.GetByIdAsync(seriesId);
@@ -345,7 +405,7 @@ namespace MangaPublishingSystem.Application.Services
                 throw new ForbiddenException("Bạn không phải tác giả của bộ truyện này.");
             }
 
-            if (series.Status != "Fund_Pending")
+            if (series.Status != "Approved" && series.Status != "Fund_Pending")
             {
                 throw new ConflictException("Bộ truyện không ở trạng thái chờ nhận vốn cấp phát.");
             }
@@ -379,6 +439,7 @@ namespace MangaPublishingSystem.Application.Services
             }
 
             await _unitOfWork.SaveChangesAsync();
+            await _notificationPublisher.PublishBoardDataChangedAsync();
         }
 
         public async System.Threading.Tasks.Task VoteSeriesAsync(
@@ -386,7 +447,8 @@ namespace MangaPublishingSystem.Application.Services
             int boardUserId,
             string voteChoice,
             string comment,
-            decimal recommendedBudget)
+            decimal recommendedBudget,
+            string? publicationSchedule)
         {
             var series = await _seriesRepository.GetByIdAsync(seriesId);
             if (series == null)
@@ -436,12 +498,19 @@ namespace MangaPublishingSystem.Application.Services
                 }
             }
 
+            var normalizedSchedule = NormalizePublicationSchedule(publicationSchedule);
+            if (voteType == "Approve" && string.IsNullOrWhiteSpace(normalizedSchedule))
+            {
+                throw new BadRequestException("Vui lòng chọn lịch phát hành khi phê duyệt.");
+            }
+
             var vote = new BoardVote
             {
                 SeriesId = seriesId,
                 BoardMemberId = boardUserId,
                 VoteType = voteType,
                 RecommendedBudget = voteType == "Approve" ? recommendedBudget : 0.00m,
+                PublicationSchedule = voteType == "Approve" ? normalizedSchedule : null,
                 Comment = comment,
                 VoteAt = DateTime.Now
             };
@@ -451,6 +520,25 @@ namespace MangaPublishingSystem.Application.Services
 
             var resolution = await _boardVotingService.EvaluateSeriesVotesAsync(seriesId);
             await _boardVotingService.ApplyVoteResolutionAsync(series, resolution, comment);
+        }
+
+        private static string? NormalizePublicationSchedule(string? schedule)
+        {
+            if (string.IsNullOrWhiteSpace(schedule))
+            {
+                return null;
+            }
+
+            return schedule.Trim() switch
+            {
+                "Weekly" => "Weekly",
+                "Bi-weekly" => "Bi-weekly",
+                "Monthly" => "Monthly",
+                "1 tuần 1 lần" => "Weekly",
+                "2 tuần 1 lần" => "Bi-weekly",
+                "1 tháng 1 lần" => "Monthly",
+                _ => null
+            };
         }
 
         private static bool CanCreateChapter(string? status) =>
@@ -905,6 +993,11 @@ namespace MangaPublishingSystem.Application.Services
         public async Task<bool> HasContractAsync(int seriesId)
         {
             return await _seriesRepository.HasContractAsync(seriesId);
+        }
+
+        public async Task<Contract?> GetContractBySeriesIdAsync(int seriesId)
+        {
+            return await _contractRepository.GetBySeriesIdAsync(seriesId);
         }
 
         private static readonly Dictionary<string, string> RevisionChecklistLabels = new(StringComparer.OrdinalIgnoreCase)

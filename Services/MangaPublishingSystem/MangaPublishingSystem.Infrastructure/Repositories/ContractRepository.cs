@@ -20,11 +20,7 @@ namespace MangaPublishingSystem.Infrastructure.Repositories
                 .Include(s => s.Mangaka)
                 .Include(s => s.Contracts)
                     .ThenInclude(c => c.ContractAddendums)
-                .Where(s => s.Status == "Fund_Pending" 
-                    || s.Status == "Approved" 
-                    || s.Status == "Active" 
-                    || s.Status == "In Production" 
-                    || s.Status == "In_Production")
+                .Where(s => s.Status == "Fund_Pending" || s.Status == "Approved" || s.Contracts.Any())
                 .OrderByDescending(s => s.UpdateAt ?? s.CreateAt)
                 .ToListAsync();
         }

@@ -9,5 +9,8 @@ namespace MangaPublishingSystem.Application.DTOs.Admin
 
         [JsonPropertyName("baseGenkouryoPrice")]
         public decimal BaseGenkouryoPrice { get; set; }
+
+        [JsonPropertyName("templateId")]
+        public int TemplateId { get; set; }
     }
 }

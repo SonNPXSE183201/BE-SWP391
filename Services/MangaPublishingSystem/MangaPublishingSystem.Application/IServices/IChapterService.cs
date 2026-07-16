@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using MangaPublishingSystem.Application.DTOs.Chapters;
+using MangaPublishingSystem.Application.DTOs.Publishing;
 using MangaPublishingSystem.Domain.Entities;
 
 namespace MangaPublishingSystem.Application.IServices
@@ -11,6 +12,7 @@ namespace MangaPublishingSystem.Application.IServices
         System.Threading.Tasks.Task ApproveChapterAsync(int chapterId, int editorId, DTOs.Reviews.ApproveChapterDto dto);
         System.Threading.Tasks.Task RejectChapterAsync(int chapterId, int editorId, DTOs.Reviews.RejectChapterDto dto);
         Task<IEnumerable<Chapter>> GetPendingReviewChaptersForEditorAsync(int editorId);
+        Task<IEnumerable<PublishingScheduleDto>> GetPublishingScheduleAsync(string month);
         System.Threading.Tasks.Task UpdateDeadlineAsync(int chapterId, DateTime deadline);
         System.Threading.Tasks.Task PublishChapterAsync(int chapterId);
         Task<IEnumerable<Chapter>> GetChaptersBySeriesIdAsync(int seriesId);

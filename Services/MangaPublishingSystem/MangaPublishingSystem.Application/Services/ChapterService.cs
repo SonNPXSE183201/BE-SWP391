@@ -10,6 +10,8 @@ using MangaPublishingSystem.Application.IServices;
 using MangaPublishingSystem.Application.DTOs.Reviews;
 using MangaPublishingSystem.Application.DTOs.Notifications;
 using MangaPublishingSystem.Application.DTOs.Chapters;
+using MangaPublishingSystem.Application.DTOs.Publishing;
+using System.Globalization;
 
 namespace MangaPublishingSystem.Application.Services
 {
@@ -33,6 +35,7 @@ namespace MangaPublishingSystem.Application.Services
         private readonly INotificationRepository _notificationRepository;
         private readonly INotificationPublisher _notificationPublisher;
         private readonly IPageRepository _pageRepository;
+        private readonly IAnnotationRepository _annotationRepository;
         private readonly IRegionRepository _regionRepository;
         private readonly ITasksRepository _tasksRepository;
         private readonly ITasksService _tasksService;
@@ -48,6 +51,7 @@ namespace MangaPublishingSystem.Application.Services
             INotificationRepository notificationRepository,
             INotificationPublisher notificationPublisher,
             IPageRepository pageRepository,
+            IAnnotationRepository annotationRepository,
             IRegionRepository regionRepository,
             ITasksRepository tasksRepository,
             ITasksService tasksService,
@@ -62,6 +66,7 @@ namespace MangaPublishingSystem.Application.Services
             _notificationRepository = notificationRepository;
             _notificationPublisher = notificationPublisher;
             _pageRepository = pageRepository;
+            _annotationRepository = annotationRepository;
             _regionRepository = regionRepository;
             _tasksRepository = tasksRepository;
             _tasksService = tasksService;
@@ -91,6 +96,12 @@ namespace MangaPublishingSystem.Application.Services
                 throw new BadRequestException("Không tìm thấy hợp đồng hợp lệ cho bộ truyện này.");
             }
 
+            var series = await _seriesRepository.GetByIdAsync(chapter.SeriesId);
+            if (series == null)
+            {
+                throw new NotFoundException("Không tìm thấy bộ truyện liên kết với chapter này.");
+            }
+
             var applicablePrice = await GetApplicableGenkouryoPriceAsync(chapter.SeriesId);
 
             await _unitOfWork.BeginTransactionAsync();
@@ -99,6 +110,7 @@ namespace MangaPublishingSystem.Application.Services
                 chapter.Status = "Approved";
                 chapter.ValidPageCount = dto.ValidPageCount;
                 chapter.AppliedGenkouryoPrice = applicablePrice;
+                chapter.PublishDate ??= await CalculateNextPublishDateAsync(chapter.SeriesId, series.PublicationSchedule);
                 chapter.QcChecklistData = dto.QcChecklistData;
                 _repository.Update(chapter);
 
@@ -179,15 +191,34 @@ namespace MangaPublishingSystem.Application.Services
                 throw new NotFoundException("Không tìm thấy bộ truyện liên kết với chapter này.");
             }
 
+            var pages = (await _pageRepository.FindAsync(p => p.ChapterId == chapterId)).ToList();
+            var pageIds = pages.Select(p => p.Id).ToList();
+            var annotations = pageIds.Count == 0
+                ? new List<Annotation>()
+                : (await _annotationRepository.FindAsync(a => a.PageId.HasValue && pageIds.Contains(a.PageId.Value))).ToList();
+            var affectedPageIds = annotations
+                .Where(a => a.PageId.HasValue)
+                .Select(a => a.PageId!.Value)
+                .Distinct()
+                .ToHashSet();
+
             chapter.Status = "Revision";
             _repository.Update(chapter);
+
+            foreach (var page in pages.Where(p => affectedPageIds.Contains(p.Id)))
+            {
+                page.Status = "InProgress";
+                page.IsApproved = false;
+                _pageRepository.Update(page);
+            }
+
             await _unitOfWork.SaveChangesAsync();
 
             var notif = new Notification
             {
                 UserId = series.MangakaId,
-                Content = $"Chapter {chapter.ChapterNumber}: {chapter.Title} bị từ chối duyệt. Lý do: {dto.FeedbackComment}",
-                Type = "Chapter_Rejected",
+                Content = $"Chapter {chapter.ChapterNumber}: {chapter.Title} cần chỉnh sửa. Lý do: {dto.FeedbackComment}",
+                Type = "Chapter_Revision_Required",
                 IsRead = false
             };
             await _notificationRepository.AddAsync(notif);
@@ -196,7 +227,7 @@ namespace MangaPublishingSystem.Application.Services
             var notifPayload = new NotificationPayload
             {
                 Id = notif.Id,
-                Title = "Chapter bị từ chối duyệt",
+                Title = "Yêu cầu sửa chương",
                 Message = notif.Content,
                 Link = $"/chapters/{chapterId}",
                 Type = notif.Type,
@@ -215,6 +246,79 @@ namespace MangaPublishingSystem.Application.Services
             return chapters;
         }
 
+        public async Task<IEnumerable<PublishingScheduleDto>> GetPublishingScheduleAsync(string month)
+        {
+            if (!DateTime.TryParseExact(month, "yyyy-MM", CultureInfo.InvariantCulture, DateTimeStyles.None, out var monthStart))
+            {
+                throw new BadRequestException("Định dạng tháng không hợp lệ. Vui lòng dùng YYYY-MM.");
+            }
+
+            var monthEnd = monthStart.AddMonths(1);
+            var chapters = await _chapterRepository.GetPublishingScheduleAsync(monthStart, monthEnd);
+
+            return chapters.Select(chapter => new PublishingScheduleDto
+            {
+                Id = chapter.Id,
+                SeriesId = chapter.SeriesId,
+                SeriesTitle = chapter.Series?.Title ?? chapter.Title,
+                ChapterNumber = chapter.ChapterNumber,
+                ChapterTitle = chapter.Title,
+                MangakaName = chapter.Series?.Mangaka?.FullName
+                    ?? chapter.Series?.Mangaka?.UserName
+                    ?? "Chưa rõ tác giả",
+                CoverUrl = chapter.Series?.CoverArtworkUrl,
+                PublishDate = chapter.PublishDate!.Value,
+                Status = chapter.Status
+            });
+        }
+
+        private async Task<DateTime> CalculateNextPublishDateAsync(int seriesId, string? publicationSchedule)
+        {
+            var existingChapters = await _chapterRepository.FindAsync(c =>
+                c.SeriesId == seriesId &&
+                c.PublishDate.HasValue &&
+                (c.Status == "Approved" || c.Status == "Published"));
+
+            var latestPublishDate = existingChapters
+                .Select(c => c.PublishDate!.Value.Date)
+                .DefaultIfEmpty(DateTime.UtcNow.Date)
+                .Max();
+
+            return NormalizeSchedule(publicationSchedule) switch
+            {
+                "weekly" => latestPublishDate.AddDays(7).AddHours(9),
+                "bi-weekly" => latestPublishDate.AddDays(14).AddHours(9),
+                "monthly" => latestPublishDate.AddMonths(1).AddHours(9),
+                _ => DateTime.UtcNow.Date.AddDays(7).AddHours(9)
+            };
+        }
+
+        private static string NormalizeSchedule(string? schedule)
+        {
+            if (string.IsNullOrWhiteSpace(schedule))
+            {
+                return string.Empty;
+            }
+
+            var normalized = schedule.Trim().ToLowerInvariant();
+            if (normalized.Contains("bi") || normalized.Contains("2 tuần"))
+            {
+                return "bi-weekly";
+            }
+
+            if (normalized.Contains("month") || normalized.Contains("tháng"))
+            {
+                return "monthly";
+            }
+
+            if (normalized.Contains("week") || normalized.Contains("tuần"))
+            {
+                return "weekly";
+            }
+
+            return normalized;
+        }
+
         public async System.Threading.Tasks.Task UpdateDeadlineAsync(int chapterId, DateTime deadline)
         {
             var chapter = await _repository.GetByIdAsync(chapterId);
@@ -222,7 +326,7 @@ namespace MangaPublishingSystem.Application.Services
             {
                 throw new NotFoundException("Không tìm thấy chapter.");
             }
-            chapter.SubmissionDeadline = deadline;
+            chapter.PublishDate = deadline;
             _repository.Update(chapter);
             await _unitOfWork.SaveChangesAsync();
         }
@@ -380,7 +484,8 @@ namespace MangaPublishingSystem.Application.Services
                 throw new ConflictException("Chapter không còn ở trạng thái cho phép chỉnh sửa.");
             }
 
-            if (string.Equals(page.Status, "Composited", StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(page.Status, "Composited", StringComparison.OrdinalIgnoreCase)
+                && !string.Equals(chapter.Status, "Revision", StringComparison.OrdinalIgnoreCase))
             {
                 return page;
             }
@@ -424,6 +529,7 @@ namespace MangaPublishingSystem.Application.Services
             }
 
             page.Status = "Composited";
+            page.UpdateAt = DateTime.UtcNow;
             _pageRepository.Update(page);
             await _unitOfWork.SaveChangesAsync();
             return page;
@@ -460,6 +566,7 @@ namespace MangaPublishingSystem.Application.Services
             }
 
             page.Status = "InProgress";
+            page.UpdateAt = DateTime.UtcNow;
             _pageRepository.Update(page);
             await _unitOfWork.SaveChangesAsync();
             return page;
@@ -679,6 +786,40 @@ namespace MangaPublishingSystem.Application.Services
                                 .ToList();
 
             var tasksByRegion = tasks.GroupBy(t => t.RegionId).ToDictionary(g => g.Key, g => g.ToList());
+
+            if (string.Equals(chapter.Status, "Revision", StringComparison.OrdinalIgnoreCase))
+            {
+                var annotations = pageIds.Count == 0
+                    ? new List<Annotation>()
+                    : (await _annotationRepository.FindAsync(a => a.PageId.HasValue && pageIds.Contains(a.PageId.Value))).ToList();
+
+                if (annotations.Count > 0)
+                {
+                    var affectedPageIds = annotations
+                        .Where(a => a.PageId.HasValue)
+                        .Select(a => a.PageId!.Value)
+                        .Distinct()
+                        .ToHashSet();
+                    var readyAffectedPages = pages.Count(p =>
+                        affectedPageIds.Contains(p.Id)
+                        && (string.Equals(p.Status, "Composited", StringComparison.OrdinalIgnoreCase)
+                            || string.Equals(p.Status, "Completed", StringComparison.OrdinalIgnoreCase)));
+                    var hasRevisionWork = readyAffectedPages == affectedPageIds.Count;
+
+                    checks.Add(new ChapterProductionCheckDto
+                    {
+                        Key = "revision-work",
+                        Label = "Trang có lỗi đã được đánh dấu sẵn sàng",
+                        Passed = hasRevisionWork,
+                        Detail = $"{readyAffectedPages}/{affectedPageIds.Count} trang lỗi đã sẵn sàng"
+                    });
+
+                    if (!hasRevisionWork)
+                    {
+                        blockers.Add("Bạn cần đánh dấu sẵn sàng cho toàn bộ trang bị ghim lỗi trước khi nộp lại.");
+                    }
+                }
+            }
 
             openTaskCount = tasks.Count(t => OpenTaskStatuses.Contains(t.Status));
             var tasksClear = openTaskCount == 0;

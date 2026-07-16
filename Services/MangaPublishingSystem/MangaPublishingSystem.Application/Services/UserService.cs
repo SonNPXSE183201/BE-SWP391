@@ -94,7 +94,10 @@ namespace MangaPublishingSystem.Application.Services
                 PortfolioUrl = dto.PortfolioUrl,
                 Skills = dto.Skills,
                 Status = UserStatus.Active,
-                AssignedEditorId = dto.AssignedEditorId
+                AssignedEditorId = dto.AssignedEditorId,
+                CitizenId = dto.CitizenId,
+                CitizenIdIssueDate = dto.CitizenIdIssueDate,
+                CitizenIdIssuePlace = dto.CitizenIdIssuePlace
             };
 
             await _unitOfWork.BeginTransactionAsync();
@@ -387,7 +390,11 @@ namespace MangaPublishingSystem.Application.Services
                 throw new NotFoundException("Không tìm thấy người dùng trên hệ thống.");
             }
 
-            if (!string.Equals(user.Email, dto.Email, StringComparison.OrdinalIgnoreCase))
+            if (user.RoleId == RoleIdMangaka)
+            {
+                EnsureImmutableMangakaIdentityFields(user, dto);
+            }
+            else if (!string.Equals(user.Email, dto.Email, StringComparison.OrdinalIgnoreCase))
             {
                 if (await _userRepository.ExistsByEmailAsync(dto.Email))
                 {
@@ -441,6 +448,13 @@ namespace MangaPublishingSystem.Application.Services
             user.PortfolioUrl = dto.PortfolioUrl;
             user.Skills = dto.Skills;
             
+            if (user.RoleId != RoleIdMangaka)
+            {
+                if (dto.CitizenId != null) user.CitizenId = dto.CitizenId;
+                if (dto.CitizenIdIssueDate.HasValue) user.CitizenIdIssueDate = dto.CitizenIdIssueDate.Value;
+                if (dto.CitizenIdIssuePlace != null) user.CitizenIdIssuePlace = dto.CitizenIdIssuePlace;
+            }
+
             if (dto.PhoneNumber != null) user.PhoneNumber = dto.PhoneNumber;
             if (dto.AvatarUrl != null) user.AvatarUrl = dto.AvatarUrl;
 
@@ -449,6 +463,29 @@ namespace MangaPublishingSystem.Application.Services
 
             var updatedUser = await _userRepository.GetByIdWithDetailsAsync(user.Id);
             return MapUserResponse(updatedUser!, "Cập nhật thông tin tài khoản thành công.");
+        }
+
+        private static void EnsureImmutableMangakaIdentityFields(DomainUser user, UpdateUserByAdminDto dto)
+        {
+            if (!string.Equals(user.Email, dto.Email, StringComparison.OrdinalIgnoreCase))
+            {
+                throw new BadRequestException("Email cua Mangaka da co dinh tu luc tao tai khoan va khong the chinh sua.");
+            }
+
+            if (dto.CitizenId != null && !string.Equals(user.CitizenId, dto.CitizenId, StringComparison.Ordinal))
+            {
+                throw new BadRequestException("So CCCD/CMND cua Mangaka da co dinh tu luc tao tai khoan va khong the chinh sua.");
+            }
+
+            if (dto.CitizenIdIssueDate.HasValue && user.CitizenIdIssueDate != dto.CitizenIdIssueDate.Value)
+            {
+                throw new BadRequestException("Ngay cap CCCD/CMND cua Mangaka da co dinh tu luc tao tai khoan va khong the chinh sua.");
+            }
+
+            if (dto.CitizenIdIssuePlace != null && !string.Equals(user.CitizenIdIssuePlace, dto.CitizenIdIssuePlace, StringComparison.Ordinal))
+            {
+                throw new BadRequestException("Noi cap CCCD/CMND cua Mangaka da co dinh tu luc tao tai khoan va khong the chinh sua.");
+            }
         }
 
         private string GenerateRandomPassword()

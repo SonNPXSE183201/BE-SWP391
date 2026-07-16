@@ -30,6 +30,8 @@ namespace MangaPublishingSystem.Infrastructure.Data.Configurations
                 .HasDefaultValue(0.00m)
                 .IsRequired();
 
+            builder.Property(e => e.PublishDate);
+
             builder.Property(e => e.QcChecklistData)
                 .HasColumnType("nvarchar(max)");
 

@@ -20,6 +20,10 @@ namespace MangaPublishingSystem.Domain.Entities
         public string? AvatarUrl { get; set; }
         public bool IsOnLeave { get; set; } = false;
         public int? AssignedEditorId { get; set; }
+        
+        public string? CitizenId { get; set; }
+        public DateTime? CitizenIdIssueDate { get; set; }
+        public string? CitizenIdIssuePlace { get; set; }
 
         // Navigation properties
         public virtual User? AssignedEditor { get; set; }
@@ -48,5 +52,6 @@ namespace MangaPublishingSystem.Domain.Entities
         public virtual ICollection<RefreshToken> RefreshTokens { get; set; } = new List<RefreshToken>();
         public virtual ICollection<PortfolioSample> PortfolioSamples { get; set; } = new List<PortfolioSample>();
         public virtual ICollection<SeriesAssistant> SeriesAssistants { get; set; } = new List<SeriesAssistant>();
+        public virtual ICollection<ContractTemplate> ContractTemplates { get; set; } = new List<ContractTemplate>();
     }
 }

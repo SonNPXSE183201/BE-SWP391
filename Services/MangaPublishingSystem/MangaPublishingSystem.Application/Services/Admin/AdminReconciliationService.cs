@@ -63,7 +63,7 @@ namespace MangaPublishingSystem.Application.Services.Admin
             {
                 "Deposit" => "Nạp tiền vào ví — Deposit (VNPay)",
                 "Withdraw" => "Rút tiền — Withdrawal (VNPay)",
-                "Production_Funding" => "Cấp vốn bản phác thảo — Tác giả nhận vốn",
+                "Production_Funding" => "Cấp vốn sản xuất — Tác giả ký hợp đồng",
                 "Platform_TopUp" => "Nạp quỹ vào ví chung NXB — Admin",
                 _ => tx.Type
             };

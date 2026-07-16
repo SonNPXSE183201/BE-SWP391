@@ -44,7 +44,10 @@ namespace MangaPublishingSystem.Application.Services.Profile
                 Skills = user.Skills,
                 SpecialtyTags = user.AssistantProfile?.SpecialtyTags,
                 PhoneNumber = user.PhoneNumber,
-                AvatarUrl = user.AvatarUrl
+                AvatarUrl = user.AvatarUrl,
+                CitizenId = user.CitizenId,
+                CitizenIdIssueDate = user.CitizenIdIssueDate,
+                CitizenIdIssuePlace = user.CitizenIdIssuePlace
             };
         }
 
@@ -92,6 +95,8 @@ namespace MangaPublishingSystem.Application.Services.Profile
             }
             else if (roleName == "Mangaka")
             {
+                EnsureMangakaIdentityFieldsUnchanged(user, dto);
+
                 if (!string.IsNullOrEmpty(dto.FullName)) user.FullName = dto.FullName;
                 if (dto.PenName != null) user.PenName = dto.PenName;
             }
@@ -116,8 +121,29 @@ namespace MangaPublishingSystem.Application.Services.Profile
                 Skills = user.Skills,
                 SpecialtyTags = user.AssistantProfile?.SpecialtyTags,
                 PhoneNumber = user.PhoneNumber,
-                AvatarUrl = user.AvatarUrl
+                AvatarUrl = user.AvatarUrl,
+                CitizenId = user.CitizenId,
+                CitizenIdIssueDate = user.CitizenIdIssueDate,
+                CitizenIdIssuePlace = user.CitizenIdIssuePlace
             };
+        }
+
+        private static void EnsureMangakaIdentityFieldsUnchanged(User user, UpdateProfileDto dto)
+        {
+            if (dto.CitizenId != null && !string.Equals(user.CitizenId, dto.CitizenId, System.StringComparison.Ordinal))
+            {
+                throw new BadRequestException("So CCCD/CMND da co dinh tu luc tao tai khoan va khong the chinh sua.");
+            }
+
+            if (dto.CitizenIdIssueDate.HasValue && user.CitizenIdIssueDate != dto.CitizenIdIssueDate.Value)
+            {
+                throw new BadRequestException("Ngay cap CCCD/CMND da co dinh tu luc tao tai khoan va khong the chinh sua.");
+            }
+
+            if (dto.CitizenIdIssuePlace != null && !string.Equals(user.CitizenIdIssuePlace, dto.CitizenIdIssuePlace, System.StringComparison.Ordinal))
+            {
+                throw new BadRequestException("Noi cap CCCD/CMND da co dinh tu luc tao tai khoan va khong the chinh sua.");
+            }
         }
     }
 }

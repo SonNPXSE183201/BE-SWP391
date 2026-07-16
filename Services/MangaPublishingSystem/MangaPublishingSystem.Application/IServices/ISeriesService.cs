@@ -14,8 +14,9 @@ namespace MangaPublishingSystem.Application.IServices
         System.Threading.Tasks.Task SetAbsenceStatusAsync(int mangakaId, bool onLeave);
         Task<IEnumerable<Series>> GetSeriesByMangakaIdAsync(int mangakaId);
         System.Threading.Tasks.Task AcceptFundAsync(int seriesId, int mangakaId);
+        System.Threading.Tasks.Task SignContractAsync(int seriesId, int mangakaId);
         System.Threading.Tasks.Task DeclineFundAsync(int seriesId, int mangakaId);
-        System.Threading.Tasks.Task VoteSeriesAsync(int seriesId, int boardUserId, string voteChoice, string comment, decimal recommendedBudget);
+        System.Threading.Tasks.Task VoteSeriesAsync(int seriesId, int boardUserId, string voteChoice, string comment, decimal recommendedBudget, string? publicationSchedule);
         Task<Chapter> SubmitChapterAsync(int seriesId, int mangakaId, SubmitChapterDto dto);
         Task<SeriesReviewDto> GetSeriesReviewAsync(int seriesId);
         Task<IEnumerable<SeriesReviewDto>> GetPendingReviewSeriesForEditorAsync(int editorId);
@@ -26,5 +27,6 @@ namespace MangaPublishingSystem.Application.IServices
         System.Threading.Tasks.Task UpdateSeriesAsync(int seriesId, int mangakaId, CreateSeriesDto dto);
         System.Threading.Tasks.Task DeleteSeriesAsync(int id, int currentUserId, string currentUserRole);
         Task<bool> HasContractAsync(int seriesId);
+        Task<Contract?> GetContractBySeriesIdAsync(int seriesId);
     }
 }

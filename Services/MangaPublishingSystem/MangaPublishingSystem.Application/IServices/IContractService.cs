@@ -7,7 +7,9 @@ namespace MangaPublishingSystem.Application.IServices
 {
     public interface IContractService : IGenericService<Contract>
     {
-        Task<ContractDto> CreateContractAsync(CreateContractDto dto);
+        Task<ContractDto> GenerateContractAsync(CreateContractDto dto);
+        Task<ContractDto> SignContractAsync(int contractId);
+        Task<ContractDto> RejectContractAsync(int contractId);
         Task<ContractDto> UpdateContractAsync(int id, UpdateContractDto dto);
         Task<ContractDto> GetContractByIdAsync(int id);
         Task<IEnumerable<ContractDto>> GetContractsAsync();

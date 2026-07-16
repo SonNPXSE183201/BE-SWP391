@@ -1,5 +1,6 @@
 using BuildingBlocks.Exceptions;
 using MangaPublishingSystem.Application.DTOs.Admin;
+using MangaPublishingSystem.Application.DTOs.Contracts;
 using MangaPublishingSystem.Application.IRepositories;
 using MangaPublishingSystem.Application.IServices;
 using MangaPublishingSystem.Domain.Entities;
@@ -11,15 +12,21 @@ namespace MangaPublishingSystem.Application.Services.Admin
         private readonly IContractRepository _contractRepository;
         private readonly ISeriesRepository _seriesRepository;
         private readonly IUnitOfWork _unitOfWork;
+        private readonly INotificationPublisher _notificationPublisher;
+        private readonly IContractService _contractService;
 
         public AdminContractService(
             IContractRepository contractRepository,
             ISeriesRepository seriesRepository,
-            IUnitOfWork unitOfWork)
+            IUnitOfWork unitOfWork,
+            INotificationPublisher notificationPublisher,
+            IContractService contractService)
         {
             _contractRepository = contractRepository;
             _seriesRepository = seriesRepository;
             _unitOfWork = unitOfWork;
+            _notificationPublisher = notificationPublisher;
+            _contractService = contractService;
         }
 
         public async Task<List<ApprovedSeriesContractDto>> GetApprovedSeriesAsync()
@@ -36,12 +43,13 @@ namespace MangaPublishingSystem.Application.Services.Admin
                     MangakaName = s.Mangaka?.FullName ?? "N/A",
                     ApprovedAt = (s.UpdateAt ?? s.CreateAt).ToUniversalTime().ToString("o"),
                     ApprovedBudget = s.ApprovedProductionBudget > 0 ? s.ApprovedProductionBudget : s.EstimatedProductionBudget,
-                    PublishSchedule = string.IsNullOrWhiteSpace(s.PublicationSchedule) ? "Chưa thiết lập" : s.PublicationSchedule,
+                    PublishSchedule = string.IsNullOrWhiteSpace(s.PublicationSchedule) ? "Not configured" : s.PublicationSchedule,
                     HasContract = contract != null,
                     ContractId = contract?.Id.ToString(),
                     GenkouryoPrice = contract?.BaseGenkouryoPrice,
                     SignedDate = contract?.SignedDate?.ToUniversalTime().ToString("o"),
                     ContractStatus = contract?.Status,
+                    ContractFileUrl = contract?.ContractFileUrl,
                     Addendums = contract?.ContractAddendums?.OrderByDescending(a => a.EffectiveDate).Select(a => new ContractAddendumDto
                     {
                         Id = a.Id.ToString(),
@@ -61,32 +69,23 @@ namespace MangaPublishingSystem.Application.Services.Admin
             var series = await _seriesRepository.GetByIdAsync(seriesId);
             if (series == null)
             {
-                throw new NotFoundException("Không tìm thấy bộ truyện.");
+                throw new NotFoundException("Series was not found.");
             }
 
-            if (series.Status != "Fund_Pending" && series.Status != "Approved" 
-                && series.Status != "Active" && series.Status != "In Production" && series.Status != "In_Production")
+            if (series.Status != "Fund_Pending" && series.Status != "Approved")
             {
-                throw new BadRequestException("Bộ truyện chưa được Hội đồng phê duyệt.");
+                throw new BadRequestException("Series is not ready for contract generation.");
             }
 
-            var existing = await _contractRepository.GetBySeriesIdAsync(seriesId);
-            if (existing != null)
-            {
-                throw new ConflictException("Bộ truyện này đã có hợp đồng.");
-            }
-
-            var contract = new Contract
+            var contract = await _contractService.GenerateContractAsync(new CreateContractDto
             {
                 UserId = series.MangakaId,
                 SeriesId = seriesId,
-                BaseGenkouryoPrice = dto.BaseGenkouryoPrice,
-                Status = "Active",
-                SignedDate = DateTime.UtcNow
-            };
+                TemplateId = dto.TemplateId,
+                BaseGenkouryoPrice = dto.BaseGenkouryoPrice
+            });
 
-            await _contractRepository.AddAsync(contract);
-            await _unitOfWork.SaveChangesAsync();
+            await _notificationPublisher.PublishBoardDataChangedAsync();
 
             return new CreateContractResponseDto
             {
@@ -101,12 +100,12 @@ namespace MangaPublishingSystem.Application.Services.Admin
             var contract = await _contractRepository.GetWithSeriesAsync(contractId);
             if (contract == null)
             {
-                throw new NotFoundException("Không tìm thấy hợp đồng.");
+                throw new NotFoundException("Contract was not found.");
             }
 
             if (!dto.GenkouryoPrice.HasValue)
             {
-                throw new BadRequestException("Phải cung cấp đơn giá nhuận bút mới khi cập nhật phụ lục hợp đồng.");
+                throw new BadRequestException("A new genkouryo price is required when creating a contract addendum.");
             }
 
             var effectiveDate = DateTime.UtcNow;
