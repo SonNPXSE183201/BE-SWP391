@@ -229,6 +229,12 @@ namespace MangaPublishingSystem.Application.Services
 
                 series.Status = "Fund_Pending";
                 series.ApprovedProductionBudget = budget;
+                series.PublicationSchedule = ResolveApprovedPublicationSchedule(
+                        allVotes,
+                        effectiveChairId,
+                        thresholds.ChairWeight)
+                    ?? series.PublicationSchedule
+                    ?? "Weekly";
                 _seriesRepository.Update(series);
 
                 var content =
