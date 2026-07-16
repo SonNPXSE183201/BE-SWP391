@@ -35,6 +35,7 @@ namespace MangaPublishingSystem.Application.Services
         private readonly IStorageService _storageService;
         private readonly IBoardVotingService _boardVotingService;
         private readonly IPlatformWalletService _platformWalletService;
+        private readonly IContractService _contractService;
 
         public SeriesService(
             ISeriesRepository repository, 
@@ -52,7 +53,8 @@ namespace MangaPublishingSystem.Application.Services
             IWalletService walletService,
             IStorageService storageService,
             IBoardVotingService boardVotingService,
-            IPlatformWalletService platformWalletService) 
+            IPlatformWalletService platformWalletService,
+            IContractService contractService) 
             : base(repository, unitOfWork)
         {
             _seriesRepository = repository;
@@ -70,6 +72,7 @@ namespace MangaPublishingSystem.Application.Services
             _storageService = storageService;
             _boardVotingService = boardVotingService;
             _platformWalletService = platformWalletService;
+            _contractService = contractService;
         }
 
         public async Task<Series> CreateSeriesAsync(int mangakaId, CreateSeriesDto createDto)
@@ -328,12 +331,8 @@ namespace MangaPublishingSystem.Application.Services
             await _unitOfWork.BeginTransactionAsync();
             try
             {
-                series.Status = "In Production";
-                _seriesRepository.Update(series);
-
-                contract.Status = "Signed";
-                contract.SignedDate = DateTime.UtcNow;
-                _contractRepository.Update(contract);
+                // Gọi sang ContractService để cập nhật trạng thái hợp đồng, sinh lại PDF có chữ ký, cập nhật trạng thái Series thành In Production, giải ngân tiền
+                await _contractService.SignContractAsync(contract.Id);
 
                 var wallet = await _walletRepository.GetWalletByUserIdAsync(mangakaId);
                 if (wallet == null)
@@ -349,12 +348,6 @@ namespace MangaPublishingSystem.Application.Services
                     await _walletRepository.AddAsync(wallet);
                     await _unitOfWork.SaveChangesAsync();
                 }
-
-                await _platformWalletService.DisburseProductionFundAsync(
-                    seriesId,
-                    mangakaId,
-                    series.ApprovedProductionBudget,
-                    wallet);
 
                 await _notificationPublisher.PublishWalletUpdatedAsync(mangakaId, new WalletUpdatedPayload
                 {
