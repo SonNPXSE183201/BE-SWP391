@@ -44,6 +44,7 @@ namespace MangaPublishingSystem.Presentation.Controllers.Chapters
                 ValidPageCount = chapter.ValidPageCount,
                 AppliedGenkouryoPrice = chapter.AppliedGenkouryoPrice,
                 SubmissionDeadline = chapter.SubmissionDeadline,
+                PublishDate = chapter.PublishDate,
                 QcChecklistData = chapter.QcChecklistData,
                 Status = chapter.Status,
                 CreateAt = chapter.CreateAt,
@@ -117,6 +118,8 @@ namespace MangaPublishingSystem.Presentation.Controllers.Chapters
                 Title = chapter.Title,
                 ValidPageCount = chapter.ValidPageCount,
                 AppliedGenkouryoPrice = chapter.AppliedGenkouryoPrice,
+                SubmissionDeadline = chapter.SubmissionDeadline,
+                PublishDate = chapter.PublishDate,
                 Status = chapter.Status,
                 CreateAt = chapter.CreateAt,
                 UpdateAt = chapter.UpdateAt

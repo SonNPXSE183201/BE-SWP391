@@ -94,7 +94,10 @@ namespace MangaPublishingSystem.Application.Services
                 PortfolioUrl = dto.PortfolioUrl,
                 Skills = dto.Skills,
                 Status = UserStatus.Active,
-                AssignedEditorId = dto.AssignedEditorId
+                AssignedEditorId = dto.AssignedEditorId,
+                CitizenId = dto.CitizenId,
+                CitizenIdIssueDate = dto.CitizenIdIssueDate,
+                CitizenIdIssuePlace = dto.CitizenIdIssuePlace
             };
 
             await _unitOfWork.BeginTransactionAsync();
@@ -441,6 +444,10 @@ namespace MangaPublishingSystem.Application.Services
             user.PortfolioUrl = dto.PortfolioUrl;
             user.Skills = dto.Skills;
             
+            if (dto.CitizenId != null) user.CitizenId = dto.CitizenId;
+            if (dto.CitizenIdIssueDate.HasValue) user.CitizenIdIssueDate = dto.CitizenIdIssueDate.Value;
+            if (dto.CitizenIdIssuePlace != null) user.CitizenIdIssuePlace = dto.CitizenIdIssuePlace;
+
             if (dto.PhoneNumber != null) user.PhoneNumber = dto.PhoneNumber;
             if (dto.AvatarUrl != null) user.AvatarUrl = dto.AvatarUrl;
 

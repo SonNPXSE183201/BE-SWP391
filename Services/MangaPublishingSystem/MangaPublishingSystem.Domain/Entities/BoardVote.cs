@@ -9,6 +9,7 @@ namespace MangaPublishingSystem.Domain.Entities
         public int BoardMemberId { get; set; }
         public string VoteType { get; set; } = null!;
         public decimal RecommendedBudget { get; set; }
+        public string? PublicationSchedule { get; set; }
         public string? Comment { get; set; }
         public DateTime VoteAt { get; set; } = DateTime.Now;
 

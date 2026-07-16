@@ -227,13 +227,14 @@ namespace MangaPublishingSystem.Application.Services
                     budget = series.EstimatedProductionBudget;
                 }
 
-                series.Status = "Approved";
+                series.Status = "Fund_Pending";
                 series.ApprovedProductionBudget = budget;
                 _seriesRepository.Update(series);
 
                 var content =
-                    $"Bộ truyện '{series.Title}' đã được Quản trị viên phê duyệt thủ công. Ngân sách: {budget:N0} VND. Lý do: {dto.Reason}";
-                await NotifyMangakaAsync(series, "Series_Approved_Manual", "Phê duyệt thủ công", content);
+                    $"Bộ truyện '{series.Title}' đã được Quản trị viên phê duyệt thủ công. Vốn thực tế được duyệt: {budget:N0} VND. Lý do: {dto.Reason}";
+                await NotifyMangakaAsync(series, "Series_Fund_Approved", "Vốn thực tế đã được duyệt", content);
+                await NotifyAdminsContractReadyAsync(series, budget);
             }
             else
             {
@@ -269,7 +270,7 @@ namespace MangaPublishingSystem.Application.Services
             {
                 case BoardVoteResolution.Approved:
                 {
-                    if (series.Status != "Approved")
+                    if (series.Status != "Fund_Pending")
                     {
                         var config = await GetConfigAsync();
                         var boardMembers = await GetActiveBoardMembersAsync(config);
@@ -284,13 +285,17 @@ namespace MangaPublishingSystem.Application.Services
                             approvedBudget = series.EstimatedProductionBudget;
                         }
 
-                        series.Status = "Approved";
+                        series.Status = "Fund_Pending";
                         series.ApprovedProductionBudget = approvedBudget;
+                        series.PublicationSchedule = ResolveApprovedPublicationSchedule(votes)
+                            ?? series.PublicationSchedule
+                            ?? "Weekly";
                         _seriesRepository.Update(series);
 
                         var content =
-                            $"Bộ truyện '{series.Title}' đã được phê duyệt cấp vốn với ngân sách {approvedBudget:N0} VND. Vui lòng xác nhận nhận gói vốn.";
-                        await NotifyMangakaAsync(series, "Series_Approved", "Gói vốn đã được duyệt", content);
+                            $"Bộ truyện '{series.Title}' đã được Hội đồng phê duyệt. Vốn thực tế được duyệt: {approvedBudget:N0} VND. Admin sẽ lập hợp đồng để bạn xem và ký.";
+                        await NotifyMangakaAsync(series, "Series_Fund_Approved", "Vốn thực tế đã được duyệt", content);
+                        await NotifyAdminsContractReadyAsync(series, approvedBudget);
                     }
                     break;
                 }
@@ -325,6 +330,19 @@ namespace MangaPublishingSystem.Application.Services
             {
                 await _unitOfWork.SaveChangesAsync();
             }
+        }
+
+        private static string? ResolveApprovedPublicationSchedule(IEnumerable<BoardVote> votes)
+        {
+            return votes
+                .Where(v =>
+                    v.VoteType.Equals("Approve", StringComparison.OrdinalIgnoreCase) &&
+                    !string.IsNullOrWhiteSpace(v.PublicationSchedule))
+                .GroupBy(v => v.PublicationSchedule!)
+                .OrderByDescending(g => g.Count())
+                .ThenBy(g => g.Key)
+                .Select(g => g.Key)
+                .FirstOrDefault();
         }
 
         private async Task<List<User>> GetActiveBoardMembersAsync(BoardVotingConfig config)
@@ -491,6 +509,35 @@ namespace MangaPublishingSystem.Application.Services
                 Type = type,
                 CreateAt = notif.CreateAt
             });
+        }
+
+        private async System.Threading.Tasks.Task NotifyAdminsContractReadyAsync(Series series, decimal approvedBudget)
+        {
+            var admins = await _userRepository.FindAsync(u => u.RoleId == 1 && u.Status == UserStatus.Active);
+            var content = $"Bộ truyện '{series.Title}' đã được Hội đồng duyệt vốn {approvedBudget:N0} VND. Vui lòng lập hợp đồng.";
+
+            foreach (var admin in admins)
+            {
+                var notif = new Notification
+                {
+                    UserId = admin.Id,
+                    Content = content,
+                    Type = "Contract_Ready_To_Create",
+                    IsRead = false
+                };
+                await _notificationRepository.AddAsync(notif);
+                await _unitOfWork.SaveChangesAsync();
+
+                await _notificationPublisher.PublishNotificationPayloadAsync(admin.Id, new NotificationPayload
+                {
+                    Id = notif.Id,
+                    Title = "Cần lập hợp đồng",
+                    Message = content,
+                    Link = "/admin/contracts",
+                    Type = notif.Type,
+                    CreateAt = notif.CreateAt
+                });
+            }
         }
     }
 }

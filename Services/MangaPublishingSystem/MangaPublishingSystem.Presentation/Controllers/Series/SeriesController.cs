@@ -66,6 +66,7 @@ namespace MangaPublishingSystem.Presentation.Controllers.Series
                 ValidPageCount = c.ValidPageCount,
                 AppliedGenkouryoPrice = c.AppliedGenkouryoPrice,
                 SubmissionDeadline = c.SubmissionDeadline,
+                PublishDate = c.PublishDate,
                 QcChecklistData = c.QcChecklistData,
                 Status = c.Status,
                 CreateAt = c.CreateAt,
@@ -159,7 +160,7 @@ namespace MangaPublishingSystem.Presentation.Controllers.Series
             var voteChoice = !string.IsNullOrWhiteSpace(dto.VoteChoice)
                 ? dto.VoteChoice
                 : (dto.Approved ? "Approve" : "Reject");
-            await _seriesService.VoteSeriesAsync(id, CurrentUserId, voteChoice, dto.Comment, dto.RecommendedBudget);
+            await _seriesService.VoteSeriesAsync(id, CurrentUserId, voteChoice, dto.Comment, dto.RecommendedBudget, dto.PublicationSchedule);
             return Ok(ApiResponse<object>.Success(null, "Bỏ phiếu thẩm định bộ truyện thành công."));
         }
 
@@ -177,6 +178,8 @@ namespace MangaPublishingSystem.Presentation.Controllers.Series
                 Title = chapter.Title,
                 ValidPageCount = chapter.ValidPageCount,
                 AppliedGenkouryoPrice = chapter.AppliedGenkouryoPrice,
+                SubmissionDeadline = chapter.SubmissionDeadline,
+                PublishDate = chapter.PublishDate,
                 Status = chapter.Status,
                 CreateAt = chapter.CreateAt,
                 UpdateAt = chapter.UpdateAt
@@ -218,6 +221,7 @@ namespace MangaPublishingSystem.Presentation.Controllers.Series
             dto.ContractStatus = contract?.Status;
             dto.BaseGenkouryoPrice = contract?.BaseGenkouryoPrice;
             dto.ContractSignedDate = contract?.SignedDate;
+            dto.ContractFileUrl = contract?.ContractFileUrl;
         }
     }
 }

@@ -44,7 +44,10 @@ namespace MangaPublishingSystem.Application.Services.Profile
                 Skills = user.Skills,
                 SpecialtyTags = user.AssistantProfile?.SpecialtyTags,
                 PhoneNumber = user.PhoneNumber,
-                AvatarUrl = user.AvatarUrl
+                AvatarUrl = user.AvatarUrl,
+                CitizenId = user.CitizenId,
+                CitizenIdIssueDate = user.CitizenIdIssueDate,
+                CitizenIdIssuePlace = user.CitizenIdIssuePlace
             };
         }
 
@@ -94,6 +97,9 @@ namespace MangaPublishingSystem.Application.Services.Profile
             {
                 if (!string.IsNullOrEmpty(dto.FullName)) user.FullName = dto.FullName;
                 if (dto.PenName != null) user.PenName = dto.PenName;
+                if (dto.CitizenId != null) user.CitizenId = dto.CitizenId;
+                if (dto.CitizenIdIssueDate.HasValue) user.CitizenIdIssueDate = dto.CitizenIdIssueDate.Value;
+                if (dto.CitizenIdIssuePlace != null) user.CitizenIdIssuePlace = dto.CitizenIdIssuePlace;
             }
             else
             {
@@ -116,7 +122,10 @@ namespace MangaPublishingSystem.Application.Services.Profile
                 Skills = user.Skills,
                 SpecialtyTags = user.AssistantProfile?.SpecialtyTags,
                 PhoneNumber = user.PhoneNumber,
-                AvatarUrl = user.AvatarUrl
+                AvatarUrl = user.AvatarUrl,
+                CitizenId = user.CitizenId,
+                CitizenIdIssueDate = user.CitizenIdIssueDate,
+                CitizenIdIssuePlace = user.CitizenIdIssuePlace
             };
         }
     }

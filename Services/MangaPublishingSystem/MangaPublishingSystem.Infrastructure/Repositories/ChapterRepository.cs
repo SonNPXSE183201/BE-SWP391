@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System;
 using System.Linq;
 using System.Threading.Tasks;
 using MangaPublishingSystem.Domain.Entities;
@@ -40,6 +41,19 @@ namespace MangaPublishingSystem.Infrastructure.Repositories
                 .Include(c => c.Pages)
                     .ThenInclude(p => p.Regions)
                 .FirstOrDefaultAsync();
+        }
+
+        public async Task<IEnumerable<Chapter>> GetPublishingScheduleAsync(DateTime monthStart, DateTime monthEnd)
+        {
+            return await _dbContext.Chapters
+                .Where(c =>
+                    c.PublishDate.HasValue &&
+                    c.PublishDate.Value >= monthStart &&
+                    c.PublishDate.Value < monthEnd)
+                .Include(c => c.Series)
+                    .ThenInclude(s => s.Mangaka)
+                .AsNoTracking()
+                .ToListAsync();
         }
     }
 }

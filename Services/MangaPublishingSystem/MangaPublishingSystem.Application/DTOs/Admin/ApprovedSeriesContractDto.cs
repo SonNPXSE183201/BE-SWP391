@@ -38,6 +38,9 @@ namespace MangaPublishingSystem.Application.DTOs.Admin
         [JsonPropertyName("contractStatus")]
         public string? ContractStatus { get; set; }
 
+        [JsonPropertyName("contractFileUrl")]
+        public string? ContractFileUrl { get; set; }
+
         [JsonPropertyName("addendums")]
         public List<ContractAddendumDto>? Addendums { get; set; }
 

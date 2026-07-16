@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System;
 using System.Threading.Tasks;
 using MangaPublishingSystem.Domain.Entities;
 
@@ -8,5 +9,6 @@ namespace MangaPublishingSystem.Application.IRepositories
     {
         Task<IEnumerable<Chapter>> GetPendingReviewChaptersWithDetailsAsync(int editorId);
         Task<Chapter?> GetChapterWithDetailsByIdAsync(int id);
+        Task<IEnumerable<Chapter>> GetPublishingScheduleAsync(DateTime monthStart, DateTime monthEnd);
     }
-}
+}

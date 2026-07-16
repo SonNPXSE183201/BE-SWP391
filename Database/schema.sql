@@ -2,6 +2,10 @@
 -- DATABASE CREATION & SCHEMA INITIALIZATION SCRIPT
 -- PROJECT: Manga Creation Workflow & Publishing Management System (MCWPMS)
 -- DATABASE NAME: MangaPublishing
+-- LOCAL RESET COMMANDS:
+--   sqlcmd -S localhost -d master -Q "IF DB_ID('MangaPublishing') IS NULL CREATE DATABASE MangaPublishing"
+--   sqlcmd -S localhost -d MangaPublishing -f 65001 -i backend/Database/schema.sql
+--   sqlcmd -S localhost -d MangaPublishing -f 65001 -i backend/Database/seed.sql
 -- RDBMS: Microsoft SQL Server (MS SQL)
 -- DATE: 2026-06-06 (cập nhật 2026-07-01)
 -- CHẠY : sqlcmd -S localhost -f 65001 -i backend/Database/schema.sql
@@ -13,53 +17,27 @@
 --   • Series_Assistant (nhóm Trợ lý cố định theo Series — Flow 2)
 -- =========================================================================
 
-USE master;
-GO
-
--- Reset/Drop Database if it already exists to start fresh and avoid conflicts/errors
-IF EXISTS (SELECT * FROM sys.databases WHERE name = 'MangaPublishing')
-BEGIN
-    ALTER DATABASE MangaPublishing SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
-    DROP DATABASE MangaPublishing;
-    PRINT 'Database "MangaPublishing" dropped successfully.';
-END
-GO
-
--- Create Database
-CREATE DATABASE MangaPublishing;
-PRINT 'Database "MangaPublishing" created successfully.';
-GO
-
-USE MangaPublishing;
 -- Run Script Azure
+-- Note: Azure SQL Database does not support USE or DROP DATABASE within the same connection.
+-- The script will instead drop all existing tables to simulate a fresh database reset.
 GO
 SET QUOTED_IDENTIFIER ON;
 GO
 
--- Drop existing tables in reverse dependency order to avoid constraints conflicts
-IF OBJECT_ID('dbo.Series_Assistant', 'U') IS NOT NULL DROP TABLE dbo.Series_Assistant;
-IF OBJECT_ID('dbo.PortfolioSample', 'U') IS NOT NULL DROP TABLE dbo.PortfolioSample;
-IF OBJECT_ID('dbo.Report', 'U') IS NOT NULL DROP TABLE dbo.Report;
-IF OBJECT_ID('dbo.Annotation', 'U') IS NOT NULL DROP TABLE dbo.Annotation;
-IF OBJECT_ID('dbo.DisputeLog', 'U') IS NOT NULL DROP TABLE dbo.DisputeLog;
-IF OBJECT_ID('dbo.TaskVersion', 'U') IS NOT NULL DROP TABLE dbo.TaskVersion;
-IF OBJECT_ID('dbo.Tasks', 'U') IS NOT NULL DROP TABLE dbo.Tasks;
-IF OBJECT_ID('dbo.Region', 'U') IS NOT NULL DROP TABLE dbo.Region;
-IF OBJECT_ID('dbo.Page', 'U') IS NOT NULL DROP TABLE dbo.Page;
-IF OBJECT_ID('dbo.Chapter', 'U') IS NOT NULL DROP TABLE dbo.Chapter;
-IF OBJECT_ID('dbo.ContractAddendum', 'U') IS NOT NULL DROP TABLE dbo.ContractAddendum;
-IF OBJECT_ID('dbo.Contract', 'U') IS NOT NULL DROP TABLE dbo.Contract;
-IF OBJECT_ID('dbo.BoardVote', 'U') IS NOT NULL DROP TABLE dbo.BoardVote;
-IF OBJECT_ID('dbo.BoardVotingConfig', 'U') IS NOT NULL DROP TABLE dbo.BoardVotingConfig;
-IF OBJECT_ID('dbo.RankingRecord', 'U') IS NOT NULL DROP TABLE dbo.RankingRecord;
-IF OBJECT_ID('dbo.Series', 'U') IS NOT NULL DROP TABLE dbo.Series;
-IF OBJECT_ID('dbo.Notification', 'U') IS NOT NULL DROP TABLE dbo.Notification;
-IF OBJECT_ID('dbo.AssistantProfile', 'U') IS NOT NULL DROP TABLE dbo.AssistantProfile;
-IF OBJECT_ID('dbo.Transaction', 'U') IS NOT NULL DROP TABLE dbo.[Transaction];
-IF OBJECT_ID('dbo.Wallet', 'U') IS NOT NULL DROP TABLE dbo.Wallet;
-IF OBJECT_ID('dbo.RefreshToken', 'U') IS NOT NULL DROP TABLE dbo.RefreshToken;
-IF OBJECT_ID('dbo.User', 'U') IS NOT NULL DROP TABLE dbo.[User];
-IF OBJECT_ID('dbo.Role', 'U') IS NOT NULL DROP TABLE dbo.Role;
+-- Drop all foreign keys
+DECLARE @dropFkSql NVARCHAR(MAX) = N'';
+SELECT @dropFkSql += 'ALTER TABLE ' + QUOTENAME(s.name) + '.' + QUOTENAME(t.name) + ' DROP CONSTRAINT ' + QUOTENAME(f.name) + ';'
+FROM sys.foreign_keys f
+INNER JOIN sys.tables t ON f.parent_object_id = t.object_id
+INNER JOIN sys.schemas s ON t.schema_id = s.schema_id;
+EXEC sp_executesql @dropFkSql;
+
+-- Drop all tables
+DECLARE @dropTableSql NVARCHAR(MAX) = N'';
+SELECT @dropTableSql += 'DROP TABLE ' + QUOTENAME(s.name) + '.' + QUOTENAME(t.name) + ';'
+FROM sys.tables t
+INNER JOIN sys.schemas s ON t.schema_id = s.schema_id;
+EXEC sp_executesql @dropTableSql;
 GO
 
 -- =========================================================================
@@ -93,6 +71,9 @@ CREATE TABLE dbo.[User] (
     AssignedEditorId INT NULL,
     PhoneNumber NVARCHAR(MAX) NULL,
     AvatarUrl NVARCHAR(MAX) NULL,
+    CitizenId VARCHAR(20) NULL,
+    CitizenIdIssueDate DATE NULL,
+    CitizenIdIssuePlace NVARCHAR(100) NULL,
     CreateAt DATETIME2 NOT NULL CONSTRAINT DF_User_CreateAt DEFAULT GETUTCDATE(),
     UpdateAt DATETIME2 NULL,
     CONSTRAINT PK_User PRIMARY KEY CLUSTERED (UserId),
@@ -226,6 +207,7 @@ CREATE TABLE dbo.Series (
     PublicationSchedule NVARCHAR(50) NULL,
     Status NVARCHAR(50) NOT NULL CONSTRAINT DF_Series_Status DEFAULT N'Draft',
     ResourceFolderUrl NVARCHAR(500) NULL,
+    ContractRejectionCount INT NOT NULL CONSTRAINT DF_Series_ContractRejCount DEFAULT 0,
     CreateAt DATETIME2 NOT NULL CONSTRAINT DF_Series_CreateAt DEFAULT GETUTCDATE(),
     UpdateAt DATETIME2 NULL,
     CONSTRAINT PK_Series PRIMARY KEY CLUSTERED (SeriesId),
@@ -280,6 +262,7 @@ CREATE TABLE dbo.BoardVote (
     BoardMemberId INT NOT NULL,
     VoteType NVARCHAR(50) NOT NULL,
     RecommendedBudget DECIMAL(18,2) NOT NULL CONSTRAINT DF_BoardVote_Budget DEFAULT 0.00,
+    PublicationSchedule NVARCHAR(50) NULL,
     Comment NVARCHAR(1000) NULL,
     VoteAt DATETIME2 NOT NULL CONSTRAINT DF_BoardVote_VoteAt DEFAULT GETDATE(),
     CreateAt DATETIME2 NOT NULL CONSTRAINT DF_BoardVote_CreateAt DEFAULT GETUTCDATE(),
@@ -308,20 +291,40 @@ CREATE TABLE dbo.BoardVotingConfig (
 GO
 
 -- =========================================================================
+-- 9c. TABLE: ContractTemplate
+-- =========================================================================
+CREATE TABLE dbo.ContractTemplate (
+    TemplateId INT IDENTITY(1,1) NOT NULL,
+    Content NVARCHAR(MAX) NOT NULL,
+    Version INT NOT NULL CONSTRAINT DF_ContractTemplate_Version DEFAULT 1,
+    IsActive BIT NOT NULL CONSTRAINT DF_ContractTemplate_IsActive DEFAULT 1,
+    CreatedByUserId INT NOT NULL,
+    CreateAt DATETIME2 NOT NULL CONSTRAINT DF_ContractTemplate_CreateAt DEFAULT GETUTCDATE(),
+    UpdateAt DATETIME2 NULL,
+    CONSTRAINT PK_ContractTemplate PRIMARY KEY CLUSTERED (TemplateId),
+    CONSTRAINT FK_ContractTemplate_User FOREIGN KEY (CreatedByUserId) REFERENCES dbo.[User] (UserId) ON DELETE NO ACTION
+);
+GO
+
+-- =========================================================================
 -- 10. TABLE: Contract
 -- =========================================================================
 CREATE TABLE dbo.Contract (
     ContractId INT IDENTITY(1,1) NOT NULL,
     UserId INT NOT NULL,
     SeriesId INT NOT NULL,
+    TemplateId INT NULL,
     BaseGenkouryoPrice DECIMAL(18,2) NOT NULL CONSTRAINT DF_Contract_Price DEFAULT 0.00,
+    ContractFileUrl NVARCHAR(500) NULL,
     SignedDate DATETIME2 NULL,
+    ExpirationDate DATETIME2 NULL,
     Status NVARCHAR(50) NOT NULL CONSTRAINT DF_Contract_Status DEFAULT N'Pending',
     CreateAt DATETIME2 NOT NULL CONSTRAINT DF_Contract_CreateAt DEFAULT GETUTCDATE(),
     UpdateAt DATETIME2 NULL,
     CONSTRAINT PK_Contract PRIMARY KEY CLUSTERED (ContractId),
     CONSTRAINT FK_Contract_User FOREIGN KEY (UserId) REFERENCES dbo.[User] (UserId) ON DELETE NO ACTION,
-    CONSTRAINT FK_Contract_Series FOREIGN KEY (SeriesId) REFERENCES dbo.Series (SeriesId) ON DELETE NO ACTION
+    CONSTRAINT FK_Contract_Series FOREIGN KEY (SeriesId) REFERENCES dbo.Series (SeriesId) ON DELETE NO ACTION,
+    CONSTRAINT FK_Contract_Template FOREIGN KEY (TemplateId) REFERENCES dbo.ContractTemplate (TemplateId) ON DELETE NO ACTION
 );
 GO
 
@@ -352,6 +355,7 @@ CREATE TABLE dbo.Chapter (
     ValidPageCount INT NOT NULL CONSTRAINT DF_Chapter_PageCount DEFAULT 0,
     AppliedGenkouryoPrice DECIMAL(18,2) NOT NULL CONSTRAINT DF_Chapter_Genkouryo DEFAULT 0.00,
     SubmissionDeadline DATETIME2 NULL,
+    PublishDate DATETIME2 NULL,
     QcChecklistData NVARCHAR(MAX) NULL,
     Status NVARCHAR(50) NOT NULL CONSTRAINT DF_Chapter_Status DEFAULT N'Draft',
     CreateAt DATETIME2 NOT NULL CONSTRAINT DF_Chapter_CreateAt DEFAULT GETUTCDATE(),

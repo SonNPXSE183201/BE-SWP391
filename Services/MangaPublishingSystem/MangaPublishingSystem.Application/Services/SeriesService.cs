@@ -366,7 +366,7 @@ namespace MangaPublishingSystem.Application.Services
                 var notif = new Notification
                 {
                     UserId = mangakaId,
-                    Content = $"Da ky hop dong cho bo truyen '{series.Title}'. So tien {series.ApprovedProductionBudget:N0} VND da duoc nap vao vi ky quy cua ban.",
+                    Content = $"Đã ký hợp đồng cho bộ truyện '{series.Title}'. Số tiền {series.ApprovedProductionBudget:N0} VND đã được nạp vào quỹ thiết lập của bạn.",
                     Type = "Contract_Signed",
                     IsRead = false
                 };
@@ -376,7 +376,7 @@ namespace MangaPublishingSystem.Application.Services
                 await _notificationPublisher.PublishNotificationPayloadAsync(mangakaId, new NotificationPayload
                 {
                     Id = notif.Id,
-                    Title = "Ky hop dong thanh cong",
+                    Title = "Ký hợp đồng thành công",
                     Message = notif.Content,
                     Link = "/wallet",
                     Type = notif.Type,
@@ -447,7 +447,8 @@ namespace MangaPublishingSystem.Application.Services
             int boardUserId,
             string voteChoice,
             string comment,
-            decimal recommendedBudget)
+            decimal recommendedBudget,
+            string? publicationSchedule)
         {
             var series = await _seriesRepository.GetByIdAsync(seriesId);
             if (series == null)
@@ -497,12 +498,19 @@ namespace MangaPublishingSystem.Application.Services
                 }
             }
 
+            var normalizedSchedule = NormalizePublicationSchedule(publicationSchedule);
+            if (voteType == "Approve" && string.IsNullOrWhiteSpace(normalizedSchedule))
+            {
+                throw new BadRequestException("Vui lòng chọn lịch phát hành khi phê duyệt.");
+            }
+
             var vote = new BoardVote
             {
                 SeriesId = seriesId,
                 BoardMemberId = boardUserId,
                 VoteType = voteType,
                 RecommendedBudget = voteType == "Approve" ? recommendedBudget : 0.00m,
+                PublicationSchedule = voteType == "Approve" ? normalizedSchedule : null,
                 Comment = comment,
                 VoteAt = DateTime.Now
             };
@@ -512,6 +520,25 @@ namespace MangaPublishingSystem.Application.Services
 
             var resolution = await _boardVotingService.EvaluateSeriesVotesAsync(seriesId);
             await _boardVotingService.ApplyVoteResolutionAsync(series, resolution, comment);
+        }
+
+        private static string? NormalizePublicationSchedule(string? schedule)
+        {
+            if (string.IsNullOrWhiteSpace(schedule))
+            {
+                return null;
+            }
+
+            return schedule.Trim() switch
+            {
+                "Weekly" => "Weekly",
+                "Bi-weekly" => "Bi-weekly",
+                "Monthly" => "Monthly",
+                "1 tuần 1 lần" => "Weekly",
+                "2 tuần 1 lần" => "Bi-weekly",
+                "1 tháng 1 lần" => "Monthly",
+                _ => null
+            };
         }
 
         private static bool CanCreateChapter(string? status) =>
