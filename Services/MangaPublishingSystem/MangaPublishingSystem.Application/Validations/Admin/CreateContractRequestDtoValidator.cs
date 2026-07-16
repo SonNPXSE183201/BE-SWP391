@@ -8,14 +8,17 @@ namespace MangaPublishingSystem.Application.Validations.Admin
         public CreateContractRequestDtoValidator()
         {
             RuleFor(x => x.SeriesId)
-                .NotEmpty().WithMessage("Mã series không được để trống.")
+                .NotEmpty().WithMessage("Series id is required.")
                 .Must(id => int.TryParse(id, out var parsed) && parsed > 0)
-                .WithMessage("Mã series không hợp lệ.");
+                .WithMessage("Series id is invalid.");
 
             RuleFor(x => x.BaseGenkouryoPrice)
-                .GreaterThan(0).WithMessage("Đơn giá nhuận bút phải lớn hơn 0.")
+                .GreaterThan(0).WithMessage("Base genkouryo price must be greater than 0.")
                 .Must(value => decimal.Round(value, 2, System.MidpointRounding.AwayFromZero) == value)
-                .WithMessage("Đơn giá nhuận bút chỉ hỗ trợ tối đa 2 chữ số thập phân.");
+                .WithMessage("Base genkouryo price supports up to 2 decimal places.");
+
+            RuleFor(x => x.TemplateId)
+                .GreaterThanOrEqualTo(0).WithMessage("Template id is invalid.");
         }
     }
 }

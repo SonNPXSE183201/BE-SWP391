@@ -356,6 +356,11 @@ VALUES
 SET IDENTITY_INSERT dbo.Chapter OFF;
 GO
 
+UPDATE dbo.Chapter
+SET PublishDate = SubmissionDeadline
+WHERE PublishDate IS NULL AND SubmissionDeadline IS NOT NULL;
+GO
+
 SET IDENTITY_INSERT dbo.Page ON;
 INSERT INTO dbo.Page
     (PageId, ChapterId, PageNumber, RawImageUrl, CompositeImageUrl, BaseLayerUrl, Status, IsApproved, CreateAt)

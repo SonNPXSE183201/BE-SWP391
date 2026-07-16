@@ -6,5 +6,6 @@ namespace MangaPublishingSystem.Application.DTOs.Series
         public string? VoteChoice { get; set; }
         public string Comment { get; set; } = null!;
         public decimal RecommendedBudget { get; set; }
+        public string? PublicationSchedule { get; set; }
     }
 }

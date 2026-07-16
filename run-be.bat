@@ -16,10 +16,11 @@ dotnet clean MangaPublishingSystem.sln -c Debug >nul 2>nul
 echo Building solution...
 dotnet build MangaPublishingSystem.sln -c Debug
 
-:: 4. Initialize Database (Đã comment để tránh mất dữ liệu test)
+:: 4. Initialize Database (disabled by default to avoid losing local test data)
 :: echo Initializing database schema and seed data...
-:: sqlcmd -S localhost -f 65001 -i Database\schema.sql
-:: sqlcmd -S localhost -f 65001 -i Database\seed.sql
+:: sqlcmd -S localhost -d master -Q "IF DB_ID('MangaPublishing') IS NULL CREATE DATABASE MangaPublishing"
+:: sqlcmd -S localhost -d MangaPublishing -f 65001 -i Database\schema.sql
+:: sqlcmd -S localhost -d MangaPublishing -f 65001 -i Database\seed.sql
 
 :: Check if Windows Terminal (wt.exe) is available
 where wt >nul 2>nul
@@ -29,13 +30,13 @@ if %ERRORLEVEL% equ 0 (
 ) else (
     echo Windows Terminal not found.
     echo Falling back to launching in separate command windows...
-    
+
     echo Launching GatewayAPI...
     start "GatewayAPI - dotnet watch" cmd /k dotnet watch run --project GatewayAPI/GatewayAPI.csproj
-    
+
     echo Launching MangaPublishingSystem...
     start "MangaPublishingSystem - dotnet watch" cmd /k dotnet watch run --project Services/MangaPublishingSystem/MangaPublishingSystem.Presentation/MangaPublishingSystem.Presentation.csproj
-    
+
     echo Launching AiVisionService...
     start "AiVisionService - uvicorn" cmd /k "cd Services\AiVisionService && .\venv\Scripts\python.exe -m uvicorn main:app --port 8000 --reload"
 )

@@ -29,5 +29,6 @@ namespace MangaPublishingSystem.Application.DTOs.Series
         public string? ContractStatus { get; set; }
         public decimal? BaseGenkouryoPrice { get; set; }
         public DateTime? ContractSignedDate { get; set; }
+        public string? ContractFileUrl { get; set; }
     }
 }

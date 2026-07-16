@@ -2,6 +2,10 @@
 -- DATABASE CREATION & SCHEMA INITIALIZATION SCRIPT
 -- PROJECT: Manga Creation Workflow & Publishing Management System (MCWPMS)
 -- DATABASE NAME: MangaPublishing
+-- LOCAL RESET COMMANDS:
+--   sqlcmd -S localhost -d master -Q "IF DB_ID('MangaPublishing') IS NULL CREATE DATABASE MangaPublishing"
+--   sqlcmd -S localhost -d MangaPublishing -f 65001 -i backend/Database/schema.sql
+--   sqlcmd -S localhost -d MangaPublishing -f 65001 -i backend/Database/seed.sql
 -- RDBMS: Microsoft SQL Server (MS SQL)
 -- DATE: 2026-06-06 (cập nhật 2026-07-01)
 -- CHẠY : sqlcmd -S localhost -f 65001 -i backend/Database/schema.sql
@@ -258,6 +262,7 @@ CREATE TABLE dbo.BoardVote (
     BoardMemberId INT NOT NULL,
     VoteType NVARCHAR(50) NOT NULL,
     RecommendedBudget DECIMAL(18,2) NOT NULL CONSTRAINT DF_BoardVote_Budget DEFAULT 0.00,
+    PublicationSchedule NVARCHAR(50) NULL,
     Comment NVARCHAR(1000) NULL,
     VoteAt DATETIME2 NOT NULL CONSTRAINT DF_BoardVote_VoteAt DEFAULT GETDATE(),
     CreateAt DATETIME2 NOT NULL CONSTRAINT DF_BoardVote_CreateAt DEFAULT GETUTCDATE(),
@@ -350,6 +355,7 @@ CREATE TABLE dbo.Chapter (
     ValidPageCount INT NOT NULL CONSTRAINT DF_Chapter_PageCount DEFAULT 0,
     AppliedGenkouryoPrice DECIMAL(18,2) NOT NULL CONSTRAINT DF_Chapter_Genkouryo DEFAULT 0.00,
     SubmissionDeadline DATETIME2 NULL,
+    PublishDate DATETIME2 NULL,
     QcChecklistData NVARCHAR(MAX) NULL,
     Status NVARCHAR(50) NOT NULL CONSTRAINT DF_Chapter_Status DEFAULT N'Draft',
     CreateAt DATETIME2 NOT NULL CONSTRAINT DF_Chapter_CreateAt DEFAULT GETUTCDATE(),
