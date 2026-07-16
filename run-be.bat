@@ -20,21 +20,5 @@ dotnet build MangaPublishingSystem.sln -c Debug
 echo Initializing database schema and seed data...
 sqlcmd -S localhost -f 65001 -i Database\schema.sql
 sqlcmd -S localhost -f 65001 -i Database\seed.sql
-:: Check if Windows Terminal (wt.exe) is available
-where wt >nul 2>nul
-if %ERRORLEVEL% equ 0 (
     echo Launching services in Windows Terminal tabs...
-    wt -d "%cd%" cmd /k dotnet watch run --project GatewayAPI/GatewayAPI.csproj ^; new-tab -d "%cd%" cmd /k dotnet watch run --project Services/MangaPublishingSystem/MangaPublishingSystem.Presentation/MangaPublishingSystem.Presentation.csproj ^; new-tab -d "%cd%\Services\AiVisionService" cmd /k ".\venv\Scripts\python.exe -m uvicorn main:app --port 8000 --reload"
-) else (
-    echo Windows Terminal not found.
-    echo Falling back to launching in separate command windows...
-    
-    echo Launching GatewayAPI...
-    start "GatewayAPI - dotnet watch" cmd /k dotnet watch run --project GatewayAPI/GatewayAPI.csproj
-    
-    echo Launching MangaPublishingSystem...
-    start "MangaPublishingSystem - dotnet watch" cmd /k dotnet watch run --project Services/MangaPublishingSystem/MangaPublishingSystem.Presentation/MangaPublishingSystem.Presentation.csproj
-    
-    echo Launching AiVisionService...
-    start "AiVisionService - uvicorn" cmd /k "cd Services\AiVisionService && .\venv\Scripts\python.exe -m uvicorn main:app --port 8000 --reload"
-)
+    wt -w 0 nt -d "%cd%" cmd /k "title GatewayAPI && dotnet watch run --project GatewayAPI/GatewayAPI.csproj" ; nt -d "%cd%" cmd /k "title MangaPublishingSystem && dotnet watch run --project Services/MangaPublishingSystem/MangaPublishingSystem.Presentation/MangaPublishingSystem.Presentation.csproj" ; nt -d "%cd%\Services\AiVisionService" cmd /k "title AiVisionService && .\venv\Scripts\python.exe -m uvicorn main:app --port 8000 --reload"

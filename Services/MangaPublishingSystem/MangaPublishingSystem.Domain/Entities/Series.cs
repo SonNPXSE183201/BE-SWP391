@@ -19,6 +19,7 @@ namespace MangaPublishingSystem.Domain.Entities
         public string? PublicationSchedule { get; set; }
         public string Status { get; set; } = "Draft";
         public string? ResourceFolderUrl { get; set; }
+        public int ContractRejectionCount { get; set; } = 0;
 
         // Navigation properties
         public virtual User Mangaka { get; set; } = null!;

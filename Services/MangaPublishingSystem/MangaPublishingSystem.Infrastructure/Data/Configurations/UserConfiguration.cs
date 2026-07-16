@@ -60,6 +60,14 @@ namespace MangaPublishingSystem.Infrastructure.Data.Configurations
             builder.Property(e => e.AssignedEditorId)
                 .HasColumnName("AssignedEditorId");
 
+            builder.Property(e => e.CitizenId)
+                .HasMaxLength(20);
+
+            builder.Property(e => e.CitizenIdIssueDate);
+
+            builder.Property(e => e.CitizenIdIssuePlace)
+                .HasMaxLength(200);
+
             builder.HasOne(e => e.AssignedEditor)
                 .WithMany()
                 .HasForeignKey(e => e.AssignedEditorId)

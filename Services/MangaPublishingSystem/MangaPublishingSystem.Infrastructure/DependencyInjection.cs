@@ -73,7 +73,7 @@ namespace MangaPublishingSystem.Infrastructure
             // Đăng ký các Http Clients cho AI Module
             services.AddHttpClient<IAiVisionClient, FastApiVisionClient>(client =>
             {
-                client.BaseAddress = new Uri(config["AiVision:BaseUrl"] ?? config["AiSettings:FastApiUrl"] ?? "http://ai-service:8000/");
+                client.BaseAddress = new Uri(config["AiVision:BaseUrl"] ?? config["AiSettings:FastApiUrl"] ?? "http://localhost:8000/");
                 client.Timeout = TimeSpan.FromMinutes(5); // AI processing có thể mất thời gian
             });
 

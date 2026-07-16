@@ -83,6 +83,14 @@ Dự án áp dụng kiến trúc **Clean Architecture** kết hợp quy chuẩn 
 
 ---
 
+### 2.4. Quy tắc nghiệp vụ đặc thù (Business Rules)
+* **Quản lý Mẫu Hợp đồng (Contract Template):**
+  * Hệ thống cho phép cấu hình và lưu trữ nhiều mẫu hợp đồng khác nhau.
+  * **Quy tắc Single Active**: Tại một thời điểm, **chỉ có tối đa 1 mẫu hợp đồng được kích hoạt (IsActive = true)**.
+  * Khi Admin tạo mới hoặc cập nhật một mẫu hợp đồng với cờ `IsActive = true`, hệ thống sẽ tự động quét và vô hiệu hóa (`IsActive = false`) tất cả các mẫu hợp đồng đang active khác. Điều này đảm bảo khi hệ thống tự động sinh Hợp đồng (Contract Generation) luôn lấy được đúng 1 mẫu hợp đồng tiêu chuẩn hiện hành mà không bị nhầm lẫn.
+
+---
+
 ## 3. DEVELOPER GUIDE: QUY TRÌNH THÊM MỘT TÍNH NĂNG / API MỚI
 
 Khi bạn (hoặc AI) cần tạo một API chức năng mới (Ví dụ: Tạo nhiệm vụ cho Trợ lý - `Create Task`), bắt buộc phải làm theo thứ tự 6 bước nghiêm ngặt dưới đây:

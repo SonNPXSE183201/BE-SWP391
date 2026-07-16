@@ -109,7 +109,7 @@ Hệ thống phân chia người dùng thành 2 nhóm với 5 vai trò phân quy
    * Tác giả liên hệ với nhà xuất bản qua Landing Page. Nhà xuất bản cử một nhân viên tìm kiếm tài năng (Scout) gặp mặt trực tiếp để đánh giá năng lực tác giả (Khả năng đào tạo, Tốc độ vẽ, Khả năng làm việc nhóm, Độ phù hợp văn hóa, Tiềm năng thương mại).
    * Hai bên ký kết bản ghi nhớ hợp đồng giấy (MOU offline), chốt đơn giá trang vẽ gốc (`BaseGenkouryoPrice` VND/trang).
    * Scout gửi hồ sơ Mangaka cho Admin.
-   * Admin nhập thông tin lên hệ thống: Tạo tài khoản Mangaka (F5.1, F5.2), phân bổ một Biên tập viên phụ trách (Tantou Editor), nhập đơn giá trang hợp đồng.
+   * Admin nhập thông tin lên hệ thống: Tạo tài khoản Mangaka (F5.1, F5.2) kèm theo **thông tin CCCD bắt buộc** (Số, Ngày cấp, Nơi cấp) để phục vụ tạo hợp đồng sau này, phân bổ một Biên tập viên phụ trách (Tantou Editor), nhập đơn giá trang hợp đồng.
    * Tác giả nhận được email kích hoạt có kèm mật khẩu tạm thời, đăng nhập, đổi mật khẩu và bắt đầu sử dụng. Tác giả có thể tự cập nhật thông tin cá nhân bổ sung (Số điện thoại, Ảnh đại diện, Bút danh) thông qua API Profile (`PUT /api/profile`).
 2. **Đối với Assistant (Đăng ký tự do)**:
    * Assistant truy cập Landing Page -> nhấn "Register".
@@ -138,9 +138,13 @@ Hệ thống phân chia người dùng thành 2 nhóm với 5 vai trò phân quy
      * *Hòa phiếu hoặc bế tắc*: Hệ thống tự động giải quyết theo cấu hình (Tie Policy: Leo thang cho Admin, Tự động từ chối, hoặc Theo phiếu Chủ tịch). Nếu leo thang, trạng thái là `Vote_Escalated`, Admin sẽ quyết định thủ công.
    * *Quá hạn 48h (AutoResolveHours)*: Hệ thống tự động đánh giá dựa trên các phiếu đã bỏ để chốt duyệt/từ chối/leo thang nhằm tránh việc treo vô hạn.
 4. **Ký hợp đồng và Cấp quỹ**:
-   * Admin tạo Hợp đồng lao động trên hệ thống (F5.3) dựa trên các thông số đã duyệt.
-   * Mangaka nhận được thông báo, kiểm tra điều khoản và nhấn "Accept Fund".
-   * Hệ thống đổi trạng thái truyện sang `In Production` và **tự động cấp số tiền ngân sách được duyệt vào ví tài trợ `SetupFundBalance` của Mangaka** (F5.4).
+   * Admin tạo Hợp đồng từ mẫu (Template) trên hệ thống (F5.3) dựa trên các thông số đã duyệt. Hệ thống xuất file PDF và lưu trữ lên Firebase. Hợp đồng sẽ được gắn một thời hạn ký (ExpirationDate, ví dụ: 7 ngày).
+     * *Lưu ý về Mẫu Hợp Đồng (Contract Template)*: Hệ thống cho phép cấu hình nhiều mẫu hợp đồng khác nhau nhưng **chỉ có tối đa 1 mẫu được kích hoạt (Active) tại một thời điểm**. Khi tạo mới hoặc cập nhật một mẫu thành `Active`, hệ thống tự động vô hiệu hóa (`IsActive = false`) tất cả các mẫu còn lại để đảm bảo tính nhất quán.
+   * Mangaka nhận được thông báo, nhấp vào link PDF để đọc trực tiếp các điều khoản do Admin biên soạn.
+   * Mangaka có quyền Ký hoặc Từ chối:
+     * **Ký (Accept Fund)**: Hệ thống đổi trạng thái truyện sang `In Production` và **tự động cấp số tiền ngân sách được duyệt vào ví tài trợ `SetupFundBalance` của Mangaka** (F5.4).
+     * **Từ chối (Reject) / Để quá hạn (Expired)**: Hợp đồng bị đổi thành `Rejected` hoặc `Expired`. Bộ truyện **được giữ nguyên ở trạng thái `Fund_Pending`** để Admin có thể tiếp tục tạo một phiên bản Hợp đồng mới (với các điều khoản ngân sách hoặc đơn giá nhuận bút mới) để đàm phán lại. (Chỉ khi Hợp đồng bị từ chối/hết hạn đến lần thứ 3 thì mới áp dụng quy tắc chống Spam).
+     * **Quy tắc chống Spam**: Nếu Mangaka từ chối hoặc để hợp đồng quá hạn tới **3 lần** (`ContractRejectionCount >= 3`), hệ thống sẽ lập tức khóa vĩnh viễn bộ truyện đó sang trạng thái `Cancelled`, chấm dứt đàm phán.
 
 ### Luồng 3 — Sản xuất & Thuê Trợ lý (Production & Hiring Assistants)
 

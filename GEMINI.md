@@ -19,6 +19,7 @@ Trước khi triển khai bất kỳ tính năng nào liên quan đến nghiệp
 2. **Quy tắc về tiền và ví (Wallet Rules)**: `SetupFundBalance` vs `WithdrawableBalance`.
 3. **Quy tắc Escrow**: Khóa tiền cọc nhiệm vụ khi tạo task, giải ngân khi approve, hoàn tiền khi hủy task.
 4. **Quy tắc Cấp vốn Hai cổng**: Truyện nộp duyệt -> Editor kiểm duyệt -> Trình HĐ -> HĐ Biểu quyết -> Admin duyệt giải ngân.
+5. **Quy tắc Mẫu Hợp đồng (Single Active Contract Template)**: Hệ thống cho phép nhiều mẫu hợp đồng nhưng **chỉ có tối đa 1 mẫu được kích hoạt (IsActive = true)** tại một thời điểm. Việc gán `IsActive = true` cho một mẫu sẽ tự động vô hiệu hóa tất cả các mẫu khác.
 
 ## 2. NGUYÊN TẮC KIẾN TRÚC NGHIÊM NGẶT (CLEAN ARCHITECTURE 4 TẦNG)
 
@@ -127,6 +128,7 @@ dotnet build MangaPublishingSystem.sln
 * **Quy tắc khai báo Enum & Ràng buộc Database (Enum Mapping & DB Constraints)**:
   * Khi tạo các trường dữ liệu kiểu Enum (ví dụ: `UserStatus` cho `Status`), bắt buộc phải sử dụng cấu hình `.HasConversion<string>()` trong Fluent API cấu hình thực thể (Configuration) để lưu trữ dưới dạng chuỗi (`VARCHAR`/`NVARCHAR`) trong cơ sở dữ liệu thay vì số nguyên.
   * Đồng thời, bắt buộc phải thêm ràng buộc `CHECK CONSTRAINT` tương ứng trong tệp SQL khởi tạo cơ sở dữ liệu `schema.sql` (ví dụ: `CONSTRAINT CK_User_Status CHECK (Status IN (N'Pending', N'Active', N'Rejected', N'Locked'))`) để đảm bảo tính toàn vẹn dữ liệu chặt chẽ ở cả mức vật lý.
+  * **Xóa dữ liệu (Database Cleanup)**: Tuyệt đối KHÔNG sử dụng stored procedure `sp_MSforeachtable` trong các kịch bản reset/cleanup CSDL (như `schema.sql` hay `seed.sql`) vì không được hỗ trợ trên Azure SQL Edge. Luôn sử dụng **Dynamic SQL** (ví dụ: vòng lặp qua `sys.tables`) để xóa hoặc vô hiệu hóa constraint.
 * **Múi giờ & Định dạng JSON**:
   * Mọi dữ liệu thời gian lưu trữ trong DB và Backend C# bắt buộc phải sử dụng **múi giờ chuẩn UTC** (`DateTime.UtcNow`).
   * Khi trả dữ liệu JSON về cho Client/FE, hệ thống sử dụng bộ chuyển đổi chung `DateTimeJsonConverter` để tự động đổi múi giờ sang giờ Việt Nam (**UTC+7**) và định dạng thân thiện: **`yyyy-MM-dd HH:mm:ss`**.
