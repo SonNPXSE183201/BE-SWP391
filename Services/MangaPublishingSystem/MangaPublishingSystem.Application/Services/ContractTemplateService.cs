@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using MangaPublishingSystem.Application.DTOs.Contracts;
 using MangaPublishingSystem.Application.IRepositories;
@@ -104,13 +105,44 @@ namespace MangaPublishingSystem.Application.Services
             return new ContractTemplateDto
             {
                 Id = entity.Id,
-                Content = entity.Content,
+                Content = EnsurePublicationSchedulePlaceholder(entity.Content),
                 Version = entity.Version,
                 IsActive = entity.IsActive,
                 CreatedByUserId = entity.CreatedByUserId,
                 CreateAt = entity.CreateAt,
                 UpdateAt = entity.UpdateAt
             };
+        }
+
+        private static string EnsurePublicationSchedulePlaceholder(string html)
+        {
+            if (html.Contains("{{PublicationSchedule}}", StringComparison.OrdinalIgnoreCase) ||
+                html.Contains("{{PublishSchedule}}", StringComparison.OrdinalIgnoreCase))
+            {
+                return html;
+            }
+
+            const string scheduleItem = "<li><strong>Lịch xuất bản:</strong> {{PublicationSchedule}}</li>";
+            var inserted = Regex.Replace(
+                html,
+                "(<li>\\s*<strong>\\s*Thể loại:\\s*</strong>\\s*\\{\\{SeriesGenre\\}\\}\\s*</li>)",
+                "$1" + scheduleItem,
+                RegexOptions.IgnoreCase | RegexOptions.Singleline);
+
+            if (!string.Equals(inserted, html, StringComparison.Ordinal))
+            {
+                return inserted;
+            }
+
+            if (html.Contains("</body>", StringComparison.OrdinalIgnoreCase))
+            {
+                return html.Replace(
+                    "</body>",
+                    "<p><strong>Lịch xuất bản:</strong> {{PublicationSchedule}}</p></body>",
+                    StringComparison.OrdinalIgnoreCase);
+            }
+
+            return html + "<p><strong>Lịch xuất bản:</strong> {{PublicationSchedule}}</p>";
         }
     }
 }
