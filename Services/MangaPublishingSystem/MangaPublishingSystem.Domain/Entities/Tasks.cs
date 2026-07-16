@@ -10,6 +10,7 @@ namespace MangaPublishingSystem.Domain.Entities
         public int RegionId { get; set; }
         public int? AssistantId { get; set; }
         public string? Description { get; set; }
+        public string? AcceptanceCriteria { get; set; }
         public decimal PaymentAmount { get; set; }
         public DateTime Deadline { get; set; }
         public int? ExtensionRequestDays { get; set; }

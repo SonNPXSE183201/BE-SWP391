@@ -402,6 +402,7 @@ CREATE TABLE dbo.Tasks (
     RegionId INT NOT NULL,
     AssistantId INT NULL,
     Description NVARCHAR(1000) NULL,
+    AcceptanceCriteria NVARCHAR(MAX) NULL,
     PaymentAmount DECIMAL(18,2) NOT NULL CONSTRAINT DF_Task_Payment DEFAULT 0.00,
     Deadline DATETIME2 NOT NULL,
     ExtensionRequestDays INT NULL,

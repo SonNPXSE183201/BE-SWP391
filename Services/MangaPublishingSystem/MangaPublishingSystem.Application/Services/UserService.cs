@@ -26,6 +26,7 @@ namespace MangaPublishingSystem.Application.Services
         private readonly IEmailService _emailService;
         private readonly IPasswordHasher _passwordHasher;
         private readonly IBoardVotingService _boardVotingService;
+        private readonly ISeriesRepository _seriesRepository;
 
         public UserService(
             IUserRepository userRepository,
@@ -33,7 +34,8 @@ namespace MangaPublishingSystem.Application.Services
             IUnitOfWork unitOfWork,
             IEmailService emailService,
             IPasswordHasher passwordHasher,
-            IBoardVotingService boardVotingService)
+            IBoardVotingService boardVotingService,
+            ISeriesRepository seriesRepository)
         {
             _userRepository = userRepository;
             _walletRepository = walletRepository;
@@ -41,6 +43,7 @@ namespace MangaPublishingSystem.Application.Services
             _emailService = emailService;
             _passwordHasher = passwordHasher;
             _boardVotingService = boardVotingService;
+            _seriesRepository = seriesRepository;
         }
 
         public async Task<UserResponseDto> CreateUserByAdminAsync(CreateUserByAdminDto dto)
@@ -425,7 +428,18 @@ namespace MangaPublishingSystem.Application.Services
             if (user.RoleId == RoleIdMangaka)
             {
                 user.PenName = dto.PenName;
+                bool isEditorChanged = user.AssignedEditorId != dto.AssignedEditorId;
                 user.AssignedEditorId = dto.AssignedEditorId;
+
+                if (isEditorChanged)
+                {
+                    var pendingSeries = await _seriesRepository.FindAsync(s => s.MangakaId == user.Id && s.Status == "Pending_Approval");
+                    foreach (var series in pendingSeries)
+                    {
+                        series.EditorId = dto.AssignedEditorId;
+                        _seriesRepository.Update(series);
+                    }
+                }
             }
             user.PortfolioUrl = dto.PortfolioUrl;
             user.Skills = dto.Skills;

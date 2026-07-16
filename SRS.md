@@ -225,17 +225,15 @@ Cơ chế biểu quyết cấp vốn Series hoạt động theo nguyên tắc Ha
 
 **Cấu hình quản lý tập trung (BoardVotingConfig):**
 
-* `ApprovalThresholdPercent`: % số phiếu Đồng ý cần thiết trên tổng số thành viên HĐ (N) để duyệt.
+* `ApprovalThresholdPercent`: % số phiếu Đồng ý cần thiết trên tổng trọng số (TotalWeight) để duyệt.
 * `RejectionThresholdPercent`: % số phiếu Từ chối cần thiết để đánh rớt.
-* Công thức tính ngưỡng: `ceil(N × %Threshold / 100)`. Mẫu số (N) luôn là tổng số thành viên HĐ đang Active.
+* Công thức tính ngưỡng: `ceil(TotalWeight × %Threshold / 100)`. Hệ thống sử dụng Trọng số Chủ tịch (ChairWeight) thay vì đếm 1 người 1 phiếu (N) để tránh hòa phiếu.
+  * Nếu N chẵn: ChairWeight = 2. Nếu N lẻ: ChairWeight = 3 (Tối đa N-2).
+  * `TotalWeight = ChairWeight + (N - 1)`. TotalWeight luôn là số lẻ.
 * Các loại phiếu bầu (Vote Type):
   * **Approve (Đồng ý)**: Bắt buộc kèm theo đề xuất ngân sách. Tính vào phe duyệt.
   * **Reject (Từ chối)**: Tính vào phe từ chối.
-  * **Abstain (Bỏ qua/Phiếu trắng)**: Ghi nhận đã vote nhưng không cộng điểm vào phe nào.
-* **Tie Policy (Chính sách khi hòa phiếu):** Áp dụng khi N thành viên đã vote và số Approve = Reject.
-  * `Escalate`: Leo thang chuyển trạng thái `Vote_Escalated` chờ Admin quyết định thủ công.
-  * `Reject`: Tự động đánh rớt Series (`Rejected`).
-  * `ChairDecides`: Giải quyết theo phiếu đã bỏ của Chủ tịch HĐ (cấu hình qua `ChairUserId`).
+* **Tie Policy (Chính sách khi hòa phiếu):** Hệ thống loại bỏ hoàn toàn khả năng hòa phiếu bằng thuật toán trọng số lẻ ở trên (TotalWeight luôn lẻ), thay vì dùng các cấu hình xử lý hòa phiếu. Mọi biểu quyết đều chắc chắn ra kết quả Approve hoặc Reject khi tất cả thành viên đã bầu.
 * **Auto Resolve (Tự động chốt):** Một background job định kỳ kiểm tra các Series ở trạng thái `Pending_Board_Vote` quá thời gian `AutoResolveHours` (mặc định 48h). Hệ thống sẽ tự tính toán kết quả dựa trên các phiếu ĐÃ bỏ thực tế, ưu tiên phe nào nhiều phiếu hơn hoặc áp dụng Tie Policy.
 * **Xóa phiếu khi nộp lại (`ClearVotesOnResubmit`):** Nếu Editor rút lại hoặc trình lại hồ sơ lên Hội đồng, mọi phiếu bầu cũ trước đó sẽ bị xóa trắng để bầu lại từ đầu.
 

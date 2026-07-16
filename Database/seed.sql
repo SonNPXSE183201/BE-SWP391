@@ -379,15 +379,15 @@ GO
 
 SET IDENTITY_INSERT dbo.Tasks ON;
 INSERT INTO dbo.Tasks
-    (TaskId, MangakaId, RegionId, AssistantId, Description, PaymentAmount, Deadline,
+    (TaskId, MangakaId, RegionId, AssistantId, Description, AcceptanceCriteria, PaymentAmount, Deadline,
      ExtensionRequestDays, ExtensionReason, ExtensionStatus, ZIndex_Order, Status, Rating, FeedbackComment, CreateAt)
 VALUES
-(1, 4, 1, 5, N'Vẽ chi tiết hậu cảnh đồi núi đỏ với buổi hoàng hôn', 500000.00, DATEADD(day, -2, GETUTCDATE()), NULL, NULL, N'None',    1, N'Approved',   5, N'Hậu cảnh vẽ rất đẹp và chi tiết, đúng phong cách.', GETUTCDATE()),
-(2, 4, 2, 5, N'Vẽ và tô màu trang phục nhân vật chính',               300000.00, DATEADD(day, -1, GETUTCDATE()), NULL, NULL, N'None',    2, N'Approved',   4, N'Màu sắc tươi sáng, đúng yêu cầu.',                   GETUTCDATE()),
-(3, 4, 3, 5, N'Vẽ nền phòng học có bàn ghế và cửa sổ lớn',           600000.00, DATEADD(day,  3, GETUTCDATE()), NULL, NULL, N'None',    1, N'Submitted',  NULL, NULL, GETUTCDATE()),
-(4, 4, 4, 5, N'Vẽ hiệu ứng các tia chớp bao quanh',                   250000.00, DATEADD(day,  5, GETUTCDATE()), NULL, NULL, N'None',    2, N'In_Progress', NULL, NULL, GETUTCDATE()),
-(5, 4, 3, 5, N'Vẽ chi tiết các đồ vật nhỏ trên bàn học',             150000.00, DATEADD(day,  4, GETUTCDATE()), NULL, NULL, N'None',    1, N'Submitted',  NULL, NULL, GETUTCDATE()),
-(6, 4, 3, 5, N'Vẽ bóng đổ cho khung cảnh phòng học',                  200000.00, DATEADD(day,  2, GETUTCDATE()), 3,    N'Cần thêm thời gian nghiên cứu phối cảnh phức tạp', N'Pending', 1, N'Disputed', NULL, NULL, GETUTCDATE());
+(1, 4, 1, 5, N'Vẽ chi tiết hậu cảnh đồi núi đỏ với buổi hoàng hôn', N'["Phải có màu đỏ chủ đạo", "Chi tiết đồi núi rõ nét"]', 500000.00, DATEADD(day, -2, GETUTCDATE()), NULL, NULL, N'None',    1, N'Approved',   5, N'Hậu cảnh vẽ rất đẹp và chi tiết, đúng phong cách.', GETUTCDATE()),
+(2, 4, 2, 5, N'Vẽ và tô màu trang phục nhân vật chính',               N'["Trang phục theo đúng design gốc", "Màu sắc không bị lem"]', 300000.00, DATEADD(day, -1, GETUTCDATE()), NULL, NULL, N'None',    2, N'Approved',   4, N'Màu sắc tươi sáng, đúng yêu cầu.',                   GETUTCDATE()),
+(3, 4, 3, 5, N'Vẽ nền phòng học có bàn ghế và cửa sổ lớn',           N'["Phối cảnh chuẩn xác", "Cửa sổ hướng sáng đúng góc"]', 600000.00, DATEADD(day,  3, GETUTCDATE()), NULL, NULL, N'None',    1, N'Submitted',  NULL, NULL, GETUTCDATE()),
+(4, 4, 4, 5, N'Vẽ hiệu ứng các tia chớp bao quanh',                   N'["Tia chớp phải sắc nét", "Có vầng sáng toả ra"]', 250000.00, DATEADD(day,  5, GETUTCDATE()), NULL, NULL, N'None',    2, N'In_Progress', NULL, NULL, GETUTCDATE()),
+(5, 4, 3, 5, N'Vẽ chi tiết các đồ vật nhỏ trên bàn học',             N'["Bao gồm sách, bút, thước", "Tỉ lệ đúng với bàn"]', 150000.00, DATEADD(day,  4, GETUTCDATE()), NULL, NULL, N'None',    1, N'Submitted',  NULL, NULL, GETUTCDATE()),
+(6, 4, 3, 5, N'Vẽ bóng đổ cho khung cảnh phòng học',                  N'["Bóng đổ nhất quán với nguồn sáng từ cửa sổ"]', 200000.00, DATEADD(day,  2, GETUTCDATE()), 3,    N'Cần thêm thời gian nghiên cứu phối cảnh phức tạp', N'Pending', 1, N'Disputed', NULL, NULL, GETUTCDATE());
 SET IDENTITY_INSERT dbo.Tasks OFF;
 GO
 
