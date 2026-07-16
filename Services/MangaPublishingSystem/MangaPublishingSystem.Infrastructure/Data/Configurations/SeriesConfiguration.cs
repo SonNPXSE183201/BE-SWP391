@@ -59,6 +59,10 @@ namespace MangaPublishingSystem.Infrastructure.Data.Configurations
             builder.Property(e => e.MangakaSubmissionNote)
                 .HasColumnType("nvarchar(max)");
 
+            builder.Property(e => e.ContractRejectionCount)
+                .HasDefaultValue(0)
+                .IsRequired();
+
             builder.HasOne(e => e.Mangaka)
                 .WithMany(u => u.MangakaSeries)
                 .HasForeignKey(e => e.MangakaId)

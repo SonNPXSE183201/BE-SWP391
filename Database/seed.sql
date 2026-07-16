@@ -45,7 +45,7 @@
 --   Annotation, DisputeLog, Report, RefreshToken
 -- =========================================================================
 
-USE MangaPublishing;
+-- Run Script Seed Azure DB
 GO
 SET QUOTED_IDENTIFIER ON;
 GO
@@ -54,7 +54,11 @@ GO
 -- PHASE 1: RESET (xóa theo thứ tự phụ thuộc FK, tránh lỗi khi chạy lại)
 -- ─────────────────────────────────────────────────────────────────────────
 PRINT 'Phase 1: Resetting all seed tables...';
-EXEC sp_MSforeachtable "ALTER TABLE ? NOCHECK CONSTRAINT all";
+DECLARE @disableSql NVARCHAR(MAX) = N'';
+SELECT @disableSql += 'ALTER TABLE ' + QUOTENAME(s.name) + '.' + QUOTENAME(t.name) + ' NOCHECK CONSTRAINT ALL; '
+FROM sys.tables t
+JOIN sys.schemas s ON t.schema_id = s.schema_id;
+EXEC sp_executesql @disableSql;
 
 DELETE FROM dbo.Report;
 DELETE FROM dbo.Annotation;
@@ -66,6 +70,7 @@ DELETE FROM dbo.Page;
 DELETE FROM dbo.Chapter;
 DELETE FROM dbo.ContractAddendum;
 DELETE FROM dbo.Contract;
+DELETE FROM dbo.ContractTemplate;
 DELETE FROM dbo.BoardVote;
 DELETE FROM dbo.BoardVotingConfig;
 DELETE FROM dbo.RankingRecord;
@@ -80,7 +85,11 @@ DELETE FROM dbo.RefreshToken;
 DELETE FROM dbo.[User];
 DELETE FROM dbo.Role;
 
-EXEC sp_MSforeachtable "ALTER TABLE ? WITH CHECK CHECK CONSTRAINT all";
+DECLARE @enableSql NVARCHAR(MAX) = N'';
+SELECT @enableSql += 'ALTER TABLE ' + QUOTENAME(s.name) + '.' + QUOTENAME(t.name) + ' WITH CHECK CHECK CONSTRAINT ALL; '
+FROM sys.tables t
+JOIN sys.schemas s ON t.schema_id = s.schema_id;
+EXEC sp_executesql @enableSql;
 GO
 
 DBCC CHECKIDENT ('dbo.Report', RESEED, 0);
@@ -93,6 +102,7 @@ DBCC CHECKIDENT ('dbo.Page', RESEED, 0);
 DBCC CHECKIDENT ('dbo.Chapter', RESEED, 0);
 DBCC CHECKIDENT ('dbo.ContractAddendum', RESEED, 0);
 DBCC CHECKIDENT ('dbo.Contract', RESEED, 0);
+DBCC CHECKIDENT ('dbo.ContractTemplate', RESEED, 0);
 DBCC CHECKIDENT ('dbo.BoardVote', RESEED, 0);
 DBCC CHECKIDENT ('dbo.BoardVotingConfig', RESEED, 0);
 DBCC CHECKIDENT ('dbo.RankingRecord', RESEED, 0);
@@ -128,25 +138,25 @@ GO
 PRINT 'Phase 3: Seeding default users (password: 12345)...';
 SET IDENTITY_INSERT dbo.[User] ON;
 INSERT INTO dbo.[User]
-    (UserId, RoleId, UserName, PasswordHash, Email, FullName, Status, CreateAt, PenName, PortfolioUrl, Skills, IsOnLeave, AssignedEditorId, PhoneNumber, AvatarUrl)
+    (UserId, RoleId, UserName, PasswordHash, Email, FullName, Status, CreateAt, PenName, PortfolioUrl, Skills, IsOnLeave, AssignedEditorId, PhoneNumber, AvatarUrl, CitizenId, CitizenIdIssueDate, CitizenIdIssuePlace)
 VALUES
-( 1, 1, 'admin',             N'$2a$11$MYGlbol73VYbWKwQNlBWeue7YregoBRkXJg2Kji/OOsDL3xrnKeK6', 'admin@mangapublishing.com',        N'Nguyễn Khắc Bằng',          N'Active',  GETUTCDATE(), NULL,      NULL,                              NULL,                        0, NULL, '0987654321', 'http://localhost:9000/manga-publishing/avatars/admin.png'),
-( 2, 2, 'editor1',           N'$2a$11$MYGlbol73VYbWKwQNlBWeue7YregoBRkXJg2Kji/OOsDL3xrnKeK6', 'editor.tran@mangapublishing.com',  N'Trần Thị Yến',             N'Active',  GETUTCDATE(), NULL,      NULL,                              NULL,                        0, NULL, '0987654322', 'http://localhost:9000/manga-publishing/avatars/editor1.png'),
-( 3, 3, 'board1',            N'$2a$11$MYGlbol73VYbWKwQNlBWeue7YregoBRkXJg2Kji/OOsDL3xrnKeK6', 'board.le@mangapublishing.com',     N'Lê Quốc Hùng',             N'Active',  GETUTCDATE(), NULL,      NULL,                              NULL,                        0, NULL, '0987654323', 'http://localhost:9000/manga-publishing/avatars/board1.png'),
-( 4, 4, 'mangaka1',          N'$2a$11$MYGlbol73VYbWKwQNlBWeue7YregoBRkXJg2Kji/OOsDL3xrnKeK6', 'mangaka.nam@gmail.com',            N'Phan Hoàng Nam',           N'Active',  GETUTCDATE(), N'NamArt', NULL,                              NULL,                        0, 2, '0987654324', 'http://localhost:9000/manga-publishing/avatars/mangaka1.png'),
-( 5, 5, 'assistant1',        N'$2a$11$MYGlbol73VYbWKwQNlBWeue7YregoBRkXJg2Kji/OOsDL3xrnKeK6', 'assistant.son@gmail.com',          N'Nguyễn Sơn',               N'Active',  GETUTCDATE(), N'Sơn Nền',     N'https://portfolio.nguyenson.com',     N'Vẽ nền, Kẻ line, Tô màu',        0, NULL, '0987654325', 'http://localhost:9000/manga-publishing/avatars/assistant1.png'),
-( 6, 5, 'assistant_pending', N'$2a$11$MYGlbol73VYbWKwQNlBWeue7YregoBRkXJg2Kji/OOsDL3xrnKeK6', 'assistant.tran@gmail.com',         N'Đào Bảo Trân',             N'Pending', GETUTCDATE(), N'Trân Màu',    N'https://portfolio.daobaotran.vn',     N'Tô màu, Kẻ line',                0, NULL, '0987654326', 'http://localhost:9000/manga-publishing/avatars/assistant_pending.png'),
-( 7, 3, 'board2',            N'$2a$11$MYGlbol73VYbWKwQNlBWeue7YregoBRkXJg2Kji/OOsDL3xrnKeK6', 'board2@mangapublishing.com',       N'Nguyễn Việt Trí',          N'Active',  GETUTCDATE(), NULL,      NULL,                              NULL,                        0, NULL, '0987654327', 'http://localhost:9000/manga-publishing/avatars/board2.png'),
-( 8, 3, 'board3',            N'$2a$11$MYGlbol73VYbWKwQNlBWeue7YregoBRkXJg2Kji/OOsDL3xrnKeK6', 'board3@mangapublishing.com',       N'Trần Thu Hà',              N'Active',  GETUTCDATE(), NULL,      NULL,                              NULL,                        0, NULL, '0987654328', 'http://localhost:9000/manga-publishing/avatars/board3.png'),
-( 9, 3, 'board4',            N'$2a$11$MYGlbol73VYbWKwQNlBWeue7YregoBRkXJg2Kji/OOsDL3xrnKeK6', 'board4@mangapublishing.com',       N'Lê Thị Thanh Xuân',        N'Active',  GETUTCDATE(), NULL,      NULL,                              NULL,                        0, NULL, '0987654329', 'http://localhost:9000/manga-publishing/avatars/board4.png'),
-(10, 3, 'board5',            N'$2a$11$MYGlbol73VYbWKwQNlBWeue7YregoBRkXJg2Kji/OOsDL3xrnKeK6', 'board5@mangapublishing.com',       N'Phạm Hồng Quân',           N'Active',  GETUTCDATE(), NULL,      NULL,                              NULL,                        0, NULL, '0987654330', 'http://localhost:9000/manga-publishing/avatars/board5.png'),
-(11, 3, 'board6',            N'$2a$11$MYGlbol73VYbWKwQNlBWeue7YregoBRkXJg2Kji/OOsDL3xrnKeK6', 'board6@mangapublishing.com',       N'Vũ Duy Mạnh',              N'Active',  GETUTCDATE(), NULL,          NULL,                                  NULL,                              0, NULL, '0987654331', 'http://localhost:9000/manga-publishing/avatars/board6.png'),
-(12, 5, 'assistant_linh',    N'$2a$11$MYGlbol73VYbWKwQNlBWeue7YregoBRkXJg2Kji/OOsDL3xrnKeK6', 'linh.troly@gmail.com',             N'Trần Mai Linh',            N'Active',  GETUTCDATE(), N'Linh Mộc',    N'https://portfolio.tranmailinh.vn',    N'Vẽ nền, Đổ bóng, Hiệu ứng',      0, NULL, '0987654332', 'http://localhost:9000/manga-publishing/avatars/assistant_linh.png'),
-(13, 5, 'assistant_khoa',    N'$2a$11$MYGlbol73VYbWKwQNlBWeue7YregoBRkXJg2Kji/OOsDL3xrnKeK6', 'khoa.troly@gmail.com',             N'Lê Minh Khoa',             N'Active',  GETUTCDATE(), N'Khoa Line',   N'https://portfolio.leminhkhoa.vn',     N'Vẽ cận, Kẻ line, Vẽ thoại',      0, NULL, '0987654333', 'http://localhost:9000/manga-publishing/avatars/assistant1.png'),
-(14, 5, 'assistant_an',      N'$2a$11$MYGlbol73VYbWKwQNlBWeue7YregoBRkXJg2Kji/OOsDL3xrnKeK6', 'an.troly@gmail.com',               N'Phạm Hoài An',             N'Active',  GETUTCDATE(), N'An Sắc',      N'https://portfolio.phamhoaian.vn',     N'Tô màu, Hiệu ứng, Đổ bóng',      0, NULL, '0987654334', 'http://localhost:9000/manga-publishing/avatars/assistant_pending.png'),
-(15, 5, 'assistant_hue',     N'$2a$11$MYGlbol73VYbWKwQNlBWeue7YregoBRkXJg2Kji/OOsDL3xrnKeK6', 'hue.troly@gmail.com',              N'Vũ Thanh Huệ',             N'Active',  GETUTCDATE(), N'Huệ Chữ',     N'https://portfolio.vuthanhhue.vn',     N'Vẽ thoại, Kẻ line, Dàn trang',   0, NULL, '0987654335', 'http://localhost:9000/manga-publishing/avatars/assistant_linh.png'),
-(16, 5, 'assistant_quang',   N'$2a$11$MYGlbol73VYbWKwQNlBWeue7YregoBRkXJg2Kji/OOsDL3xrnKeK6', 'quang.troly@gmail.com',            N'Đặng Nhật Quang',          N'Active',  GETUTCDATE(), N'Quang Cảnh',  N'https://portfolio.dangnhatquang.vn',  N'Vẽ nền, Phối cảnh, Hiệu ứng',    0, NULL, '0987654336', 'http://localhost:9000/manga-publishing/avatars/assistant1.png'),
-(17, 5, 'assistant_my',      N'$2a$11$MYGlbol73VYbWKwQNlBWeue7YregoBRkXJg2Kji/OOsDL3xrnKeK6', 'my.troly@gmail.com',               N'Hoàng Uyên My',            N'Active',  GETUTCDATE(), N'My Bóng',     N'https://portfolio.hoanguyenmy.vn',    N'Đổ bóng, Tô màu, Vẽ cận',        0, NULL, '0987654337', 'http://localhost:9000/manga-publishing/avatars/assistant_pending.png');
+( 1, 1, 'admin',             N'$2a$11$MYGlbol73VYbWKwQNlBWeue7YregoBRkXJg2Kji/OOsDL3xrnKeK6', 'admin@mangapublishing.com',        N'Nguyễn Khắc Bằng',          N'Active',  GETUTCDATE(), NULL,      NULL,                              NULL,                        0, NULL, '0987654321', 'http://localhost:9000/manga-publishing/avatars/admin.png', '079099001122', '2020-01-01', N'Cục CSQLHC'),
+( 2, 2, 'editor1',           N'$2a$11$MYGlbol73VYbWKwQNlBWeue7YregoBRkXJg2Kji/OOsDL3xrnKeK6', 'editor.tran@mangapublishing.com',  N'Trần Thị Yến',             N'Active',  GETUTCDATE(), NULL,      NULL,                              NULL,                        0, NULL, '0987654322', 'http://localhost:9000/manga-publishing/avatars/editor1.png', '079099001123', '2020-02-01', N'Cục CSQLHC'),
+( 3, 3, 'board1',            N'$2a$11$MYGlbol73VYbWKwQNlBWeue7YregoBRkXJg2Kji/OOsDL3xrnKeK6', 'board.le@mangapublishing.com',     N'Lê Quốc Hùng',             N'Active',  GETUTCDATE(), NULL,      NULL,                              NULL,                        0, NULL, '0987654323', 'http://localhost:9000/manga-publishing/avatars/board1.png', '079099001124', '2020-03-01', N'Cục CSQLHC'),
+( 4, 4, 'mangaka1',          N'$2a$11$MYGlbol73VYbWKwQNlBWeue7YregoBRkXJg2Kji/OOsDL3xrnKeK6', 'mangaka.nam@gmail.com',            N'Phan Hoàng Nam',           N'Active',  GETUTCDATE(), N'NamArt', NULL,                              NULL,                        0, 2, '0987654324', 'http://localhost:9000/manga-publishing/avatars/mangaka1.png', '079099001125', '2020-04-01', N'Cục CSQLHC'),
+( 5, 5, 'assistant1',        N'$2a$11$MYGlbol73VYbWKwQNlBWeue7YregoBRkXJg2Kji/OOsDL3xrnKeK6', 'assistant.son@gmail.com',          N'Nguyễn Sơn',               N'Active',  GETUTCDATE(), N'Sơn Nền',     N'https://portfolio.nguyenson.com',     N'Vẽ nền, Kẻ line, Tô màu',        0, NULL, '0987654325', 'http://localhost:9000/manga-publishing/avatars/assistant1.png', '079099001126', '2020-05-01', N'Cục CSQLHC'),
+( 6, 5, 'assistant_pending', N'$2a$11$MYGlbol73VYbWKwQNlBWeue7YregoBRkXJg2Kji/OOsDL3xrnKeK6', 'assistant.tran@gmail.com',         N'Đào Bảo Trân',             N'Pending', GETUTCDATE(), N'Trân Màu',    N'https://portfolio.daobaotran.vn',     N'Tô màu, Kẻ line',                0, NULL, '0987654326', 'http://localhost:9000/manga-publishing/avatars/assistant_pending.png', '079099001127', '2020-06-01', N'Cục CSQLHC'),
+( 7, 3, 'board2',            N'$2a$11$MYGlbol73VYbWKwQNlBWeue7YregoBRkXJg2Kji/OOsDL3xrnKeK6', 'board2@mangapublishing.com',       N'Nguyễn Việt Trí',          N'Active',  GETUTCDATE(), NULL,      NULL,                              NULL,                        0, NULL, '0987654327', 'http://localhost:9000/manga-publishing/avatars/board2.png', '079099001128', '2020-07-01', N'Cục CSQLHC'),
+( 8, 3, 'board3',            N'$2a$11$MYGlbol73VYbWKwQNlBWeue7YregoBRkXJg2Kji/OOsDL3xrnKeK6', 'board3@mangapublishing.com',       N'Trần Thu Hà',              N'Active',  GETUTCDATE(), NULL,      NULL,                              NULL,                        0, NULL, '0987654328', 'http://localhost:9000/manga-publishing/avatars/board3.png', '079099001129', '2020-08-01', N'Cục CSQLHC'),
+( 9, 3, 'board4',            N'$2a$11$MYGlbol73VYbWKwQNlBWeue7YregoBRkXJg2Kji/OOsDL3xrnKeK6', 'board4@mangapublishing.com',       N'Lê Thị Thanh Xuân',        N'Active',  GETUTCDATE(), NULL,      NULL,                              NULL,                        0, NULL, '0987654329', 'http://localhost:9000/manga-publishing/avatars/board4.png', '079099001130', '2020-09-01', N'Cục CSQLHC'),
+(10, 3, 'board5',            N'$2a$11$MYGlbol73VYbWKwQNlBWeue7YregoBRkXJg2Kji/OOsDL3xrnKeK6', 'board5@mangapublishing.com',       N'Phạm Hồng Quân',           N'Active',  GETUTCDATE(), NULL,      NULL,                              NULL,                        0, NULL, '0987654330', 'http://localhost:9000/manga-publishing/avatars/board5.png', '079099001131', '2020-10-01', N'Cục CSQLHC'),
+(11, 3, 'board6',            N'$2a$11$MYGlbol73VYbWKwQNlBWeue7YregoBRkXJg2Kji/OOsDL3xrnKeK6', 'board6@mangapublishing.com',       N'Vũ Duy Mạnh',              N'Active',  GETUTCDATE(), NULL,          NULL,                                  NULL,                              0, NULL, '0987654331', 'http://localhost:9000/manga-publishing/avatars/board6.png', '079099001132', '2020-11-01', N'Cục CSQLHC'),
+(12, 5, 'assistant_linh',    N'$2a$11$MYGlbol73VYbWKwQNlBWeue7YregoBRkXJg2Kji/OOsDL3xrnKeK6', 'linh.troly@gmail.com',             N'Trần Mai Linh',            N'Active',  GETUTCDATE(), N'Linh Mộc',    N'https://portfolio.tranmailinh.vn',    N'Vẽ nền, Đổ bóng, Hiệu ứng',      0, NULL, '0987654332', 'http://localhost:9000/manga-publishing/avatars/assistant_linh.png', '079099001133', '2020-12-01', N'Cục CSQLHC'),
+(13, 5, 'assistant_khoa',    N'$2a$11$MYGlbol73VYbWKwQNlBWeue7YregoBRkXJg2Kji/OOsDL3xrnKeK6', 'khoa.troly@gmail.com',             N'Lê Minh Khoa',             N'Active',  GETUTCDATE(), N'Khoa Line',   N'https://portfolio.leminhkhoa.vn',     N'Vẽ cận, Kẻ line, Vẽ thoại',      0, NULL, '0987654333', 'http://localhost:9000/manga-publishing/avatars/assistant1.png', '079099001134', '2021-01-01', N'Cục CSQLHC'),
+(14, 5, 'assistant_an',      N'$2a$11$MYGlbol73VYbWKwQNlBWeue7YregoBRkXJg2Kji/OOsDL3xrnKeK6', 'an.troly@gmail.com',               N'Phạm Hoài An',             N'Active',  GETUTCDATE(), N'An Sắc',      N'https://portfolio.phamhoaian.vn',     N'Tô màu, Hiệu ứng, Đổ bóng',      0, NULL, '0987654334', 'http://localhost:9000/manga-publishing/avatars/assistant_pending.png', '079099001135', '2021-02-01', N'Cục CSQLHC'),
+(15, 5, 'assistant_hue',     N'$2a$11$MYGlbol73VYbWKwQNlBWeue7YregoBRkXJg2Kji/OOsDL3xrnKeK6', 'hue.troly@gmail.com',              N'Vũ Thanh Huệ',             N'Active',  GETUTCDATE(), N'Huệ Chữ',     N'https://portfolio.vuthanhhue.vn',     N'Vẽ thoại, Kẻ line, Dàn trang',   0, NULL, '0987654335', 'http://localhost:9000/manga-publishing/avatars/assistant_linh.png', '079099001136', '2021-03-01', N'Cục CSQLHC'),
+(16, 5, 'assistant_quang',   N'$2a$11$MYGlbol73VYbWKwQNlBWeue7YregoBRkXJg2Kji/OOsDL3xrnKeK6', 'quang.troly@gmail.com',            N'Đặng Nhật Quang',          N'Active',  GETUTCDATE(), N'Quang Cảnh',  N'https://portfolio.dangnhatquang.vn',  N'Vẽ nền, Phối cảnh, Hiệu ứng',    0, NULL, '0987654336', 'http://localhost:9000/manga-publishing/avatars/assistant1.png', '079099001137', '2021-04-01', N'Cục CSQLHC'),
+(17, 5, 'assistant_my',      N'$2a$11$MYGlbol73VYbWKwQNlBWeue7YregoBRkXJg2Kji/OOsDL3xrnKeK6', 'my.troly@gmail.com',               N'Hoàng Uyên My',            N'Active',  GETUTCDATE(), N'My Bóng',     N'https://portfolio.hoanguyenmy.vn',    N'Đổ bóng, Tô màu, Vẽ cận',        0, NULL, '0987654337', 'http://localhost:9000/manga-publishing/avatars/assistant_pending.png', '079099001138', '2021-05-01', N'Cục CSQLHC');
 SET IDENTITY_INSERT dbo.[User] OFF;
 GO
 
@@ -278,6 +288,14 @@ VALUES
  28000000.00, 0.00, 0.00, NULL, N'Pending_Approval',
  N'http://localhost:9000/manga-publishing/resources/series-4', GETUTCDATE()),
 
+-- [6] Series test Reject hợp đồng 3 lần
+(6, 4, 2, NULL,
+ N'Ký Sự Hủy Hợp Đồng', N'Comedy, Drama',
+ N'Truyện để test reject hợp đồng 3 lần',
+ N'http://localhost:9000/manga-publishing/covers/bi-an-midgard.jpg',
+ 20000000.00, 20000000.00, 20000000.00, N'Monthly', N'Fund_Pending',
+ N'http://localhost:9000/manga-publishing/resources/series-6', GETUTCDATE()),
+
 -- [5] Đang biểu quyết Hội đồng
 (5, 4, 2,
  N'Editor đánh giá: Bản phác thảo đạt chuẩn thẩm mỹ và cốt truyện phù hợp thị trường Seinen. Đề xuất Hội đồng phê duyệt ngân sách 35.000.000 VND.',
@@ -301,13 +319,20 @@ INSERT INTO dbo.Series_Assistant (SeriesId, AssistantId, RoleInTeam, JoinedDate,
 GO
 
 -- ─────────────────────────────────────────────────────────────────────────
--- PHASE 8: CONTRACTS & ADDENDUMS
+-- PHASE 8: CONTRACT TEMPLATES, CONTRACTS & ADDENDUMS
 -- ─────────────────────────────────────────────────────────────────────────
-PRINT 'Phase 8: Seeding contracts...';
+PRINT 'Phase 8: Seeding contract templates and contracts...';
+
+SET IDENTITY_INSERT dbo.ContractTemplate ON;
+INSERT INTO dbo.ContractTemplate (TemplateId, Content, Version, IsActive, CreatedByUserId, CreateAt) VALUES
+(1, N'<!DOCTYPE html><html lang="vi"><head><meta charset="UTF-8"><style>@page { size: A4; margin: 20mm 15mm 20mm 30mm; } body { font-family: "Times New Roman", Times, serif; line-height: 1.6; margin: 0; color: #000; font-size: 16px; text-align: justify; } .header-group { text-align: center; margin-bottom: 30px; } .country-title { font-size: 18px; font-weight: bold; margin-bottom: 5px; } .motto-title { font-size: 18px; font-weight: bold; text-decoration: underline; } .separator { width: 30%; border-top: 1px solid #000; margin: 10px auto 20px auto; } .contract-title { font-size: 24px; font-weight: bold; text-align: center; margin-top: 20px; margin-bottom: 15px; text-transform: uppercase; } .date-location { font-style: italic; text-align: right; margin-bottom: 20px; } .section-header { font-weight: bold; font-size: 17px; margin-top: 25px; margin-bottom: 10px; text-transform: uppercase; } .article-header { font-weight: bold; font-size: 17px; margin-top: 20px; margin-bottom: 5px; text-decoration: underline; } .info-table { width: 100%; margin-bottom: 15px; border-collapse: collapse; } .info-table td { padding: 4px 0; vertical-align: top; text-align: left; } .info-table td.label { width: 1px; white-space: nowrap; font-weight: bold; padding-right: 20px; } .content-list { padding-left: 30px; margin-top: 5px; margin-bottom: 10px; } .content-list li { margin-bottom: 5px; } .signature-table { width: 100%; margin-top: 40px; } .signature-table td { width: 50%; text-align: center; vertical-align: top; } .signature-title { font-weight: bold; font-size: 16px; margin-bottom: 5px; } .signature-note { font-style: italic; font-size: 14px; margin-bottom: 80px; } .signature-name { font-weight: bold; font-size: 16px; }</style></head><body><div class="header-group"><div class="country-title">CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</div><div class="motto-title">Độc lập - Tự do - Hạnh phúc</div><div class="separator"></div></div><div class="contract-title">HỢP ĐỒNG SỬ DỤNG TÁC PHẨM TRONG LĨNH VỰC XUẤT BẢN</div><div class="date-location">Hôm nay, ngày {{Day}} tháng {{Month}} năm {{Year}}, tại {{PlatformAddress}}</div><p>Chúng tôi gồm có:</p><div class="section-header">BÊN CHO PHÉP SỬ DỤNG TÁC PHẨM (BÊN A - TÁC GIẢ)</div><table class="info-table"><tr><td class="label">Họ và tên:</td><td><strong>{{MangakaFullName}}</strong></td></tr><tr><td class="label">Bút danh:</td><td>{{MangakaPenName}}</td></tr><tr><td class="label">CCCD/CMND số:</td><td>{{MangakaCitizenId}}</td></tr><tr><td class="label">Ngày cấp:</td><td>{{MangakaCitizenIdIssueDate}}</td></tr><tr><td class="label">Nơi cấp:</td><td>{{MangakaCitizenIdIssuePlace}}</td></tr><tr><td class="label">Email:</td><td>{{MangakaEmail}}</td></tr><tr><td class="label">Số điện thoại:</td><td>{{MangakaPhoneNumber}}</td></tr><tr><td colspan="2" style="font-style: italic; padding-top: 8px;">Là chủ sở hữu bản quyền đối với tác phẩm đăng tải trên nền tảng.</td></tr></table><div class="section-header">BÊN SỬ DỤNG TÁC PHẨM (BÊN B - ĐẠI DIỆN NỀN TẢNG)</div><table class="info-table"><tr><td class="label">Tên tổ chức/Công ty:</td><td><strong>{{PlatformName}}</strong></td></tr><tr><td class="label">Đại diện bởi:</td><td>{{PlatformRepresentativeName}}</td></tr><tr><td class="label">Chức vụ:</td><td>{{PlatformRepresentativeRole}}</td></tr><tr><td class="label">Địa chỉ:</td><td>{{PlatformAddress}}</td></tr><tr><td class="label">Email:</td><td>{{PlatformEmail}}</td></tr></table><p style="margin-top: 20px; font-weight: bold;">Hai bên cùng thoả thuận và thống nhất ký kết hợp đồng với các điều khoản sau đây:</p><div class="article-header">Điều 1: Tác phẩm sử dụng</div><p>Bên A đồng ý cho Bên B xuất bản tác phẩm thuộc sở hữu của mình với các thông tin chi tiết dưới đây:</p><ul class="content-list"><li><strong>Tên tác phẩm (Series):</strong> {{SeriesTitle}}</li><li><strong>Thể loại:</strong> {{SeriesGenre}}</li><li><strong>Số chương dự kiến/đã xuất bản:</strong> Theo thoả thuận từng giai đoạn trên hệ thống.</li><li><strong>Quyền sở hữu tác giả:</strong> Bên A giữ quyền nhân thân, Bên B được quyền phân phối và xuất bản độc quyền trên nền tảng của Bên B.</li><li><strong>Ngôn ngữ xuất bản:</strong> Tiếng Việt.</li></ul><div class="article-header">Điều 2: Trách nhiệm của Bên A</div><p>Bên A có trách nhiệm hoàn thành và đăng tải các bản thảo (Chapter/Page) lên hệ thống của Bên B theo đúng tiến độ và chất lượng đã thoả thuận trên hệ thống.</p><div class="article-header">Điều 3: Thời hạn xuất bản và sử dụng tác phẩm</div><ul class="content-list"><li>Bên B có quyền sử dụng tác phẩm ghi tại Điều 1 Hợp đồng này để xuất bản và phân phối trên nền tảng của Bên B trong thời hạn: <strong>{{ContractDurationMonths}} tháng</strong> kể từ ngày hợp đồng có hiệu lực.</li><li>Trước khi hết hạn hợp đồng 30 ngày, nếu không bên nào có yêu cầu bằng văn bản về việc chấm dứt, hợp đồng sẽ tự động gia hạn thêm một khoảng thời gian tương đương. Mọi thay đổi về thời hạn hoặc điều khoản khác phải được lập thành Phụ lục hợp đồng.</li></ul><div class="article-header">Điều 4: Quyền nhân thân và kiểm duyệt</div><p>Bên B phải tôn trọng các quyền nhân thân quy định tại Điều 19 Luật Sở hữu trí tuệ của Bên A. Bên B có quyền kiểm duyệt nội dung (thông qua Editor) trước khi đưa xuất bản trước công chúng nhằm đảm bảo tác phẩm phù hợp với quy định của pháp luật và tiêu chuẩn của nền tảng.</p><div class="article-header">Điều 5: Thanh toán Nhuận bút và Ngân sách sản xuất</div><p><strong>5.1. Ngân sách sản xuất (Production Budget):</strong></p><ul class="content-list"><li>Sau khi hợp đồng có hiệu lực và bộ truyện được Hội đồng biên tập phê duyệt, Bên B sẽ cấp cho Bên A một khoản Ngân sách sản xuất ban đầu (Setup Fund) là: <strong>{{ApprovedProductionBudget}} VNĐ</strong>.</li><li>Khoản ngân sách này được chuyển thẳng vào ví tài trợ (SetupFundBalance) của Bên A trên hệ thống và CHỈ được sử dụng để thanh toán thù lao thuê Trợ lý (Assistant) vẽ các phân vùng tác phẩm. Không được phép rút khoản tiền này ra khỏi hệ thống.</li><li>Trong trường hợp ví tài trợ (SetupFundBalance) cạn kiệt, Bên A phải tự sử dụng nguồn tiền cá nhân (từ ví WithdrawableBalance hoặc nạp thêm tiền từ ngoài vào) để tiếp tục duy trì việc thanh toán cho Trợ lý. Hệ thống không cho phép chi tiêu thấu chi (Overdraft).</li><li>Nếu Bên A hết khả năng tài chính và không thể tiếp tục trả thù lao cho Trợ lý, dẫn đến việc chậm trễ hoặc đình trệ tiến độ sản xuất tác phẩm quá thời hạn quy định, Bên B có quyền đơn phương chấm dứt hợp đồng và yêu cầu Bên A bồi thường theo Điều 7. Mọi thay đổi về ngân sách hoặc tiến độ phải được hai bên thỏa thuận lập thành Phụ lục hợp đồng.</li></ul><p><strong>5.2. Nhuận bút xuất bản (Genkouryou Payout):</strong></p><ul class="content-list"><li>Bên B thanh toán nhuận bút cho Bên A dựa trên đơn giá cơ bản: <strong>{{BaseGenkouryoPrice}} VNĐ / trang hợp lệ (Valid Page)</strong>.</li><li>Nhuận bút = Đơn giá cơ bản × Số lượng trang hợp lệ của chương.</li><li>Không áp dụng hình thức chia sẻ doanh thu (Hoa hồng/Revenue Share) trừ khi có Phụ lục hợp đồng quy định khác.</li><li>Phương thức thanh toán: Hệ thống tự động quyết toán và chuyển tiền vào Ví rút tiền (WithdrawableBalance) của Bên A sau khi chương (Chapter) được duyệt (Approved) và xuất bản thành công. Bên A có quyền làm lệnh rút số dư này về tài khoản ngân hàng cá nhân.</li></ul><div class="article-header">Điều 6: Cam kết chuyển quyền</div><p>Bên A cam kết không được chuyển quyền sử dụng tác phẩm theo quy định tại Điều 1 Hợp đồng này cho bất kỳ bên thứ ba nào (bao gồm các nền tảng xuất bản khác) trong suốt thời gian hợp đồng có hiệu lực.</p><div class="article-header">Điều 7: Trách nhiệm do vi phạm hợp đồng và Giải quyết tranh chấp</div><p><strong>7.1. Phạt vi phạm:</strong></p><ul class="content-list"><li>Bất kỳ bên nào vi phạm các điều khoản cam kết trong Hợp đồng này (bao gồm chậm tiến độ nộp bản thảo, bỏ dở tác phẩm không có lý do chính đáng, hoặc phân phối lậu bản quyền) sẽ bị phạt vi phạm bằng 8% giá trị phần nghĩa vụ hợp đồng bị vi phạm.</li><li>Ngoài ra, bên vi phạm phải bồi thường toàn bộ thiệt hại thực tế phát sinh cho bên bị vi phạm. Trong trường hợp Bên A bỏ dở tác phẩm, Bên A phải hoàn trả phần Ngân sách sản xuất (Setup Fund) đã được cấp nhưng chưa sử dụng hoặc sử dụng sai mục đích.</li></ul><p><strong>7.2. Giải quyết tranh chấp:</strong></p><ul class="content-list"><li>Các tranh chấp phát sinh (nếu có) sẽ được ưu tiên giải quyết thông qua hệ thống giải quyết tranh chấp nội bộ (Dispute) của nền tảng, do Hội đồng biên tập phán quyết.</li><li>Nếu hòa giải không thành, một trong hai bên có thể đưa vụ việc ra Tòa án nhân dân có thẩm quyền để giải quyết theo quy định của pháp luật.</li></ul><div class="article-header">Điều 8: Điều khoản chung</div><p>Hợp đồng này được thiết lập dưới dạng Hợp đồng điện tử trên hệ thống Manga Publishing System. Hợp đồng có hiệu lực kể từ thời điểm Bên A xác nhận "Đồng ý và Ký" trên hệ thống.</p><table class="signature-table"><tr><td><div class="signature-title">ĐẠI DIỆN BÊN B</div><div class="signature-note">(Đã ký điện tử)</div><div class="signature-name">{{PlatformName}}</div></td><td><div class="signature-title">ĐẠI DIỆN BÊN A</div><div class="signature-note">(Đã ký điện tử)</div><div class="signature-name">{{MangakaFullName}}</div></td></tr></table></body></html>', 1, 1, 1, GETUTCDATE());
+SET IDENTITY_INSERT dbo.ContractTemplate OFF;
+GO
+
 SET IDENTITY_INSERT dbo.Contract ON;
-INSERT INTO dbo.Contract (ContractId, UserId, SeriesId, BaseGenkouryoPrice, SignedDate, Status, CreateAt) VALUES
-(1, 4, 1, 500000.00, GETUTCDATE(), N'Signed',  GETUTCDATE()),
-(2, 4, 2, 400000.00, GETUTCDATE(), N'Active',  GETUTCDATE());
+INSERT INTO dbo.Contract (ContractId, UserId, SeriesId, TemplateId, BaseGenkouryoPrice, ContractFileUrl, SignedDate, ExpirationDate, Status, CreateAt) VALUES
+(1, 4, 1, 1, 500000.00, N'https://firebasestorage.googleapis.com/v0/b/mangapublishing.appspot.com/o/contracts%2Fcontract-1.pdf', GETUTCDATE(), NULL, N'Signed',  GETUTCDATE()),
+(2, 4, 2, 1, 400000.00, N'https://firebasestorage.googleapis.com/v0/b/mangapublishing.appspot.com/o/contracts%2Fcontract-2.pdf', GETUTCDATE(), NULL, N'Active',  GETUTCDATE());
 -- Series 3: chưa có HĐ (test Tạo HĐ)
 SET IDENTITY_INSERT dbo.Contract OFF;
 GO
@@ -329,6 +354,11 @@ VALUES
 (1, 1, 1, N'Khởi đầu cuộc hành trình', 3, 500000.00, DATEADD(day, 10, GETUTCDATE()), N'{"Technical":"Passed","Art":"Passed","Content":"Passed"}', N'Approved', GETUTCDATE()),
 (2, 1, 2, N'Gặp gỡ đồng đội mới',       2, 500000.00, DATEADD(day, 20, GETUTCDATE()), NULL, N'Draft', GETUTCDATE());
 SET IDENTITY_INSERT dbo.Chapter OFF;
+GO
+
+UPDATE dbo.Chapter
+SET PublishDate = SubmissionDeadline
+WHERE PublishDate IS NULL AND SubmissionDeadline IS NOT NULL;
 GO
 
 SET IDENTITY_INSERT dbo.Page ON;

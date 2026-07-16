@@ -10,6 +10,9 @@ namespace MangaPublishingSystem.Application.DTOs.Contracts
         public int SeriesId { get; set; }
         public string? SeriesTitle { get; set; }
         public decimal BaseGenkouryoPrice { get; set; }
+        public int? TemplateId { get; set; }
+        public string? ContractFileUrl { get; set; }
+        public DateTime? ExpirationDate { get; set; }
         public DateTime? SignedDate { get; set; }
         public string Status { get; set; } = "Pending";
         public DateTime CreateAt { get; set; }

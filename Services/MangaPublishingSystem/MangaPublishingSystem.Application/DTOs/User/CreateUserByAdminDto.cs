@@ -34,5 +34,8 @@ namespace MangaPublishingSystem.Application.DTOs.User
         public string? PortfolioUrl { get; set; }
         public string? Skills { get; set; }
         public int? AssignedEditorId { get; set; }
+        public string? CitizenId { get; set; }
+        public System.DateTime? CitizenIdIssueDate { get; set; }
+        public string? CitizenIdIssuePlace { get; set; }
     }
 }

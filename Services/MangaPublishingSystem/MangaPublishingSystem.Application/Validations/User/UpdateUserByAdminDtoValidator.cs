@@ -31,6 +31,18 @@ namespace MangaPublishingSystem.Application.Validations.User
             RuleFor(x => x.PenName)
                 .MaximumLength(100).WithMessage("Bút danh không được vượt quá 100 ký tự.")
                 .When(x => !string.IsNullOrEmpty(x.PenName));
+
+            RuleFor(x => x.CitizenId)
+                .Matches("^[0-9]{9,12}$").WithMessage("Số CMND/CCCD phải chứa từ 9 đến 12 chữ số.")
+                .When(x => !string.IsNullOrEmpty(x.CitizenId));
+
+            RuleFor(x => x.CitizenIdIssueDate)
+                .LessThan(System.DateTime.UtcNow).WithMessage("Ngày cấp CMND/CCCD không hợp lệ (phải trong quá khứ).")
+                .When(x => x.CitizenIdIssueDate.HasValue);
+
+            RuleFor(x => x.CitizenIdIssuePlace)
+                .MaximumLength(200).WithMessage("Nơi cấp CMND/CCCD không được vượt quá 200 ký tự.")
+                .When(x => !string.IsNullOrEmpty(x.CitizenIdIssuePlace));
         }
     }
 }

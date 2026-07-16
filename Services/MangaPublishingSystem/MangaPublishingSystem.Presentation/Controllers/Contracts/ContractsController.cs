@@ -10,7 +10,6 @@ namespace MangaPublishingSystem.Presentation.Controllers.Contracts
 {
     [ApiController]
     [Route("api/contracts")]
-    [Authorize(Roles = "System Admin")]
     public class ContractsController : ControllerBase
     {
         private readonly IContractService _contractService;
@@ -21,6 +20,7 @@ namespace MangaPublishingSystem.Presentation.Controllers.Contracts
         }
 
         [HttpGet]
+        [Authorize(Roles = "System Admin")]
         public async Task<ActionResult<ApiResponse<IEnumerable<ContractDto>>>> GetAll()
         {
             var result = await _contractService.GetContractsAsync();
@@ -28,20 +28,39 @@ namespace MangaPublishingSystem.Presentation.Controllers.Contracts
         }
 
         [HttpGet("{id}")]
+        [Authorize(Roles = "System Admin,Mangaka")]
         public async Task<ActionResult<ApiResponse<ContractDto>>> GetById(int id)
         {
             var result = await _contractService.GetContractByIdAsync(id);
             return Ok(ApiResponse<ContractDto>.Success(result, "Lấy chi tiết hợp đồng thành công."));
         }
 
-        [HttpPost]
-        public async Task<ActionResult<ApiResponse<ContractDto>>> Create([FromBody] CreateContractDto dto)
+        [HttpPost("generate")]
+        [Authorize(Roles = "System Admin")]
+        public async Task<ActionResult<ApiResponse<ContractDto>>> Generate([FromBody] CreateContractDto dto)
         {
-            var result = await _contractService.CreateContractAsync(dto);
+            var result = await _contractService.GenerateContractAsync(dto);
             return Ok(ApiResponse<ContractDto>.Success(result, "Tạo hợp đồng thành công."));
         }
 
+        [HttpPost("{id}/sign")]
+        [Authorize(Roles = "Mangaka")]
+        public async Task<ActionResult<ApiResponse<ContractDto>>> Sign(int id)
+        {
+            var result = await _contractService.SignContractAsync(id);
+            return Ok(ApiResponse<ContractDto>.Success(result, "Ký hợp đồng thành công."));
+        }
+
+        [HttpPost("{id}/reject")]
+        [Authorize(Roles = "Mangaka")]
+        public async Task<ActionResult<ApiResponse<ContractDto>>> Reject(int id)
+        {
+            var result = await _contractService.RejectContractAsync(id);
+            return Ok(ApiResponse<ContractDto>.Success(result, "Từ chối hợp đồng thành công."));
+        }
+
         [HttpPut("{id}")]
+        [Authorize(Roles = "System Admin")]
         public async Task<ActionResult<ApiResponse<ContractDto>>> Update(int id, [FromBody] UpdateContractDto dto)
         {
             var result = await _contractService.UpdateContractAsync(id, dto);
@@ -49,6 +68,7 @@ namespace MangaPublishingSystem.Presentation.Controllers.Contracts
         }
 
         [HttpDelete("{id}")]
+        [Authorize(Roles = "System Admin")]
         public async Task<ActionResult<ApiResponse<object>>> Delete(int id)
         {
             await _contractService.DeleteContractAsync(id);

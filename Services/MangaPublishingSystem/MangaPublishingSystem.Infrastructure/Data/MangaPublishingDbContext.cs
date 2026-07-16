@@ -28,6 +28,7 @@ namespace MangaPublishingSystem.Infrastructure.Data
         public virtual DbSet<BoardVote> BoardVotes { get; set; } = null!;
         public virtual DbSet<BoardVotingConfig> BoardVotingConfigs { get; set; } = null!;
         public virtual DbSet<Contract> Contracts { get; set; } = null!;
+        public virtual DbSet<ContractTemplate> ContractTemplates { get; set; } = null!;
         public virtual DbSet<ContractAddendum> ContractAddendums { get; set; } = null!;
         public virtual DbSet<Chapter> Chapters { get; set; } = null!;
         public virtual DbSet<Page> Pages { get; set; } = null!;

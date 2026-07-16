@@ -355,7 +355,7 @@ namespace MangaPublishingSystem.Application.Services
                     Amount = transaction.Amount,
                     WithdrawableAmount = transaction.Amount, // Cộng lại tiền
                     Status = "Success",
-                    ReferenceCode = "REF" + transaction.ReferenceCode.Substring(3), // Change WDR to REF
+                    ReferenceCode = "REF" + (transaction.ReferenceCode != null && transaction.ReferenceCode.Length > 3 ? transaction.ReferenceCode.Substring(3) : Guid.NewGuid().ToString("N").Substring(0, 8)), // Change WDR to REF
                     ToUserId = wallet.UserId
                 };
                 await _transactionRepository.AddAsync(refundTx);

@@ -23,6 +23,9 @@ namespace MangaPublishingSystem.Infrastructure.Data.Configurations
                 .HasDefaultValue(0.00m)
                 .IsRequired();
 
+            builder.Property(e => e.PublicationSchedule)
+                .HasMaxLength(50);
+
             builder.Property(e => e.Comment)
                 .HasMaxLength(1000);
 

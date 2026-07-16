@@ -9,5 +9,8 @@ namespace MangaPublishingSystem.Application.DTOs.Profile
         public string? SpecialtyTags { get; set; }
         public string? PhoneNumber { get; set; }
         public string? AvatarUrl { get; set; }
+        public string? CitizenId { get; set; }
+        public System.DateTime? CitizenIdIssueDate { get; set; }
+        public string? CitizenIdIssuePlace { get; set; }
     }
 }
