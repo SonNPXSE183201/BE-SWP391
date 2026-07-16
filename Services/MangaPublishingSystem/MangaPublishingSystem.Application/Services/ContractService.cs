@@ -107,7 +107,7 @@ namespace MangaPublishingSystem.Application.Services
             };
 
             // 1. Chuẩn bị nội dung HTML từ Template
-            var htmlContent = template.Content
+            var htmlContent = EnsurePublicationSchedulePlaceholder(template.Content)
                 .Replace("{{MangakaFullName}}", !string.IsNullOrWhiteSpace(user.FullName) ? user.FullName : user.UserName)
                 .Replace("{{MangakaName}}", !string.IsNullOrWhiteSpace(user.FullName) ? user.FullName : user.UserName) // fallback for older templates
                 .Replace("{{MangakaPenName}}", user.PenName ?? "")
@@ -118,6 +118,8 @@ namespace MangaPublishingSystem.Application.Services
                 .Replace("{{MangakaPhoneNumber}}", user.PhoneNumber ?? "")
                 .Replace("{{SeriesTitle}}", series.Title)
                 .Replace("{{SeriesGenre}}", series.Genre ?? "")
+                .Replace("{{PublicationSchedule}}", FormatPublicationSchedule(series.PublicationSchedule))
+                .Replace("{{PublishSchedule}}", FormatPublicationSchedule(series.PublicationSchedule))
                 .Replace("{{BaseGenkouryoPrice}}", dto.BaseGenkouryoPrice.ToString("N0"))
                 .Replace("{{BasePrice}}", dto.BaseGenkouryoPrice.ToString("N0") + " VND") // fallback
                 .Replace("{{ExpirationDate}}", contract.ExpirationDate.Value.ToString("dd/MM/yyyy"))
@@ -330,6 +332,8 @@ namespace MangaPublishingSystem.Application.Services
                 MangakaName = contract.User?.FullName,
                 SeriesId = contract.SeriesId,
                 SeriesTitle = contract.Series?.Title,
+                PublicationSchedule = contract.Series?.PublicationSchedule,
+                PublishSchedule = FormatPublicationSchedule(contract.Series?.PublicationSchedule),
                 TemplateId = contract.TemplateId,
                 ContractFileUrl = contract.ContractFileUrl,
                 ExpirationDate = contract.ExpirationDate,
@@ -347,7 +351,7 @@ namespace MangaPublishingSystem.Application.Services
             ContractTemplate template,
             bool mangakaSigned)
         {
-            var htmlContent = template.Content
+            var htmlContent = EnsurePublicationSchedulePlaceholder(template.Content)
                 .Replace("{{MangakaFullName}}", !string.IsNullOrWhiteSpace(user.FullName) ? user.FullName : user.UserName)
                 .Replace("{{MangakaName}}", !string.IsNullOrWhiteSpace(user.FullName) ? user.FullName : user.UserName)
                 .Replace("{{MangakaPenName}}", user.PenName ?? "")
@@ -358,6 +362,8 @@ namespace MangaPublishingSystem.Application.Services
                 .Replace("{{MangakaPhoneNumber}}", user.PhoneNumber ?? "")
                 .Replace("{{SeriesTitle}}", series.Title)
                 .Replace("{{SeriesGenre}}", series.Genre ?? "")
+                .Replace("{{PublicationSchedule}}", FormatPublicationSchedule(series.PublicationSchedule))
+                .Replace("{{PublishSchedule}}", FormatPublicationSchedule(series.PublicationSchedule))
                 .Replace("{{BaseGenkouryoPrice}}", contract.BaseGenkouryoPrice.ToString("N0"))
                 .Replace("{{BasePrice}}", contract.BaseGenkouryoPrice.ToString("N0") + " VND")
                 .Replace("{{ExpirationDate}}", contract.ExpirationDate.HasValue ? contract.ExpirationDate.Value.ToString("dd/MM/yyyy") : "")
@@ -418,6 +424,44 @@ namespace MangaPublishingSystem.Application.Services
                 RegexOptions.IgnoreCase | RegexOptions.Singleline);
 
             return html;
+        }
+
+        private static string FormatPublicationSchedule(string? publicationSchedule)
+        {
+            return string.IsNullOrWhiteSpace(publicationSchedule)
+                ? "Chưa cấu hình"
+                : publicationSchedule.Trim();
+        }
+
+        private static string EnsurePublicationSchedulePlaceholder(string html)
+        {
+            if (html.Contains("{{PublicationSchedule}}", StringComparison.OrdinalIgnoreCase) ||
+                html.Contains("{{PublishSchedule}}", StringComparison.OrdinalIgnoreCase))
+            {
+                return html;
+            }
+
+            const string scheduleItem = "<li><strong>Lịch xuất bản:</strong> {{PublicationSchedule}}</li>";
+            var inserted = Regex.Replace(
+                html,
+                "(<li>\\s*<strong>\\s*Thể loại:\\s*</strong>\\s*\\{\\{SeriesGenre\\}\\}\\s*</li>)",
+                "$1" + scheduleItem,
+                RegexOptions.IgnoreCase | RegexOptions.Singleline);
+
+            if (!string.Equals(inserted, html, StringComparison.Ordinal))
+            {
+                return inserted;
+            }
+
+            if (html.Contains("</body>", StringComparison.OrdinalIgnoreCase))
+            {
+                return html.Replace(
+                    "</body>",
+                    "<p><strong>Lịch xuất bản:</strong> {{PublicationSchedule}}</p></body>",
+                    StringComparison.OrdinalIgnoreCase);
+            }
+
+            return html + "<p><strong>Lịch xuất bản:</strong> {{PublicationSchedule}}</p>";
         }
 
         private static string ApplyContractPrintStyles(string html)

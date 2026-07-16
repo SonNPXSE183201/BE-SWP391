@@ -287,7 +287,10 @@ namespace MangaPublishingSystem.Application.Services
 
                         series.Status = "Fund_Pending";
                         series.ApprovedProductionBudget = approvedBudget;
-                        series.PublicationSchedule = ResolveApprovedPublicationSchedule(votes)
+                        series.PublicationSchedule = ResolveApprovedPublicationSchedule(
+                                votes,
+                                effectiveChairId,
+                                thresholds.ChairWeight)
                             ?? series.PublicationSchedule
                             ?? "Weekly";
                         _seriesRepository.Update(series);
@@ -332,17 +335,27 @@ namespace MangaPublishingSystem.Application.Services
             }
         }
 
-        private static string? ResolveApprovedPublicationSchedule(IEnumerable<BoardVote> votes)
+        private static string? ResolveApprovedPublicationSchedule(
+            IEnumerable<BoardVote> votes,
+            int? effectiveChairUserId,
+            int chairWeight)
         {
             return votes
                 .Where(v =>
                     v.VoteType.Equals("Approve", StringComparison.OrdinalIgnoreCase) &&
                     !string.IsNullOrWhiteSpace(v.PublicationSchedule))
                 .GroupBy(v => v.PublicationSchedule!)
-                .OrderByDescending(g => g.Count())
+                .OrderByDescending(g => g.Sum(v => GetVoteWeight(v, effectiveChairUserId, chairWeight)))
                 .ThenBy(g => g.Key)
                 .Select(g => g.Key)
                 .FirstOrDefault();
+        }
+
+        private static int GetVoteWeight(BoardVote vote, int? effectiveChairUserId, int chairWeight)
+        {
+            return effectiveChairUserId.HasValue && vote.BoardMemberId == effectiveChairUserId.Value
+                ? chairWeight
+                : 1;
         }
 
         private async Task<List<User>> GetActiveBoardMembersAsync(BoardVotingConfig config)
@@ -482,6 +495,7 @@ namespace MangaPublishingSystem.Application.Services
                     BoardMemberId = v.BoardMemberId,
                     VoteType = v.VoteType,
                     RecommendedBudget = v.RecommendedBudget,
+                    PublicationSchedule = v.PublicationSchedule,
                     Comment = v.Comment,
                     VoteAt = v.VoteAt
                 }).ToList()
