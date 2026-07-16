@@ -1,6 +1,25 @@
 {
   "Routes": [
     {
+      "DownstreamPathTemplate": "/api/contract-templates/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "manga-api",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/api/v1/contract-templates/{everything}",
+      "UpstreamHttpMethod": [
+        "Get",
+        "Post",
+        "Put",
+        "Delete",
+        "Patch",
+        "Options"
+      ]
+    },
+    {
       "DownstreamPathTemplate": "/api/ai/{everything}",
       "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [
