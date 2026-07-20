@@ -138,22 +138,10 @@ namespace MangaPublishingSystem.Application.Services
 
             htmlContent = ApplySignatureStatus(htmlContent, mangakaSigned: false);
 
-            // 2. Tạo file PDF từ HTML
+            // 2. Tạo file PDF từ HTML (tự động chuyển sang PdfSharpCore fallback nếu chạy trên Linux Docker không có kernel32.dll)
             htmlContent = ApplyContractPrintStyles(htmlContent);
-
-            var converter = new HtmlToPdf();
-            converter.Options.PdfPageSize = PdfPageSize.A4;
-            converter.Options.PdfPageOrientation = PdfPageOrientation.Portrait;
-            converter.Options.MarginTop = 24;
-            converter.Options.MarginRight = 28;
-            converter.Options.MarginBottom = 24;
-            converter.Options.MarginLeft = 28;
-            converter.Options.WebPageWidth = 794;
-            var pdfDocument = converter.ConvertHtmlString(htmlContent);
-            using var pdfStream = new MemoryStream();
-            pdfDocument.Save(pdfStream);
-            pdfDocument.Close();
-            pdfStream.Position = 0;
+            var pdfBytes = GeneratePdfBytes(htmlContent);
+            using var pdfStream = new MemoryStream(pdfBytes);
 
             // 3. Upload file PDF lên Storage
             string fileName = $"contract_{series.Id}_{DateTime.Now.Ticks}.pdf";
@@ -383,20 +371,8 @@ namespace MangaPublishingSystem.Application.Services
             htmlContent = ApplySignatureStatus(htmlContent, mangakaSigned);
             htmlContent = ApplyContractPrintStyles(htmlContent);
 
-            var converter = new HtmlToPdf();
-            converter.Options.PdfPageSize = PdfPageSize.A4;
-            converter.Options.PdfPageOrientation = PdfPageOrientation.Portrait;
-            converter.Options.MarginTop = 24;
-            converter.Options.MarginRight = 28;
-            converter.Options.MarginBottom = 24;
-            converter.Options.MarginLeft = 28;
-            converter.Options.WebPageWidth = 794;
-
-            var pdfDocument = converter.ConvertHtmlString(htmlContent);
-            using var pdfStream = new MemoryStream();
-            pdfDocument.Save(pdfStream);
-            pdfDocument.Close();
-            pdfStream.Position = 0;
+            var pdfBytes = GeneratePdfBytes(htmlContent);
+            using var pdfStream = new MemoryStream(pdfBytes);
 
             var fileName = $"contract_{series.Id}_{DateTime.Now.Ticks}.pdf";
             return await _storageService.UploadFileAsync(pdfStream, fileName, "application/pdf", "contracts");
@@ -509,6 +485,129 @@ namespace MangaPublishingSystem.Application.Services
             }
 
             return printCss + html;
+        }
+
+        private static byte[] GeneratePdfBytes(string htmlContent)
+        {
+            try
+            {
+                var converter = new HtmlToPdf();
+                converter.Options.PdfPageSize = PdfPageSize.A4;
+                converter.Options.PdfPageOrientation = PdfPageOrientation.Portrait;
+                converter.Options.MarginTop = 24;
+                converter.Options.MarginRight = 28;
+                converter.Options.MarginBottom = 24;
+                converter.Options.MarginLeft = 28;
+                converter.Options.WebPageWidth = 794;
+
+                var pdfDocument = converter.ConvertHtmlString(htmlContent);
+                using var pdfStream = new MemoryStream();
+                pdfDocument.Save(pdfStream);
+                pdfDocument.Close();
+                return pdfStream.ToArray();
+            }
+            catch (Exception ex) when (ex.Message.Contains("kernel32") || ex is DllNotFoundException || ex is TypeInitializationException)
+            {
+                // Fallback cho môi trường Linux / Docker không hỗ trợ Windows Win32 P/Invoke (kernel32.dll)
+                return GeneratePdfBytesCrossPlatformFallback(htmlContent);
+            }
+        }
+
+        private static byte[] GeneratePdfBytesCrossPlatformFallback(string htmlContent)
+        {
+            using var document = new PdfSharpCore.Pdf.PdfDocument();
+            document.Info.Title = "Hợp đồng xuất bản";
+
+            var cleanText = Regex.Replace(htmlContent, "<style.*?>.*?</style>", "", RegexOptions.Singleline | RegexOptions.IgnoreCase);
+            cleanText = Regex.Replace(cleanText, "<script.*?>.*?</script>", "", RegexOptions.Singleline | RegexOptions.IgnoreCase);
+            cleanText = Regex.Replace(cleanText, "<br\\s*/?>", "\n", RegexOptions.IgnoreCase);
+            cleanText = Regex.Replace(cleanText, "</p>", "\n\n", RegexOptions.IgnoreCase);
+            cleanText = Regex.Replace(cleanText, "</li>", "\n", RegexOptions.IgnoreCase);
+            cleanText = Regex.Replace(cleanText, "</div>", "\n", RegexOptions.IgnoreCase);
+            cleanText = Regex.Replace(cleanText, "</tr>", "\n", RegexOptions.IgnoreCase);
+            cleanText = Regex.Replace(cleanText, "<.*?>", string.Empty);
+            cleanText = System.Net.WebUtility.HtmlDecode(cleanText);
+
+            var lines = cleanText.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+
+            var page = document.AddPage();
+            page.Size = PdfSharpCore.PageSize.A4;
+            var gfx = PdfSharpCore.Drawing.XGraphics.FromPdfPage(page);
+
+            var fontTitle = new PdfSharpCore.Drawing.XFont("Arial", 13, PdfSharpCore.Drawing.XFontStyle.Bold);
+            var fontBold = new PdfSharpCore.Drawing.XFont("Arial", 10, PdfSharpCore.Drawing.XFontStyle.Bold);
+            var fontRegular = new PdfSharpCore.Drawing.XFont("Arial", 10, PdfSharpCore.Drawing.XFontStyle.Regular);
+
+            double marginX = 40;
+            double currentY = 50;
+            double pageHeight = page.Height.Point - 50;
+
+            foreach (var rawLine in lines)
+            {
+                var line = rawLine.Trim();
+                if (string.IsNullOrWhiteSpace(line)) continue;
+
+                var selectedFont = fontRegular;
+                if (line.StartsWith("CỘNG HÒA", StringComparison.OrdinalIgnoreCase) ||
+                    line.StartsWith("HỢP ĐỒNG", StringComparison.OrdinalIgnoreCase) ||
+                    line.StartsWith("ĐIỀU", StringComparison.OrdinalIgnoreCase) ||
+                    line.StartsWith("BÊN A", StringComparison.OrdinalIgnoreCase) ||
+                    line.StartsWith("BÊN B", StringComparison.OrdinalIgnoreCase))
+                {
+                    selectedFont = line.StartsWith("HỢP ĐỒNG", StringComparison.OrdinalIgnoreCase) ? fontTitle : fontBold;
+                }
+
+                double maxWidth = page.Width.Point - (2 * marginX);
+                var wrappedLines = WrapText(gfx, line, selectedFont, maxWidth);
+
+                foreach (var wLine in wrappedLines)
+                {
+                    if (currentY + 15 > pageHeight)
+                    {
+                        page = document.AddPage();
+                        page.Size = PdfSharpCore.PageSize.A4;
+                        gfx = PdfSharpCore.Drawing.XGraphics.FromPdfPage(page);
+                        currentY = 50;
+                    }
+
+                    gfx.DrawString(wLine, selectedFont, PdfSharpCore.Drawing.XBrushes.Black, new PdfSharpCore.Drawing.XPoint(marginX, currentY));
+                    currentY += 15;
+                }
+            }
+
+            using var stream = new MemoryStream();
+            document.Save(stream, false);
+            return stream.ToArray();
+        }
+
+        private static List<string> WrapText(PdfSharpCore.Drawing.XGraphics gfx, string text, PdfSharpCore.Drawing.XFont font, double maxWidth)
+        {
+            var words = text.Split(' ');
+            var lines = new List<string>();
+            var currentLine = "";
+
+            foreach (var word in words)
+            {
+                var testLine = string.IsNullOrEmpty(currentLine) ? word : $"{currentLine} {word}";
+                var size = gfx.MeasureString(testLine, font);
+
+                if (size.Width > maxWidth && !string.IsNullOrEmpty(currentLine))
+                {
+                    lines.Add(currentLine);
+                    currentLine = word;
+                }
+                else
+                {
+                    currentLine = testLine;
+                }
+            }
+
+            if (!string.IsNullOrEmpty(currentLine))
+            {
+                lines.Add(currentLine);
+            }
+
+            return lines;
         }
     }
 }
