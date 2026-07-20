@@ -20,6 +20,44 @@
                        "DownstreamPathTemplate":  "/api/contract-templates/{everything}"
                    },
                    {
+                       "DownstreamPathTemplate":  "/api/contracts/{everything}",
+                       "DownstreamScheme":  "http",
+                       "DownstreamHostAndPorts":  [
+                                                      {
+                                                          "Host":  "localhost",
+                                                          "Port":  5010
+                                                      }
+                                                  ],
+                       "UpstreamPathTemplate":  "/api/v1/contracts/{everything}",
+                       "UpstreamHttpMethod":  [
+                                                  "Get",
+                                                  "Post",
+                                                  "Put",
+                                                  "Delete",
+                                                  "Patch",
+                                                  "Options"
+                                              ]
+                   },
+                   {
+                       "DownstreamPathTemplate":  "/api/contracts",
+                       "DownstreamScheme":  "http",
+                       "DownstreamHostAndPorts":  [
+                                                      {
+                                                          "Host":  "localhost",
+                                                          "Port":  5010
+                                                      }
+                                                  ],
+                       "UpstreamPathTemplate":  "/api/v1/contracts",
+                       "UpstreamHttpMethod":  [
+                                                  "Get",
+                                                  "Post",
+                                                  "Put",
+                                                  "Delete",
+                                                  "Patch",
+                                                  "Options"
+                                              ]
+                   },
+                   {
                        "DownstreamPathTemplate":  "/api/ai/{everything}",
                        "DownstreamScheme":  "http",
                        "DownstreamHostAndPorts":  [
@@ -105,6 +143,25 @@
                                                       }
                                                   ],
                        "UpstreamPathTemplate":  "/api/v1/admin/contracts/{everything}",
+                       "UpstreamHttpMethod":  [
+                                                  "Get",
+                                                  "Post",
+                                                  "Put",
+                                                  "Delete",
+                                                  "Patch",
+                                                  "Options"
+                                              ]
+                   },
+                   {
+                       "DownstreamPathTemplate":  "/api/admin/contracts",
+                       "DownstreamScheme":  "http",
+                       "DownstreamHostAndPorts":  [
+                                                      {
+                                                          "Host":  "localhost",
+                                                          "Port":  5010
+                                                      }
+                                                  ],
+                       "UpstreamPathTemplate":  "/api/v1/admin/contracts",
                        "UpstreamHttpMethod":  [
                                                   "Get",
                                                   "Post",

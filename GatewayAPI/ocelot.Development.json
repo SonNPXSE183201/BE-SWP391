@@ -115,6 +115,25 @@
                                               ]
                    },
                    {
+                       "DownstreamPathTemplate":  "/api/admin/contracts",
+                       "DownstreamScheme":  "http",
+                       "DownstreamHostAndPorts":  [
+                                                      {
+                                                          "Host":  "localhost",
+                                                          "Port":  5010
+                                                      }
+                                                  ],
+                       "UpstreamPathTemplate":  "/api/v1/admin/contracts",
+                       "UpstreamHttpMethod":  [
+                                                  "Get",
+                                                  "Post",
+                                                  "Put",
+                                                  "Delete",
+                                                  "Patch",
+                                                  "Options"
+                                              ]
+                   },
+                   {
                        "DownstreamPathTemplate":  "/api/admin/reconciliation/{everything}",
                        "DownstreamScheme":  "http",
                        "DownstreamHostAndPorts":  [
