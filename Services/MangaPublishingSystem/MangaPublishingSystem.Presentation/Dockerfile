@@ -14,6 +14,23 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libc6-dev \
     libx11-dev \
     fontconfig \
+    libx11-6 \
+    libxcomposite1 \
+    libxcursor1 \
+    libxdamage1 \
+    libxext6 \
+    libxfixes3 \
+    libxi6 \
+    libxrandr2 \
+    libxrender1 \
+    libxss1 \
+    libxtst6 \
+    libnss3 \
+    libcups2 \
+    libfontconfig1 \
+    libgbm1 \
+    libasound2 \
+    fonts-liberation \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=build /app/publish .
