@@ -115,6 +115,25 @@
       ]
     },
     {
+      "DownstreamPathTemplate": "/api/admin/contracts",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "manga-api",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/api/v1/admin/contracts",
+      "UpstreamHttpMethod": [
+        "Get",
+        "Post",
+        "Put",
+        "Delete",
+        "Patch",
+        "Options"
+      ]
+    },
+    {
       "DownstreamPathTemplate": "/api/admin/reconciliation/{everything}",
       "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [
@@ -333,6 +352,25 @@
         }
       ],
       "UpstreamPathTemplate": "/api/v1/contracts/{everything}",
+      "UpstreamHttpMethod": [
+        "Get",
+        "Post",
+        "Put",
+        "Delete",
+        "Patch",
+        "Options"
+      ]
+    },
+    {
+      "DownstreamPathTemplate": "/api/contracts",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "manga-api",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/api/v1/contracts",
       "UpstreamHttpMethod": [
         "Get",
         "Post",
