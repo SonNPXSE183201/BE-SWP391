@@ -41,8 +41,12 @@ Hệ thống phân chia người dùng thành 2 nhóm với 5 vai trò phân quy
 | **F1.8**  | Withdraw Funds                | Wallet       | Yêu cầu rút tiền từ ví được rút (`WithdrawableBalance`) về tài khoản ngân hàng thông qua cổng mô phỏng VNPay Sandbox.    | Sau khi VNPay phản hồi thành công, số dư ví giảm ngay lập tức.                                                                        |
 | **F1.9**  | Deposit Funds                 | Wallet       | Nạp tiền cá nhân vào ví thông qua VNPay Sandbox để bổ sung ngân sách thuê Assistant.                                             | Sau khi thanh toán thành công, số dư ví được cộng tiền ngay lập tức.                                                               |
 | **F1.10** | Approve Deadline Extension    | Task Mgmt    | Phê duyệt hoặc Từ chối yêu cầu xin gia hạn deadline nộp bài từ Assistant.                                                          | Nếu duyệt: cập nhật hạn chót mới = Hạn chót cũ + Số ngày xin thêm.                                                                 |
+| **F1.11** | Create & Manage Chapters      | Series       | Quản lý cấu trúc chương (Chapter) của bộ truyện.                                                                                   | Cho phép tạo, sửa tên chương và gán các trang vẽ vào chương.                                                                       |
+| **F1.12** | Submit Chapter for Review     | Series       | Nộp toàn bộ Chapter hoàn chỉnh cho Tantou Editor phê duyệt.                                                                        | Chapter chuyển trạng thái Pending_Review, gửi thông báo tới Editor.                                                                |
+| **F2.16** | Cancel Task (Emergency)       | Task Mgmt    | Hủy khẩn cấp Task đang thực hiện nếu Assistant không hoạt động.                                                                    | Task bị hủy, tiền ký quỹ được hoàn trả lập tức về ví Mangaka.                                                                      |
 | **F2.13** | Manual Composite Tuning       | Task Mgmt    | Cho phép Mangaka kéo thả các layer ảnh, tinh chỉnh lại thứ tự đè Z-Index thủ công trên Canvas trước khi đóng gói trang.    | Giao diện kéo thả mượt mà, phân tách rõ ràng các layer và lưu lại đúng cấu trúc.                                              |
 | **F2.14** | Set Absence Status            | Task Mgmt    | Bật chế độ nghỉ phép hoặc nghỉ khẩn cấp (`On_Leave`).                                                                             | Hệ thống tạm dừng đếm ngược thời gian tự động duyệt (Auto-Approve 3 ngày) của các task đang chờ để bảo vệ tiền ký quỹ. |
+
 
 ---
 
@@ -98,6 +102,9 @@ Hệ thống phân chia người dùng thành 2 nhóm với 5 vai trò phân quy
 | **F5.5** | Update Contract Addendum   | User Mgmt | Tạo phụ lục hợp đồng (`ContractAddendum`) để cập nhật đơn giá trang vẽ mới cho tác giả.                                                       | Đơn giá phụ lục chỉ áp dụng cho các chương tạo sau mốc thời gian ký phụ lục (không tính ngược lại).               |
 | **F5.6** | VNPay Reconciliation       | Wallet    | Đối soát: Đối chiếu dữ liệu giao dịch nạp/rút tiền trên hệ thống với file CSV kết quả đối soát xuất từ VNPay.                             | Tự động quét và ghim cảnh báo các giao dịch lệch trạng thái (Ví dụ: hệ thống báo lỗi nhưng VNPay báo thành công). |
 | **F5.7** | View System Dashboard      | Dashboard | Xem bảng điều khiển tổng quan hệ thống: Tổng số truyện, tổng người dùng theo role, và tổng doanh thu nạp ví.                                   | Hiển thị chính xác các con số thống kê theo thời gian thực.                                                                   |
+| **F5.8** | Approve Withdrawal Requests | Wallet | Duyệt hoặc từ chối các yêu cầu rút tiền từ Ví về tài khoản ngân hàng của Mangaka/Assistant. | Tiền bị khóa sẽ được trừ hẳn đi (nếu duyệt) hoặc hoàn lại số dư khả dụng (nếu từ chối). |
+| **F5.9** | Manage Internal Users | User Mgmt | Tạo tài khoản Mangaka, Tantou Editor, Board Member và gán Editor cho Mangaka. | Tài khoản được tạo thành công, có mật khẩu tạm, Mangaka được liên kết đúng với Editor phụ trách. |
+| **F5.10** | Resolve Escalated Series | Publishing | Ra phán quyết cuối cùng (Approve/Reject) cho các dự án truyện bị hòa phiếu ở Hội đồng. | Chuyển dự án sang trạng thái Approved hoặc Rejected như một Board Member tối cao. |
 
 ---
 
