@@ -18,7 +18,8 @@ namespace MangaPublishingSystem.Infrastructure.Services
         public async Task<string> UploadFileAsync(Stream fileStream, string fileName, string contentType, string folderPath = "")
         {
             var folder = string.IsNullOrEmpty(folderPath) ? "uploads" : folderPath.TrimEnd('/');
-            var uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", folder.Replace("/", "\\"));
+            var normalizedFolder = folder.Replace('\\', Path.DirectorySeparatorChar).Replace('/', Path.DirectorySeparatorChar);
+            var uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", normalizedFolder);
             if (!Directory.Exists(uploadsFolder))
             {
                 Directory.CreateDirectory(uploadsFolder);
@@ -43,8 +44,8 @@ namespace MangaPublishingSystem.Infrastructure.Services
                 if (string.IsNullOrEmpty(fileUrl)) return Task.FromResult(false);
 
                 var uri = new Uri(fileUrl);
-                var localPath = uri.LocalPath.TrimStart('/');
-                var filePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", localPath.Replace("/", "\\"));
+                var localPath = uri.LocalPath.TrimStart('/').Replace('\\', Path.DirectorySeparatorChar).Replace('/', Path.DirectorySeparatorChar);
+                var filePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", localPath);
 
                 if (File.Exists(filePath))
                 {
