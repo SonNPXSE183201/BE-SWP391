@@ -534,9 +534,10 @@ namespace MangaPublishingSystem.Application.Services
             page.Size = PdfSharpCore.PageSize.A4;
             var gfx = PdfSharpCore.Drawing.XGraphics.FromPdfPage(page);
 
-            var fontTitle = new PdfSharpCore.Drawing.XFont("Arial", 13, PdfSharpCore.Drawing.XFontStyle.Bold);
-            var fontBold = new PdfSharpCore.Drawing.XFont("Arial", 10, PdfSharpCore.Drawing.XFontStyle.Bold);
-            var fontRegular = new PdfSharpCore.Drawing.XFont("Arial", 10, PdfSharpCore.Drawing.XFontStyle.Regular);
+            var fontOptions = new PdfSharpCore.Drawing.XPdfFontOptions(PdfSharpCore.Pdf.PdfFontEncoding.Unicode);
+            var fontTitle = new PdfSharpCore.Drawing.XFont("Arial", 13, PdfSharpCore.Drawing.XFontStyle.Bold, fontOptions);
+            var fontBold = new PdfSharpCore.Drawing.XFont("Arial", 10, PdfSharpCore.Drawing.XFontStyle.Bold, fontOptions);
+            var fontRegular = new PdfSharpCore.Drawing.XFont("Arial", 10, PdfSharpCore.Drawing.XFontStyle.Regular, fontOptions);
 
             double marginX = 40;
             double currentY = 50;
