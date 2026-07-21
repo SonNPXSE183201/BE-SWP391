@@ -515,6 +515,11 @@ namespace MangaPublishingSystem.Application.Services
 
         private static byte[] GeneratePdfBytesCrossPlatformFallback(string htmlContent)
         {
+            if (PdfSharpCore.Fonts.GlobalFontSettings.FontResolver == null || PdfSharpCore.Fonts.GlobalFontSettings.FontResolver.GetType() != typeof(CustomFontResolver))
+            {
+                PdfSharpCore.Fonts.GlobalFontSettings.FontResolver = new CustomFontResolver();
+            }
+
             using var document = new PdfSharpCore.Pdf.PdfDocument();
             document.Info.Title = "Hợp đồng xuất bản";
 
