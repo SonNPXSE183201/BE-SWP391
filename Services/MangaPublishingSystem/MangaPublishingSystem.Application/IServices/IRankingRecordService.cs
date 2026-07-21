@@ -10,5 +10,7 @@ namespace MangaPublishingSystem.Application.IServices
     {
         System.Threading.Tasks.Task CreateRankingsAsync(CreateRankingsDto dto);
         Task<IEnumerable<RankingRecord>> GetRankingsByPeriodAsync(DateTime period);
+        Task<IEnumerable<SeriesRankingSummaryDto>> GetMangakaSeriesRankingsAsync(int mangakaId);
+        Task<IEnumerable<RankingHistoryRecordDto>> GetSeriesRankingHistoryAsync(int seriesId);
     }
 }
