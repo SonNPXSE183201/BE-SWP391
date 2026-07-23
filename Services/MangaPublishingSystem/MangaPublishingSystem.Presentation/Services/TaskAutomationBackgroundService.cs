@@ -36,6 +36,7 @@ namespace MangaPublishingSystem.Presentation.Services
                         await taskAutomationService.AutoApproveSubmittedTasksAsync();
                         await taskAutomationService.CleanExpiredRefreshTokensAsync();
                         await taskAutomationService.AutoResolveExpiredBoardVotesAsync();
+                        await taskAutomationService.AutoSettleGracePeriodTasksAsync();
                     }
                     _logger.LogInformation("Quét tự động hóa nhiệm vụ hoàn tất.");
                 }
