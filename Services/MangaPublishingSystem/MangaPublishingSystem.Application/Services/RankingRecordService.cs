@@ -30,8 +30,28 @@ namespace MangaPublishingSystem.Application.Services
 
         public async System.Threading.Tasks.Task CreateRankingsAsync(CreateRankingsDto dto)
         {
-            var orderedRecords = dto.Records.OrderByDescending(r => r.VoteCount).ToList();
-            int totalCount = orderedRecords.Count;
+            if (dto.Records == null || dto.Records.Count == 0)
+            {
+                return;
+            }
+
+            // 1. Lọc trùng SeriesId trong đợt nhập (lấy bản ghi có VoteCount cao nhất nếu nhập lặp)
+            var deduplicatedRecords = dto.Records
+                .GroupBy(r => r.SeriesId)
+                .Select(g => g.OrderByDescending(r => r.VoteCount).First())
+                .OrderByDescending(r => r.VoteCount)
+                .ToList();
+
+            // 2. Xóa sạch các bản ghi xếp hạng cũ của cùng ngày chốt số liệu (RecordedDate.Date)
+            var targetDate = dto.RecordedDate.Date;
+            var existingOldRecords = await _repository.FindAsync(r => r.RecordedDate.Date == targetDate);
+            foreach (var oldRec in existingOldRecords)
+            {
+                _repository.Delete(oldRec);
+            }
+
+            // 3. Đánh lại vị trí thứ hạng (RankPosition) cho danh sách đã lọc trùng
+            int totalCount = deduplicatedRecords.Count;
             int bottomCount = Math.Max(1, (int)Math.Ceiling(totalCount * 0.2));
             int bottomRankThreshold = totalCount - bottomCount + 1;
 
@@ -39,7 +59,7 @@ namespace MangaPublishingSystem.Application.Services
 
             for (int i = 0; i < totalCount; i++)
             {
-                var record = orderedRecords[i];
+                var record = deduplicatedRecords[i];
                 int rankPos = i + 1;
                 var rankingRecord = new RankingRecord
                 {
@@ -53,7 +73,7 @@ namespace MangaPublishingSystem.Application.Services
             }
             await _unitOfWork.SaveChangesAsync();
 
-            // Phát cảnh báo sớm Axing cho nhóm bộ truyện ở vị trí đáy (Bottom Tier)
+            // 4. Phát cảnh báo sớm Axing cho nhóm bộ truyện ở vị trí đáy (Bottom Tier)
             for (int i = 0; i < createdRecords.Count; i++)
             {
                 var rec = createdRecords[i];
@@ -79,7 +99,13 @@ namespace MangaPublishingSystem.Application.Services
 
         public async Task<IEnumerable<RankingRecord>> GetRankingsByPeriodAsync(DateTime period)
         {
-            return await _repository.FindAsync(r => r.RecordedDate.Date == period.Date, r => r.Series);
+            var records = await _repository.FindAsync(r => r.RecordedDate.Date == period.Date, r => r.Series);
+            // Đảm bảo dữ liệu trả về duy nhất theo SeriesId phòng trường hợp dữ liệu cũ bị lưu trùng
+            return records
+                .GroupBy(r => r.SeriesId)
+                .Select(g => g.OrderByDescending(r => r.VoteCount).ThenBy(r => r.RankPosition).First())
+                .OrderBy(r => r.RankPosition)
+                .ToList();
         }
 
         public async Task<IEnumerable<SeriesRankingSummaryDto>> GetMangakaSeriesRankingsAsync(int mangakaId)
