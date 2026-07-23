@@ -73,7 +73,7 @@ namespace MangaPublishingSystem.Application.Services
                 var existing = existingOldRecords.FirstOrDefault(r => r.SeriesId == rec.SeriesId);
                 if (existing != null)
                 {
-                    existing.VoteCount = rec.VoteCount;
+                    existing.VoteCount += rec.VoteCount;
                     _repository.Update(existing);
                 }
                 else
