@@ -27,10 +27,11 @@ namespace MangaPublishingSystem.Presentation.Controllers.Rankings
 
         private int CurrentUserId => int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
 
+        [Authorize(Roles = "Editorial Board, Admin")]
         [HttpPost]
         public async Task<ActionResult<ApiResponse<object>>> CreateRankings([FromBody] CreateRankingsDto dto)
         {
-            await _rankingRecordService.CreateRankingsAsync(dto);
+            await _rankingRecordService.CreateRankingsAsync(dto, CurrentUserId);
             return Ok(ApiResponse<object>.Success(null, "Tạo bảng xếp hạng thành công."));
         }
 
