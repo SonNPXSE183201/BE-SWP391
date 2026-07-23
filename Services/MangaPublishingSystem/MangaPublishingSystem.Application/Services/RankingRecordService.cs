@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using BuildingBlocks.Exceptions;
 using MangaPublishingSystem.Domain.Entities;
 using MangaPublishingSystem.Application.IRepositories;
 using MangaPublishingSystem.Application.IServices;
@@ -15,68 +16,103 @@ namespace MangaPublishingSystem.Application.Services
         private readonly ISeriesRepository _seriesRepository;
         private readonly INotificationRepository _notificationRepository;
         private readonly INotificationPublisher _notificationPublisher;
+        private readonly IBoardVotingConfigRepository _boardVotingConfigRepository;
+        private readonly IUserRepository _userRepository;
 
         public RankingRecordService(
             IRankingRecordRepository repository,
             ISeriesRepository seriesRepository,
             INotificationRepository notificationRepository,
             INotificationPublisher notificationPublisher,
+            IBoardVotingConfigRepository boardVotingConfigRepository,
+            IUserRepository userRepository,
             IUnitOfWork unitOfWork) : base(repository, unitOfWork)
         {
             _seriesRepository = seriesRepository;
             _notificationRepository = notificationRepository;
             _notificationPublisher = notificationPublisher;
+            _boardVotingConfigRepository = boardVotingConfigRepository;
+            _userRepository = userRepository;
         }
 
-        public async System.Threading.Tasks.Task CreateRankingsAsync(CreateRankingsDto dto)
+        public async System.Threading.Tasks.Task CreateRankingsAsync(CreateRankingsDto dto, int currentUserId)
         {
+            // 0. Kiểm tra quyền: Chỉ Chủ tịch hội đồng biên tập (ChairUserId) hoặc Admin/System Admin mới được phép nhập/chốt
+            var configs = await _boardVotingConfigRepository.GetAllAsync();
+            var config = configs.FirstOrDefault();
+            var users = await _userRepository.FindAsync(u => u.Id == currentUserId, u => u.Role);
+            var user = users.FirstOrDefault();
+
+            bool isChair = config != null && config.ChairUserId == currentUserId;
+            bool isAdmin = user != null && user.Role != null && (user.Role.RoleName == "Admin" || user.Role.RoleName == "System Admin");
+
+            if (!isChair && !isAdmin)
+            {
+                throw new ForbiddenException("Chỉ Chủ tịch Hội đồng biên tập hoặc Admin mới có quyền nhập và chốt bảng xếp hạng.");
+            }
+
             if (dto.Records == null || dto.Records.Count == 0)
             {
                 return;
             }
 
+            var targetDate = dto.RecordedDate.Date;
+
             // 1. Lọc trùng SeriesId trong đợt nhập (lấy bản ghi có VoteCount cao nhất nếu nhập lặp)
             var deduplicatedRecords = dto.Records
+                .GroupBy(r => r.SeriesId)
+                .Select(g => g.OrderByDescending(r => r.VoteCount).First())
+                .ToList();
+
+            // 2. Lấy các bản ghi xếp hạng hiện có của cùng ngày chốt số liệu
+            var existingOldRecords = (await _repository.FindAsync(r => r.RecordedDate.Date == targetDate)).ToList();
+
+            // 3. Upsert (Cập nhật điểm nếu đã có, Thêm mới nếu chưa có)
+            foreach (var rec in deduplicatedRecords)
+            {
+                var existing = existingOldRecords.FirstOrDefault(r => r.SeriesId == rec.SeriesId);
+                if (existing != null)
+                {
+                    existing.VoteCount = rec.VoteCount;
+                    _repository.Update(existing);
+                }
+                else
+                {
+                    var newRankingRecord = new RankingRecord
+                    {
+                        SeriesId = rec.SeriesId,
+                        VoteCount = rec.VoteCount,
+                        RankPosition = 0,
+                        RecordedDate = dto.RecordedDate
+                    };
+                    await _repository.AddAsync(newRankingRecord);
+                }
+            }
+            await _unitOfWork.SaveChangesAsync();
+
+            // 4. Lấy lại tất cả bản ghi trong ngày đó để Đánh lại vị trí thứ hạng (RankPosition 1..N) theo VoteCount giảm dần
+            var allPeriodRecords = (await _repository.FindAsync(r => r.RecordedDate.Date == targetDate))
                 .GroupBy(r => r.SeriesId)
                 .Select(g => g.OrderByDescending(r => r.VoteCount).First())
                 .OrderByDescending(r => r.VoteCount)
                 .ToList();
 
-            // 2. Xóa sạch các bản ghi xếp hạng cũ của cùng ngày chốt số liệu (RecordedDate.Date)
-            var targetDate = dto.RecordedDate.Date;
-            var existingOldRecords = await _repository.FindAsync(r => r.RecordedDate.Date == targetDate);
-            foreach (var oldRec in existingOldRecords)
-            {
-                _repository.Delete(oldRec);
-            }
-
-            // 3. Đánh lại vị trí thứ hạng (RankPosition) cho danh sách đã lọc trùng
-            int totalCount = deduplicatedRecords.Count;
+            int totalCount = allPeriodRecords.Count;
             int bottomCount = Math.Max(1, (int)Math.Ceiling(totalCount * 0.2));
             int bottomRankThreshold = totalCount - bottomCount + 1;
 
-            var createdRecords = new List<RankingRecord>();
-
             for (int i = 0; i < totalCount; i++)
             {
-                var record = deduplicatedRecords[i];
-                int rankPos = i + 1;
-                var rankingRecord = new RankingRecord
-                {
-                    SeriesId = record.SeriesId,
-                    VoteCount = record.VoteCount,
-                    RankPosition = rankPos,
-                    RecordedDate = dto.RecordedDate
-                };
-                await _repository.AddAsync(rankingRecord);
-                createdRecords.Add(rankingRecord);
+                var rec = allPeriodRecords[i];
+                rec.RankPosition = i + 1;
+                _repository.Update(rec);
             }
             await _unitOfWork.SaveChangesAsync();
 
-            // 4. Phát cảnh báo sớm Axing cho nhóm bộ truyện ở vị trí đáy (Bottom Tier)
-            for (int i = 0; i < createdRecords.Count; i++)
+            // 5. Phát cảnh báo sớm Axing cho nhóm bộ truyện ở vị trí đáy (Bottom Tier)
+            for (int i = 0; i < allPeriodRecords.Count; i++)
             {
-                var rec = createdRecords[i];
+                var rec = allPeriodRecords[i];
                 if (rec.RankPosition >= bottomRankThreshold)
                 {
                     var series = await _seriesRepository.GetByIdAsync(rec.SeriesId);

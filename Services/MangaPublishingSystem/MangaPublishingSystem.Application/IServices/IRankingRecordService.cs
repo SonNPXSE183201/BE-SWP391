@@ -8,7 +8,7 @@ namespace MangaPublishingSystem.Application.IServices
 {
     public interface IRankingRecordService : IGenericService<RankingRecord>
     {
-        System.Threading.Tasks.Task CreateRankingsAsync(CreateRankingsDto dto);
+        System.Threading.Tasks.Task CreateRankingsAsync(CreateRankingsDto dto, int currentUserId);
         Task<IEnumerable<RankingRecord>> GetRankingsByPeriodAsync(DateTime period);
         Task<IEnumerable<SeriesRankingSummaryDto>> GetMangakaSeriesRankingsAsync(int mangakaId);
         Task<IEnumerable<RankingHistoryRecordDto>> GetSeriesRankingHistoryAsync(int seriesId);
