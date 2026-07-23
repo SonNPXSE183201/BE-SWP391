@@ -34,4 +34,5 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=build /app/publish .
+RUN chmod -R 755 /app
 ENTRYPOINT ["dotnet", "MangaPublishingSystem.Presentation.dll"]

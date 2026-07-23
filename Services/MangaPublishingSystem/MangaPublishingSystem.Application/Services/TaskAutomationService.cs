@@ -20,6 +20,9 @@ namespace MangaPublishingSystem.Application.Services
         private readonly IAssistantProfileRepository _assistantProfileRepository;
         private readonly IRefreshTokenRepository _refreshTokenRepository;
         private readonly ISeriesRepository _seriesRepository;
+        private readonly IChapterRepository _chapterRepository;
+        private readonly IPageRepository _pageRepository;
+        private readonly IRegionRepository _regionRepository;
         private readonly IBoardVoteRepository _boardVoteRepository;
         private readonly IBoardVotingService _boardVotingService;
         private readonly IUnitOfWork _unitOfWork;
@@ -35,6 +38,9 @@ namespace MangaPublishingSystem.Application.Services
             IAssistantProfileRepository assistantProfileRepository,
             IRefreshTokenRepository refreshTokenRepository,
             ISeriesRepository seriesRepository,
+            IChapterRepository chapterRepository,
+            IPageRepository pageRepository,
+            IRegionRepository regionRepository,
             IBoardVoteRepository boardVoteRepository,
             IBoardVotingService boardVotingService,
             IUnitOfWork unitOfWork,
@@ -49,6 +55,9 @@ namespace MangaPublishingSystem.Application.Services
             _assistantProfileRepository = assistantProfileRepository;
             _refreshTokenRepository = refreshTokenRepository;
             _seriesRepository = seriesRepository;
+            _chapterRepository = chapterRepository;
+            _pageRepository = pageRepository;
+            _regionRepository = regionRepository;
             _boardVoteRepository = boardVoteRepository;
             _boardVotingService = boardVotingService;
             _unitOfWork = unitOfWork;
@@ -333,6 +342,84 @@ namespace MangaPublishingSystem.Application.Services
             profile.CurrentActiveTasks = tasksList.Count(t => t.Status == "In_Progress" || t.Status == "Submitted" || t.Status == "Revision" || t.Status == "Pending");
 
             _assistantProfileRepository.Update(profile);
+        }
+
+        public async Task AutoSettleGracePeriodTasksAsync()
+        {
+            _logger.LogInformation("Bắt đầu tự động kiểm tra và dọn dẹp các task sau 24h ân hạn của bộ truyện bị hủy...");
+            try
+            {
+                var now = DateTime.UtcNow;
+                var cancelledSeries = await _seriesRepository.FindAsync(s => s.Status == "Cancelled");
+                var cancelledSeriesIds = cancelledSeries.Select(s => s.Id).ToList();
+
+                if (!cancelledSeriesIds.Any()) return;
+
+                var chapters = await _chapterRepository.FindAsync(c => cancelledSeriesIds.Contains(c.SeriesId));
+                var chapterIds = chapters.Select(c => c.Id).ToList();
+                if (!chapterIds.Any()) return;
+
+                var pages = await _pageRepository.FindAsync(p => chapterIds.Contains(p.ChapterId));
+                var pageIds = pages.Select(p => p.Id).ToList();
+                if (!pageIds.Any()) return;
+
+                var regions = await _regionRepository.FindAsync(r => pageIds.Contains(r.PageId));
+                var regionIds = regions.Select(r => r.Id).ToList();
+                if (!regionIds.Any()) return;
+
+                var graceExpiredTasks = await _tasksRepository.FindAsync(t =>
+                    regionIds.Contains(t.RegionId) &&
+                    (t.Status == "In_Progress" || t.Status == "Submitted" || t.Status == "Revision") &&
+                    t.Deadline < now);
+
+                foreach (var task in graceExpiredTasks)
+                {
+                    _logger.LogInformation("Tự động chốt dọn dẹp sau 24h ân hạn: TaskId {TaskId} thuộc bộ truyện bị hủy.", task.Id);
+                    try
+                    {
+                        await _walletService.ReleaseFundsAsync(task.Id, isApproved: false);
+
+                        task.Status = "Cancelled";
+                        task.FeedbackComment = "Tự động dọn dẹp và hoàn tiền cọc dư sau 24 giờ ân hạn của bộ truyện bị hủy.";
+                        _tasksRepository.Update(task);
+
+                        var notifMangaka = new Notification
+                        {
+                            UserId = task.MangakaId,
+                            Content = $"Nhiệm vụ '{task.Description}' đã được hệ thống tự động dọn dẹp thanh lý và hoàn phần tiền cọc còn dư về ví sau 24 giờ ân hạn.",
+                            Type = "Task_AutoGraceSettle_Mangaka",
+                            IsRead = false
+                        };
+                        await _notificationRepository.AddAsync(notifMangaka);
+                        await _notificationPublisher.PublishNotificationAsync(task.MangakaId, notifMangaka.Content, notifMangaka.Type);
+
+                        if (task.AssistantId.HasValue)
+                        {
+                            var notifAssistant = new Notification
+                            {
+                                UserId = task.AssistantId.Value,
+                                Content = $"Thời hạn 24 giờ ân hạn cho nhiệm vụ '{task.Description}' thuộc bộ truyện bị hủy đã hết. Hệ thống đã tự động chốt dọn dẹp nhiệm vụ này.",
+                                Type = "Task_AutoGraceSettle_Assistant",
+                                IsRead = false
+                            };
+                            await _notificationRepository.AddAsync(notifAssistant);
+                            await _notificationPublisher.PublishNotificationAsync(task.AssistantId.Value, notifAssistant.Content, notifAssistant.Type);
+
+                            await UpdateAssistantStats(task.AssistantId.Value);
+                        }
+
+                        await _unitOfWork.SaveChangesAsync();
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Lỗi khi tự động dọn dẹp task sau ân hạn: TaskId {TaskId}", task.Id);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Lỗi khi chạy job tự động dọn dẹp 24h ân hạn.");
+            }
         }
     }
 }

@@ -46,6 +46,20 @@ namespace MangaPublishingSystem.Presentation.Controllers.Rankings
             return Ok(ApiResponse<IEnumerable<RankingRecord>>.Success(rankings, $"Lấy bảng xếp hạng cho ngày {period} thành công."));
         }
 
+        [HttpGet("my-series")]
+        public async Task<ActionResult<ApiResponse<IEnumerable<SeriesRankingSummaryDto>>>> GetMySeriesRankings()
+        {
+            var rankings = await _rankingRecordService.GetMangakaSeriesRankingsAsync(CurrentUserId);
+            return Ok(ApiResponse<IEnumerable<SeriesRankingSummaryDto>>.Success(rankings, "Lấy thông tin thứ hạng bộ truyện thành công."));
+        }
+
+        [HttpGet("series/{seriesId}/history")]
+        public async Task<ActionResult<ApiResponse<IEnumerable<RankingHistoryRecordDto>>>> GetSeriesRankingHistory(int seriesId)
+        {
+            var history = await _rankingRecordService.GetSeriesRankingHistoryAsync(seriesId);
+            return Ok(ApiResponse<IEnumerable<RankingHistoryRecordDto>>.Success(history, "Lấy lịch sử xếp hạng bộ truyện thành công."));
+        }
+
         [Authorize(Roles = "Editorial Board")]
         [HttpPost("/api/ranking/votes")]
         public async Task<ActionResult<ApiResponse<object>>> VoteRanking([FromBody] VoteRankingRequestDto dto)
