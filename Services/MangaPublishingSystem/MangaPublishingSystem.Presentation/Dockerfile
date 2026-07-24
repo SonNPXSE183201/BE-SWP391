@@ -15,6 +15,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     wkhtmltopdf \
     fontconfig \
     libfontconfig1 \
+    libxrender1 \
+    libxext6 \
+    libx11-6 \
+    libjpeg62-turbo \
     fonts-liberation \
     fonts-freefont-ttf \
     && rm -rf /var/lib/apt/lists/*
