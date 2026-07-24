@@ -8,8 +8,12 @@
   <ItemGroup>
     <PackageReference Include="FluentValidation" Version="11.11.0" />
     <PackageReference Include="MediatR" Version="12.4.1" />
-    <PackageReference Include="Select.HtmlToPdf.NetCore" Version="26.3.0" />
+    <PackageReference Include="Haukcode.WkHtmlToPdfDotNet" Version="1.5.90" />
     <PackageReference Include="PdfSharpCore" Version="1.3.65" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="Fonts\**" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <PropertyGroup>

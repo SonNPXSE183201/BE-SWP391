@@ -8,31 +8,22 @@ RUN dotnet publish "MangaPublishingSystem.Presentation.csproj" -c Release -o /ap
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
 WORKDIR /app
 
-# Cài đặt libgdiplus và các thư viện cần thiết cho SelectPdf / System.Drawing trên Linux
+# Cài đặt wkhtmltopdf (engine HTML→PDF cross-platform) và các font cần thiết cho tiếng Việt
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libgdiplus \
     libc6-dev \
-    libx11-dev \
+    wkhtmltopdf \
     fontconfig \
-    libx11-6 \
-    libxcomposite1 \
-    libxcursor1 \
-    libxdamage1 \
-    libxext6 \
-    libxfixes3 \
-    libxi6 \
-    libxrandr2 \
-    libxrender1 \
-    libxss1 \
-    libxtst6 \
-    libnss3 \
-    libcups2 \
     libfontconfig1 \
-    libgbm1 \
-    libasound2 \
     fonts-liberation \
+    fonts-freefont-ttf \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=build /app/publish .
+
+# Rebuild font cache để hệ thống nhận font bundled
+RUN fc-cache -fv
+
 RUN chmod -R 755 /app
 ENTRYPOINT ["dotnet", "MangaPublishingSystem.Presentation.dll"]
+
