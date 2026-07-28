@@ -143,6 +143,10 @@ namespace MangaPublishingSystem.Application.Services
             // 2. Tạo file PDF từ HTML (tự động chuyển sang PdfSharpCore fallback nếu chạy trên Linux Docker không có kernel32.dll)
             htmlContent = ApplyContractPrintStyles(htmlContent);
             var pdfBytes = GeneratePdfBytes(htmlContent);
+            // if (pdfBytes == null || pdfBytes.Length == 0)
+            // {
+            //     throw new Exception("DEBUG: pdfBytes is empty or null! PDF generation failed silently.");
+            // }
             using var pdfStream = new MemoryStream(pdfBytes);
 
             // 3. Upload file PDF lên Storage
