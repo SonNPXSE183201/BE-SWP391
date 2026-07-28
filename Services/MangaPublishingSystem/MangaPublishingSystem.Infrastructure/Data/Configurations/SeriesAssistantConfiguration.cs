@@ -21,6 +21,10 @@ namespace MangaPublishingSystem.Infrastructure.Data.Configurations
                 .IsRequired()
                 .HasDefaultValue("Pending");
 
+            builder.Property(e => e.PendingNewRoles)
+                .HasMaxLength(200)
+                .IsRequired(false);
+
             builder.Property(e => e.CreateAt)
                 .HasDefaultValueSql("GETUTCDATE()")
                 .IsRequired();

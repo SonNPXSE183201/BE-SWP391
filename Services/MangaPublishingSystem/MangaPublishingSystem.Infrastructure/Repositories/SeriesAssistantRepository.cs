@@ -55,7 +55,7 @@ namespace MangaPublishingSystem.Infrastructure.Repositories
                     .ThenInclude(s => s.Mangaka)
                 .Include(sa => sa.Series)
                     .ThenInclude(s => s.SeriesAssistants)
-                .Where(sa => sa.AssistantId == assistantId && sa.Status == "Pending")
+                .Where(sa => sa.AssistantId == assistantId && (sa.Status == "Pending" || sa.PendingNewRoles != null))
                 .OrderByDescending(sa => sa.CreateAt)
                 .AsNoTrackingWithIdentityResolution()
                 .ToListAsync();
