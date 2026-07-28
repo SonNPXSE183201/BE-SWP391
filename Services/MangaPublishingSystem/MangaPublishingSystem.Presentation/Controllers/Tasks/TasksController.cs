@@ -200,7 +200,7 @@ namespace MangaPublishingSystem.Presentation.Controllers.Tasks
                 ChapterTitle = chapter?.Title,
                 PageId = page?.Id ?? 0,
                 PageNumber = page?.PageNumber ?? 0,
-                PageImageUrl = page?.RawImageUrl,
+                PageImageUrl = page?.CompositeImageUrl ?? page?.RawImageUrl,
                 BaseLayerUrl = page?.BaseLayerUrl ?? page?.RawImageUrl,
                 RegionName = t.Region?.Name,
                 RegionCoordinatesJson = t.Region?.CoordinatesJson,

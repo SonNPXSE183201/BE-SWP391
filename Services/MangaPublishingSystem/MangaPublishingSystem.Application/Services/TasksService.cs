@@ -238,6 +238,8 @@ namespace MangaPublishingSystem.Application.Services
                 latestVersion.Status = "Approved";
                 _taskVersionRepository.Update(latestVersion);
             }
+            
+            await _unitOfWork.SaveChangesAsync();
 
             // Auto-composite: gộp lớp vẽ Assistant đã duyệt lên trang gốc
             var region = await _regionRepository.GetByIdAsync(task.RegionId);
@@ -639,7 +641,7 @@ namespace MangaPublishingSystem.Application.Services
                 AssistantName = t.Assistant?.FullName,
                 PageNumber = t.Region?.Page?.PageNumber ?? 0,
                 PageId = t.Region?.PageId ?? 0,
-                PageImageUrl = t.Region?.Page?.RawImageUrl,
+                PageImageUrl = t.Region?.Page?.CompositeImageUrl ?? t.Region?.Page?.RawImageUrl,
                 RegionName = t.Region?.Name,
                 RegionCoordinatesJson = t.Region?.CoordinatesJson,
                 CreateAt = t.CreateAt,
@@ -681,7 +683,7 @@ namespace MangaPublishingSystem.Application.Services
                 AssistantName = t.Assistant?.FullName,
                 PageNumber = t.Region?.Page?.PageNumber ?? 0,
                 PageId = t.Region?.PageId ?? 0,
-                PageImageUrl = t.Region?.Page?.RawImageUrl,
+                PageImageUrl = t.Region?.Page?.CompositeImageUrl ?? t.Region?.Page?.RawImageUrl,
                 RegionName = t.Region?.Name,
                 RegionCoordinatesJson = t.Region?.CoordinatesJson,
                 CreateAt = t.CreateAt,
@@ -753,7 +755,7 @@ namespace MangaPublishingSystem.Application.Services
                 ChapterTitle = chapter?.Title,
                 PageId = page?.Id ?? 0,
                 PageNumber = page?.PageNumber ?? 0,
-                PageImageUrl = page?.RawImageUrl,
+                PageImageUrl = page?.CompositeImageUrl ?? page?.RawImageUrl,
                 BaseLayerUrl = page?.BaseLayerUrl ?? page?.RawImageUrl,
                 RegionName = t.Region?.Name,
                 RegionCoordinatesJson = t.Region?.CoordinatesJson,
