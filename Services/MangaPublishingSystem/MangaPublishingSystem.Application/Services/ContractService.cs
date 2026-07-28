@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.IO;
+using System.Diagnostics;
+using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using BuildingBlocks.Exceptions;
@@ -489,131 +491,68 @@ namespace MangaPublishingSystem.Application.Services
 
         private static byte[] GeneratePdfBytes(string htmlContent)
         {
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                try
+                {
+                    var converter = new HtmlToPdf();
+                    converter.Options.PdfPageSize = PdfPageSize.A4;
+                    converter.Options.PdfPageOrientation = PdfPageOrientation.Portrait;
+                    converter.Options.MarginTop = 24;
+                    converter.Options.MarginRight = 28;
+                    converter.Options.MarginBottom = 24;
+                    converter.Options.MarginLeft = 28;
+                    converter.Options.WebPageWidth = 794;
+
+                    var pdfDocument = converter.ConvertHtmlString(htmlContent);
+                    using var pdfStream = new MemoryStream();
+                    pdfDocument.Save(pdfStream);
+                    pdfDocument.Close();
+                    return pdfStream.ToArray();
+                }
+                catch
+                {
+                    // Fallback to cross-platform logic if SelectPdf fails
+                }
+            }
+
+            // Using wkhtmltopdf CLI on Linux (Docker)
+            var tempHtml = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString() + ".html");
+            var tempPdf = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString() + ".pdf");
+            
             try
             {
-                var converter = new HtmlToPdf();
-                converter.Options.PdfPageSize = PdfPageSize.A4;
-                converter.Options.PdfPageOrientation = PdfPageOrientation.Portrait;
-                converter.Options.MarginTop = 24;
-                converter.Options.MarginRight = 28;
-                converter.Options.MarginBottom = 24;
-                converter.Options.MarginLeft = 28;
-                converter.Options.WebPageWidth = 794;
+                File.WriteAllText(tempHtml, htmlContent, System.Text.Encoding.UTF8);
 
-                var pdfDocument = converter.ConvertHtmlString(htmlContent);
-                using var pdfStream = new MemoryStream();
-                pdfDocument.Save(pdfStream);
-                pdfDocument.Close();
-                return pdfStream.ToArray();
-            }
-            catch (Exception ex) when (ex.Message.Contains("kernel32") || ex is DllNotFoundException || ex is TypeInitializationException)
-            {
-                // Fallback cho môi trường Linux / Docker không hỗ trợ Windows Win32 P/Invoke (kernel32.dll)
-                return GeneratePdfBytesCrossPlatformFallback(htmlContent);
-            }
-        }
-
-        private static byte[] GeneratePdfBytesCrossPlatformFallback(string htmlContent)
-        {
-            if (PdfSharpCore.Fonts.GlobalFontSettings.FontResolver == null || PdfSharpCore.Fonts.GlobalFontSettings.FontResolver.GetType() != typeof(CustomFontResolver))
-            {
-                PdfSharpCore.Fonts.GlobalFontSettings.FontResolver = new CustomFontResolver();
-            }
-
-            using var document = new PdfSharpCore.Pdf.PdfDocument();
-            document.Info.Title = "Hợp đồng xuất bản";
-
-            var cleanText = Regex.Replace(htmlContent, "<style.*?>.*?</style>", "", RegexOptions.Singleline | RegexOptions.IgnoreCase);
-            cleanText = Regex.Replace(cleanText, "<script.*?>.*?</script>", "", RegexOptions.Singleline | RegexOptions.IgnoreCase);
-            cleanText = Regex.Replace(cleanText, "<br\\s*/?>", "\n", RegexOptions.IgnoreCase);
-            cleanText = Regex.Replace(cleanText, "</p>", "\n\n", RegexOptions.IgnoreCase);
-            cleanText = Regex.Replace(cleanText, "</li>", "\n", RegexOptions.IgnoreCase);
-            cleanText = Regex.Replace(cleanText, "</div>", "\n", RegexOptions.IgnoreCase);
-            cleanText = Regex.Replace(cleanText, "</tr>", "\n", RegexOptions.IgnoreCase);
-            cleanText = Regex.Replace(cleanText, "<.*?>", string.Empty);
-            cleanText = System.Net.WebUtility.HtmlDecode(cleanText);
-
-            var lines = cleanText.Split('\n', StringSplitOptions.RemoveEmptyEntries);
-
-            var page = document.AddPage();
-            page.Size = PdfSharpCore.PageSize.A4;
-            var gfx = PdfSharpCore.Drawing.XGraphics.FromPdfPage(page);
-
-            var fontOptions = new PdfSharpCore.Drawing.XPdfFontOptions(PdfSharpCore.Pdf.PdfFontEncoding.Unicode);
-            var fontTitle = new PdfSharpCore.Drawing.XFont("Arial", 13, PdfSharpCore.Drawing.XFontStyle.Bold, fontOptions);
-            var fontBold = new PdfSharpCore.Drawing.XFont("Arial", 10, PdfSharpCore.Drawing.XFontStyle.Bold, fontOptions);
-            var fontRegular = new PdfSharpCore.Drawing.XFont("Arial", 10, PdfSharpCore.Drawing.XFontStyle.Regular, fontOptions);
-
-            double marginX = 40;
-            double currentY = 50;
-            double pageHeight = page.Height.Point - 50;
-
-            foreach (var rawLine in lines)
-            {
-                var line = rawLine.Trim();
-                if (string.IsNullOrWhiteSpace(line)) continue;
-
-                var selectedFont = fontRegular;
-                if (line.StartsWith("CỘNG HÒA", StringComparison.OrdinalIgnoreCase) ||
-                    line.StartsWith("HỢP ĐỒNG", StringComparison.OrdinalIgnoreCase) ||
-                    line.StartsWith("ĐIỀU", StringComparison.OrdinalIgnoreCase) ||
-                    line.StartsWith("BÊN A", StringComparison.OrdinalIgnoreCase) ||
-                    line.StartsWith("BÊN B", StringComparison.OrdinalIgnoreCase))
+                var process = new Process
                 {
-                    selectedFont = line.StartsWith("HỢP ĐỒNG", StringComparison.OrdinalIgnoreCase) ? fontTitle : fontBold;
-                }
-
-                double maxWidth = page.Width.Point - (2 * marginX);
-                var wrappedLines = WrapText(gfx, line, selectedFont, maxWidth);
-
-                foreach (var wLine in wrappedLines)
-                {
-                    if (currentY + 15 > pageHeight)
+                    StartInfo = new ProcessStartInfo
                     {
-                        page = document.AddPage();
-                        page.Size = PdfSharpCore.PageSize.A4;
-                        gfx = PdfSharpCore.Drawing.XGraphics.FromPdfPage(page);
-                        currentY = 50;
+                        FileName = "wkhtmltopdf",
+                        Arguments = $"--page-size A4 --margin-top 24mm --margin-right 28mm --margin-bottom 24mm --margin-left 28mm --encoding utf-8 -q \"{tempHtml}\" \"{tempPdf}\"",
+                        RedirectStandardOutput = true,
+                        RedirectStandardError = true,
+                        UseShellExecute = false,
+                        CreateNoWindow = true
                     }
+                };
 
-                    gfx.DrawString(wLine, selectedFont, PdfSharpCore.Drawing.XBrushes.Black, new PdfSharpCore.Drawing.XPoint(marginX, currentY));
-                    currentY += 15;
-                }
-            }
+                process.Start();
+                process.WaitForExit(30000);
 
-            using var stream = new MemoryStream();
-            document.Save(stream, false);
-            return stream.ToArray();
-        }
-
-        private static List<string> WrapText(PdfSharpCore.Drawing.XGraphics gfx, string text, PdfSharpCore.Drawing.XFont font, double maxWidth)
-        {
-            var words = text.Split(' ');
-            var lines = new List<string>();
-            var currentLine = "";
-
-            foreach (var word in words)
-            {
-                var testLine = string.IsNullOrEmpty(currentLine) ? word : $"{currentLine} {word}";
-                var size = gfx.MeasureString(testLine, font);
-
-                if (size.Width > maxWidth && !string.IsNullOrEmpty(currentLine))
+                if (!File.Exists(tempPdf))
                 {
-                    lines.Add(currentLine);
-                    currentLine = word;
+                    var error = process.StandardError.ReadToEnd();
+                    throw new Exception($"wkhtmltopdf failed to generate PDF. Error: {error}");
                 }
-                else
-                {
-                    currentLine = testLine;
-                }
-            }
 
-            if (!string.IsNullOrEmpty(currentLine))
+                return File.ReadAllBytes(tempPdf);
+            }
+            finally
             {
-                lines.Add(currentLine);
+                if (File.Exists(tempHtml)) File.Delete(tempHtml);
+                if (File.Exists(tempPdf)) File.Delete(tempPdf);
             }
-
-            return lines;
         }
     }
 }
