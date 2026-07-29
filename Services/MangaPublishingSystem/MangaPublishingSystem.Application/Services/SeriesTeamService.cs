@@ -136,10 +136,31 @@ namespace MangaPublishingSystem.Application.Services
                         throw new ConflictException("Trợ lý này đã có tất cả các vai trò này trong nhóm.");
                     }
 
-                    currentRoles.AddRange(rolesToAdd);
-                    existing.RoleInTeam = string.Join(", ", currentRoles);
-                    existing.UpdateAt = DateTime.UtcNow;
-                    _seriesAssistantRepository.Update(existing);
+                    if (existing.Status == "Active")
+                    {
+                        var currentPending = existing.PendingNewRoles?
+                            .Split(new[] { ", " }, StringSplitOptions.RemoveEmptyEntries)
+                            .Select(r => r.Trim())
+                            .ToList() ?? new List<string>();
+
+                        var actualNewPending = rolesToAdd.Except(currentPending, StringComparer.OrdinalIgnoreCase).ToList();
+                        if (!actualNewPending.Any())
+                        {
+                            throw new ConflictException("Đã gửi lời mời cho (các) vai trò này rồi, đang chờ trợ lý xác nhận.");
+                        }
+
+                        currentPending.AddRange(actualNewPending);
+                        existing.PendingNewRoles = string.Join(", ", currentPending);
+                        existing.UpdateAt = DateTime.UtcNow;
+                        _seriesAssistantRepository.Update(existing);
+                    }
+                    else
+                    {
+                        currentRoles.AddRange(rolesToAdd);
+                        existing.RoleInTeam = string.Join(", ", currentRoles);
+                        existing.UpdateAt = DateTime.UtcNow;
+                        _seriesAssistantRepository.Update(existing);
+                    }
                 }
                 else
                 {
@@ -165,12 +186,12 @@ namespace MangaPublishingSystem.Application.Services
             }
 
             bool isActiveMemberGettingNewRole = existing.Status == "Active";
-            string notificationType = isActiveMemberGettingNewRole ? "Series_Team_Role_Assigned" : "Series_Team_Invite";
-            string notificationTitle = isActiveMemberGettingNewRole ? "Vai trò mới trong dự án" : "Lời mời tham gia dự án";
+            string notificationType = "Series_Team_Invite";
+            string notificationTitle = isActiveMemberGettingNewRole ? "Lời mời vai trò mới trong dự án" : "Lời mời tham gia dự án";
             string notificationContent = isActiveMemberGettingNewRole
-                ? $"Bạn được giao thêm vai trò {dto.RoleInTeam.Trim()} trong nhóm dự án \"{series.Title}\"."
+                ? $"Bạn được mời đảm nhận thêm vai trò {dto.RoleInTeam.Trim()} trong nhóm dự án \"{series.Title}\"."
                 : $"Bạn được mời tham gia nhóm dự án \"{series.Title}\" với vai trò {dto.RoleInTeam.Trim()}.";
-            string notificationLink = isActiveMemberGettingNewRole ? "/assistant/tasks" : $"/assistant/series-invites/{seriesId}";
+            string notificationLink = $"/assistant/series-invites/{seriesId}";
 
             var notif = new Notification
             {
@@ -201,21 +222,36 @@ namespace MangaPublishingSystem.Application.Services
         public async Task<SeriesAssistantDto> RespondToInviteAsync(int seriesId, int assistantId, RespondSeriesInviteDto dto)
         {
             var membership = await _seriesAssistantRepository.GetMembershipAsync(seriesId, assistantId);
-            if (membership == null || membership.Status != "Pending")
+            if (membership == null || (membership.Status != "Pending" && string.IsNullOrEmpty(membership.PendingNewRoles)))
             {
                 throw new NotFoundException("Không tìm thấy lời mời đang chờ phản hồi.");
             }
 
+            bool isActiveWithPendingRole = membership.Status == "Active" && !string.IsNullOrEmpty(membership.PendingNewRoles);
+
             if (!dto.Accept)
             {
-                membership.Status = "Removed";
-                membership.UpdateAt = DateTime.UtcNow;
-                _seriesAssistantRepository.Update(membership);
+                if (isActiveWithPendingRole)
+                {
+                    membership.PendingNewRoles = null;
+                    membership.UpdateAt = DateTime.UtcNow;
+                    _seriesAssistantRepository.Update(membership);
+                }
+                else
+                {
+                    membership.Status = "Removed";
+                    membership.UpdateAt = DateTime.UtcNow;
+                    _seriesAssistantRepository.Update(membership);
+                }
+
+                var declineContent = isActiveWithPendingRole
+                    ? $"Trợ lý {membership.Assistant.FullName} đã từ chối đảm nhận thêm vai trò mới trong \"{membership.Series.Title}\"."
+                    : $"Trợ lý {membership.Assistant.FullName} đã từ chối lời mời tham gia \"{membership.Series.Title}\".";
 
                 var declineNotif = new Notification
                 {
                     UserId = membership.Series.MangakaId,
-                    Content = $"Trợ lý {membership.Assistant.FullName} đã từ chối lời mời tham gia \"{membership.Series.Title}\".",
+                    Content = declineContent,
                     Type = "Series_Team_Declined",
                     IsRead = false,
                 };
@@ -225,7 +261,7 @@ namespace MangaPublishingSystem.Application.Services
                 await _notificationPublisher.PublishNotificationPayloadAsync(membership.Series.MangakaId, new NotificationPayload
                 {
                     Id = declineNotif.Id,
-                    Title = "Trợ lý từ chối tham gia",
+                    Title = isActiveWithPendingRole ? "Từ chối vai trò mới" : "Từ chối tham gia",
                     Message = declineNotif.Content,
                     Link = $"/mangaka/series/{seriesId}",
                     Type = declineNotif.Type,
@@ -235,15 +271,38 @@ namespace MangaPublishingSystem.Application.Services
                 return MapToDto(membership);
             }
 
-            membership.Status = "Active";
-            membership.JoinedDate = DateTime.UtcNow;
-            membership.UpdateAt = DateTime.UtcNow;
-            _seriesAssistantRepository.Update(membership);
+            if (isActiveWithPendingRole)
+            {
+                var activeRoles = membership.RoleInTeam
+                    .Split(new[] { ", " }, StringSplitOptions.RemoveEmptyEntries)
+                    .Select(r => r.Trim()).ToList();
+                
+                var pendingRoles = membership.PendingNewRoles?
+                    .Split(new[] { ", " }, StringSplitOptions.RemoveEmptyEntries)
+                    .Select(r => r.Trim()).ToList() ?? new List<string>();
+
+                var merged = activeRoles.Union(pendingRoles, StringComparer.OrdinalIgnoreCase).ToList();
+                membership.RoleInTeam = string.Join(", ", merged);
+                membership.PendingNewRoles = null;
+                membership.UpdateAt = DateTime.UtcNow;
+                _seriesAssistantRepository.Update(membership);
+            }
+            else
+            {
+                membership.Status = "Active";
+                membership.JoinedDate = DateTime.UtcNow;
+                membership.UpdateAt = DateTime.UtcNow;
+                _seriesAssistantRepository.Update(membership);
+            }
+
+            var acceptContent = isActiveWithPendingRole
+                ? $"Trợ lý {membership.Assistant.FullName} đã đồng ý đảm nhận thêm vai trò trong \"{membership.Series.Title}\"."
+                : $"Trợ lý {membership.Assistant.FullName} đã chấp nhận tham gia nhóm dự án \"{membership.Series.Title}\".";
 
             var acceptNotif = new Notification
             {
                 UserId = membership.Series.MangakaId,
-                Content = $"Trợ lý {membership.Assistant.FullName} đã chấp nhận tham gia nhóm dự án \"{membership.Series.Title}\".",
+                Content = acceptContent,
                 Type = "Series_Team_Accepted",
                 IsRead = false,
             };
@@ -253,7 +312,7 @@ namespace MangaPublishingSystem.Application.Services
             await _notificationPublisher.PublishNotificationPayloadAsync(membership.Series.MangakaId, new NotificationPayload
             {
                 Id = acceptNotif.Id,
-                Title = "Trợ lý tham gia dự án",
+                Title = isActiveWithPendingRole ? "Đảm nhận vai trò mới" : "Trợ lý tham gia dự án",
                 Message = acceptNotif.Content,
                 Link = $"/mangaka/series/{seriesId}",
                 Type = acceptNotif.Type,

@@ -52,8 +52,8 @@ namespace MangaPublishingSystem.Application.Services.Assistant
                 SeriesId = sa.SeriesId,
                 SeriesTitle = sa.Series?.Title ?? "Không rõ dự án",
                 CoverUrl = sa.Series?.CoverArtworkUrl,
-                RoleInTeam = sa.RoleInTeam,
-                Status = sa.Status,
+                RoleInTeam = sa.Status == "Active" && sa.PendingNewRoles != null ? sa.PendingNewRoles : sa.RoleInTeam,
+                Status = "Pending", // Always show as pending to the FE for invites
                 CreateAt = sa.CreateAt,
 
                 // Series detail

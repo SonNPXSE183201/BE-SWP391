@@ -624,13 +624,10 @@ namespace MangaPublishingSystem.Application.Services
                         "Trang còn task Assistant chưa xong. Hãy nghiệm thu hoặc hủy task trước khi thay ảnh.");
                 }
 
-                if (tasks.Count > 0)
-                {
-                    throw new BadRequestException(
-                        "Trang đã có công việc Assistant. Hãy xử lý trên Canvas hoặc xóa vùng chưa giao task trước khi thay ảnh.");
-                }
+                var regionsWithTasks = tasks.Select(t => t.RegionId).ToHashSet();
+                var unassignedRegions = regions.Where(r => !regionsWithTasks.Contains(r.Id)).ToList();
 
-                foreach (var region in regions)
+                foreach (var region in unassignedRegions)
                 {
                     _regionRepository.Delete(region);
                 }
